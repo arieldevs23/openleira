@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { scan } from 'react-scan'
 
 import App from '@/App'
+import { installSoundUnlock } from '@/shared/sounds'
 import '@/index.css'
 import 'katex/dist/katex.min.css'
 
@@ -22,6 +23,9 @@ if ('serviceWorker' in navigator) {
     console.warn('Service worker registration failed:', err);
   });
 }
+
+// Send/receive cues need an AudioContext born inside a user gesture.
+installSoundUnlock()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) {

@@ -16,6 +16,7 @@ import { api } from '@/shared/api';
 import { PROVIDER_PERMISSION_PREFERENCE_KEYS } from '@/shared/constants';
 import { readUserPreference } from '@/shared/userSettings';
 import type { CommandModalPayload, CostCommandData, HelpCommandData, MarkSessionProcessing, ModelCommandData, QueuedDraft, SessionActivityMap, StatusCommandData,QueuedSendOptions,ChatAttachment,ChatMessage,PendingPermissionRequest,PermissionMode,SessionEstablishedContext,Project,ProjectSession,LLMProvider,SlashCommand } from '@/shared/types';
+import { playSendSound } from '@/shared/sounds';
 import { grantClaudeToolPermission } from '@/modules/chat/utils/chatPermissions';
 import {
   clearQueuedMessage,
@@ -680,6 +681,11 @@ export function useChatComposerState({
         || !selectedProject
       ) {
         return;
+      }
+
+      // A flushed queued draft already played the cue when it was submitted.
+      if (!queuedSubmission) {
+        playSendSound();
       }
 
       // A turn is already in flight: stash this message instead of sending it.

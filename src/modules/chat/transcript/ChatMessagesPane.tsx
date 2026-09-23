@@ -88,6 +88,16 @@ type ChatMessagesPaneProps = {
  * list and tool groups, the export menu, the provider empty state and the
  * load-all-history overlay.
  */
+/**
+ * iMessage-style rhythm: consecutive plain bubbles from the same sender sit
+ * 4px apart, while a change of sender keeps the pane's 12px gap.
+ */
+const isSameSenderBubble = (prev: ChatMessage | null, current: ChatMessage): boolean => {
+  if (!prev || prev.type !== current.type) return false;
+  if (current.type !== 'user' && current.type !== 'assistant') return false;
+  return !prev.isToolUse && !current.isToolUse;
+};
+
 function ChatMessagesPane({
   scrollContainerRef,
   onWheel,
@@ -209,7 +219,7 @@ function ChatMessagesPane({
           </div>
         </div>
       )}
-      <div className="mx-auto w-full max-w-[54.25rem] space-y-3 px-4 sm:space-y-4">
+      <div className="mx-auto w-full max-w-[54.25rem] space-y-3 px-4">
       {(isLoadingSessionMessages || isProcessing) && chatMessages.length === 0 ? (
         <div className="mt-8 text-center text-gray-500 dark:text-gray-400">
           <div className="flex items-center justify-center space-x-2">
@@ -327,6 +337,7 @@ function ChatMessagesPane({
               return (
                 <LazyMessageRow
                   key={getMessageKey(item)}
+                  className={isSameSenderBubble(messagePrevMessage, item) ? '!mt-1' : undefined}
                   lazyRows={lazyRows}
                   timestamp={item.timestamp}
                   initiallyNearViewport={initiallyNearViewport}

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { DarkModeToggle } from '@/shared/ui';
+import { useSetUiPreference, useUiPreferences } from '@/shared/context/UiPreferencesContext';
 import type { CodeEditorSettingsState, ProjectSortOrder } from '@/shared/types';
 import { LanguageSelector } from '@/modules/i18n';
 import SettingsCard from '@/modules/settings/SettingsCard';
@@ -29,6 +30,8 @@ export default function AppearanceSettingsTab({
   onCodeEditorFontSizeChange,
 }: AppearanceSettingsTabProps) {
   const { t } = useTranslation('settings');
+  const { soundEffects } = useUiPreferences();
+  const setPreference = useSetUiPreference();
 
   return (
     <div className="space-y-8">
@@ -39,6 +42,21 @@ export default function AppearanceSettingsTab({
             description={t('appearanceSettings.darkMode.description')}
           >
             <DarkModeToggle ariaLabel={t('appearanceSettings.darkMode.label')} />
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsSection title={t('appearanceSettings.soundEffects.label')}>
+        <SettingsCard>
+          <SettingsRow
+            label={t('appearanceSettings.soundEffects.label')}
+            description={t('appearanceSettings.soundEffects.description')}
+          >
+            <SettingsToggle
+              checked={soundEffects}
+              onChange={(value) => setPreference('soundEffects', value)}
+              ariaLabel={t('appearanceSettings.soundEffects.label')}
+            />
           </SettingsRow>
         </SettingsCard>
       </SettingsSection>

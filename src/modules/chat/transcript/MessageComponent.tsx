@@ -110,7 +110,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
               <ChatMessageFiles files={message.files} />
             )}
             {userCopyContent.trim().length > 0 || (!message.images?.length && !message.files?.length) ? (
-              <div className="chat-bubble-user group max-w-full px-3 py-2 sm:px-4">
+              <div className="chat-bubble-user group max-w-full">
                 <div dir="auto" className="break-words text-sm">
                   <Markdown
                     breaks
@@ -338,7 +338,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                 </ReasoningContent>
               </Reasoning>
             ) : (
-              <div dir="auto" className="chat-bubble-assistant px-4 py-3 text-sm">
+              <div dir="auto" className="chat-bubble-assistant text-sm">
                 {/* Reasoning accordion */}
                 {showThinking && message.reasoning && (
                   <Reasoning className="mb-3" defaultOpen={false}>

@@ -4,6 +4,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { ServerEvent,MarkSessionIdle,MarkSessionProcessing,PendingPermissionRequest,ProjectSession,LLMProvider,NormalizedMessage,GetSessionActivity,MarkSessionBackground } from '@/shared/types';
 import { showCompletionTitleIndicator } from '@/modules/chat/utils/pageTitleNotification';
 import { playChatCompletionSound, playNotificationSound } from '@/shared/utils';
+import { isSoundEffectsEnabled, playReceiveSound } from '@/shared/sounds';
 import type { SessionStore } from '@/modules/chat/hooks/useSessionStore';
 import { normalizedToChatMessages } from '@/modules/chat/hooks/useChatMessages';
 import { collectRunningBackgroundTasks } from '@/modules/chat/utils/backgroundTasks';
@@ -292,7 +293,13 @@ export function useChatRealtimeHandlers({
           // Celebrate only successful runs (failed runs end with success: false).
           if (msg.success !== false) {
             showCompletionTitleIndicator();
-            void playChatCompletionSound();
+            // One cue per reply: the iMessage-style receive sound stands in for
+            // the generic chime when sound effects are on, never both.
+            if (isSoundEffectsEnabled()) {
+              playReceiveSound();
+            } else {
+              void playChatCompletionSound();
+            }
           }
 
           // The session id is stable for the whole conversation (allocated

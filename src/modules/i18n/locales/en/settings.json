@@ -179,6 +179,10 @@
         "label": "Font Size",
         "description": "Editor font size in pixels"
       }
+    },
+    "soundEffects": {
+      "label": "Sound effects",
+      "description": "Play a short sound when you send and receive messages"
     }
   },
   "mcpForm": {

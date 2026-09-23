@@ -15,6 +15,8 @@ export type UiPreferences = {
   sendByCtrlEnter: boolean;
   sidebarVisible: boolean;
   voiceEnabled: boolean;
+  /** iMessage-style send/receive cues in the chat. */
+  soundEffects: boolean;
 };
 
 export type UiPreferenceKey = keyof UiPreferences;
@@ -29,6 +31,7 @@ const DEFAULTS: UiPreferences = {
   sendByCtrlEnter: false,
   sidebarVisible: true,
   voiceEnabled: false,
+  soundEffects: true,
 };
 
 const PREFERENCE_KEYS = Object.keys(DEFAULTS) as UiPreferenceKey[];

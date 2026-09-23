@@ -34,6 +34,8 @@ type LazyMessageRowProps = {
    * placeholder and mounts when scrolled toward.
    */
   initiallyNearViewport: boolean;
+  /** Spacing override, e.g. the tighter gap between same-sender bubbles. */
+  className?: string;
   children: ReactNode;
 };
 
@@ -41,6 +43,7 @@ export default function LazyMessageRow({
   lazyRows,
   timestamp,
   initiallyNearViewport,
+  className,
   children,
 }: LazyMessageRowProps) {
   const [isNearViewport, setIsNearViewport] = useState(initiallyNearViewport);
@@ -70,6 +73,7 @@ export default function LazyMessageRow({
   return (
     <div
       ref={elementRef}
+      className={className}
       data-message-timestamp={timestamp || undefined}
       style={isMounted ? undefined : { height: measuredHeight ?? ESTIMATED_ROW_HEIGHT_PX }}
     >

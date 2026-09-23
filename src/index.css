@@ -1034,27 +1034,58 @@ h1, h2, h3, h4 {
   letter-spacing: -0.02em;
 }
 
-/* User turn: primary blue, right-aligned, square bottom-right corner */
-.chat-bubble-user {
-  background-color: hsl(var(--primary));
-  color: #fff;
-  border-radius: 12px;
-  border-bottom-right-radius: 0;
+/* iMessage-style bubbles. The corner nearest the sender is pinched to 4px to
+   read as the "tail"; a real pseudo-element tail is avoided on purpose since it
+   misaligns on tall, multiline, and code-heavy replies. */
+.chat-bubble-user,
+.chat-bubble-assistant {
+  border-radius: 18px;
+  padding: 10px 14px;
 }
 
-/* Assistant turn: off-white surface with border, square bottom-left corner */
+.chat-bubble-user {
+  background: linear-gradient(180deg, #0A84FF 0%, #0B5CFF 100%);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+/* prose-gray sets its own greys on the .prose element, so override them there. */
+.chat-bubble-assistant .prose {
+  --tw-prose-body: #000;
+  --tw-prose-headings: #000;
+  --tw-prose-bold: #000;
+  --tw-prose-invert-body: #fff;
+  --tw-prose-invert-headings: #fff;
+  --tw-prose-invert-bold: #fff;
+}
+
 .chat-bubble-assistant {
-  background-color: #F8F8F6;
-  border: 1px solid #E5E6E3;
+  background-color: #E9E9EB;
   color: #000;
-  border-radius: 12px;
-  border-bottom-left-radius: 0;
+  border-bottom-left-radius: 4px;
 }
 
 .dark .chat-bubble-assistant {
-  background-color: hsl(var(--card));
-  border-color: hsl(var(--border));
-  color: hsl(var(--foreground));
+  background-color: #3A3A3C;
+  color: #fff;
+}
+
+/* Code keeps its own surface inside the grey bubble instead of blending in. */
+.chat-bubble-assistant .chat-code-block {
+  background-color: #fff;
+}
+
+.dark .chat-bubble-assistant .chat-code-block {
+  background-color: rgb(24 24 27); /* zinc-900, same as outside a bubble */
+}
+
+.chat-bubble-assistant .chat-inline-code {
+  background-color: rgb(255 255 255 / 0.7);
+}
+
+.dark .chat-bubble-assistant .chat-inline-code {
+  background-color: rgb(0 0 0 / 0.3);
+  color: #fff;
 }
 
 /* Active sidebar item: muted fill and medium-weight foreground text, nothing else.

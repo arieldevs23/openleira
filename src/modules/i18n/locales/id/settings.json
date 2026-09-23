@@ -179,6 +179,10 @@
         "label": "ukuran font",
         "description": "ukuran font editor dalam pixel"
       }
+    },
+    "soundEffects": {
+      "label": "sound effects",
+      "description": "bunyi pas kirim/terima pesan"
     }
   },
   "mcpForm": {
