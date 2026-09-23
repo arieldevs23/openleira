@@ -61,13 +61,12 @@ export default function SidebarModeTabs({
         aria-label={tab.showLabel ? undefined : tab.label}
         title={tab.showLabel ? undefined : tab.label}
         className={cn(
-          'flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-normal transition-all',
+          '-mb-px flex min-w-0 items-center justify-center gap-1.5 border-b-2 px-2 py-1.5 text-xs font-normal transition-colors',
           tab.mode === 'archived' && 'px-2.5',
           canGrow && tab.showLabel && 'flex-1',
           isActive
-            ? 'bg-background text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
-          isActive && tab.mode === 'running' && 'ring-1 ring-emerald-500/15',
+            ? 'border-primary font-medium text-foreground'
+            : 'border-transparent text-muted-foreground hover:text-foreground',
         )}
       >
         {tab.mode === 'running' ? (
@@ -111,7 +110,7 @@ export default function SidebarModeTabs({
   );
 
   return (
-    <div className="rounded-lg bg-muted/50 p-0.5">
+    <div className="border-b border-border">
       <div ref={rowRef} className="relative flex">
         {visibleIndexes.map((index) => (
           <Fragment key={tabs[index].mode}>{renderTab(tabs[index], true)}</Fragment>

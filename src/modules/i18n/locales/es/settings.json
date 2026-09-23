@@ -472,7 +472,7 @@
     },
     "managed": {
       "badge": "Gestionado",
-      "hint": "Gestionado por CloudCLI."
+      "hint": "Gestionado por OpenLeira."
     },
     "help": {
       "title": "Acerca de MCP en Codex",
@@ -499,12 +499,9 @@
     "installFailed": "La instalación falló",
     "uninstallFailed": "La desinstalación falló",
     "toggleFailed": "El cambio de estado falló",
-    "starterPluginLabel": "Plugin de inicio",
-    "starter": "Inicio",
-    "docs": "Docs",
     "sections": {
       "officialTitle": "Plugins oficiales",
-      "officialDescription": "Mantenidos por el equipo de CloudCLI y listos para instalar directamente.",
+      "officialDescription": "Mantenidos por el equipo de OpenLeira y listos para instalar directamente.",
       "unofficialTitle": "Otros plugins",
       "unofficialDescription": "Plugins e integraciones no oficiales de otros usuarios. Revisa el código fuente antes de instalar."
     },
@@ -532,10 +529,10 @@
       "description": "Vigila sesiones largas de Claude Code por si se cuelgan y expone controles del proceso.",
       "install": "Instalar"
     },
-    "prismCloudCLI": {
-      "name": "PRISM CloudCLI",
+    "prismOpenLeira": {
+      "name": "PRISM OpenLeira",
       "badge": "no oficial",
-      "description": "Inteligencia de sesiones para Claude Code, dentro de CloudCLI. Descubre por qué tus sesiones queman tokens sin salir del navegador.",
+      "description": "Inteligencia de sesiones para Claude Code, dentro de OpenLeira. Descubre por qué tus sesiones queman tokens sin salir del navegador.",
       "install": "Instalar"
     },
     "sessionManagerPlugin": {

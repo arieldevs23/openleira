@@ -2,7 +2,7 @@ import { memo, useState } from 'react';
 import { Check, Edit2, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { Badge, Dialog, DialogContent, DialogTitle, LLMProviderLogo, Tooltip, buttonVariants } from '@/shared/ui';
+import { Dialog, DialogContent, DialogTitle, LLMProviderLogo, Tooltip, buttonVariants } from '@/shared/ui';
 import { cn } from '@/shared/utils';
 import type { LLMProvider, Project, ProjectSession, SessionWithProvider } from '@/shared/types';
 import { PROVIDER_LABELS, createSessionViewModel, formatCompactAge } from '@/modules/sidebar/utils/sidebarProjectFormatting';
@@ -110,46 +110,38 @@ function SidebarSessionItem({
     setMobileOptionsOpen(false);
   };
 
+  const statusDot = (showAttentionIndicator || showBackgroundIndicator || showRecentIndicator) && (
+    <Tooltip content={indicatorLabel} position="top">
+      <span
+        role="status"
+        aria-label={indicatorLabel}
+        className={cn(
+          'block h-1.5 w-1.5 flex-shrink-0 rounded-full',
+          showAttentionIndicator
+            ? 'bg-amber-500'
+            : showBackgroundIndicator
+              ? 'bg-purple-500 dark:bg-purple-400'
+              : 'bg-green-500',
+        )}
+      />
+    </Tooltip>
+  );
+
   return (
     <div className="group relative">
-      {(showAttentionIndicator || showBackgroundIndicator || showRecentIndicator) && (
-        <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 transform">
-          <Tooltip content={indicatorLabel} position="right">
-            <div
-              role="status"
-              aria-label={indicatorLabel}
-              className={cn(
-                'h-2 w-2 animate-pulse rounded-full',
-                showAttentionIndicator
-                  ? 'bg-amber-500'
-                  : showBackgroundIndicator
-                    ? 'bg-purple-500 dark:bg-purple-400'
-                    : 'bg-green-500',
-              )}
-            />
-          </Tooltip>
-        </div>
-      )}
-
       {isCompact && (
       <div>
         <div
           className={cn(
-            'p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative',
-            isSelected ? 'bg-primary/5 border-primary/20' : '',
-            !isSelected && isProcessing
-              ? 'border-border/60 bg-muted/20'
-              : !isSelected && sessionView.isActive
-              ? 'border-green-500/30 bg-green-50/5 dark:bg-green-900/5'
-              : 'border-border/30',
+            'relative mx-3 my-0.5 rounded-lg p-2 transition-colors duration-150',
+            isSelected ? 'sidebar-item-active' : 'active:bg-muted',
           )}
           onClick={selectMobileSession}
         >
           <div className="flex items-center gap-2">
             <div
               className={cn(
-                'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
-                isSelected ? 'bg-primary/10' : 'bg-muted/50',
+                'w-5 h-5 flex items-center justify-center flex-shrink-0',
               )}
             >
               <LLMProviderLogo provider={session.__provider} className="h-3 w-3" />
@@ -163,6 +155,7 @@ function SidebarSessionItem({
                 >
                   {sessionView.sessionName}
                 </div>
+                {statusDot}
                 {isProcessing ? (
                   <span className="ml-auto flex-shrink-0">
                     <Tooltip content={t('tooltips.processingSessionIndicator', 'Processing session')} position="top">
@@ -177,9 +170,9 @@ function SidebarSessionItem({
               </div>
               <div className="mt-0.5 flex items-center">
                 {sessionView.messageCount > 0 && (
-                  <Badge variant="secondary" className="px-1 py-0 text-xs">
+                  <span className="text-[11px] text-muted-foreground">
                     {sessionView.messageCount}
-                  </Badge>
+                  </span>
                 )}
               </div>
             </div>
@@ -210,7 +203,7 @@ function SidebarSessionItem({
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden="true" />
 
             <div className="mb-4 flex items-center gap-3 px-1">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-muted">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
                 <LLMProviderLogo provider={session.__provider} className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -239,7 +232,7 @@ function SidebarSessionItem({
                       saveMobileRename();
                     }
                   }}
-                  className="w-full rounded-xl border-2 border-primary/40 bg-background px-3 py-3 text-foreground shadow-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-3 text-foreground focus:border-primary focus:outline-none"
                   autoFocus
                   autoComplete="off"
                   // 16px keeps iOS Safari from zooming the viewport on focus.
@@ -249,7 +242,7 @@ function SidebarSessionItem({
                   <button
                     type="button"
                     onClick={saveMobileRename}
-                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-transform active:scale-95"
+                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-transform active:scale-95"
                   >
                     <Check className="h-5 w-5 flex-shrink-0" />
                     Save
@@ -257,7 +250,7 @@ function SidebarSessionItem({
                   <button
                     type="button"
                     onClick={onCancelEditingSession}
-                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-muted/35 px-4 py-3 text-sm font-medium text-foreground transition-colors active:bg-muted"
+                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium text-foreground transition-colors active:bg-muted"
                   >
                     <X className="h-5 w-5 flex-shrink-0" />
                     Cancel
@@ -269,7 +262,7 @@ function SidebarSessionItem({
                 <button
                   type="button"
                   onClick={startMobileRename}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-border bg-muted/35 px-4 py-3 text-left text-foreground transition-colors active:bg-muted"
+                  className="flex min-h-12 w-full items-center gap-3 rounded-lg bg-muted px-4 py-3 text-left text-foreground transition-colors active:bg-muted"
                 >
                   <Edit2 className="h-5 w-5 flex-shrink-0" />
                   <span className="text-sm font-medium">Rename session</span>
@@ -280,7 +273,7 @@ function SidebarSessionItem({
                   onClick={handleCopyAction}
                   disabled={isCopyPending}
                   className={cn(
-                    'flex min-h-12 w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
+                    'flex min-h-12 w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
                     copyState === 'copied'
                       ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300'
                       : copyState === 'error'
@@ -308,7 +301,7 @@ function SidebarSessionItem({
                       setMobileOptionsOpen(false);
                       requestDeleteSession();
                     }}
-                    className="flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-red-600 transition-colors active:bg-red-500/10 dark:text-red-400"
+                    className="flex min-h-12 w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-red-600 transition-colors active:bg-red-500/10 dark:text-red-400"
                   >
                     <Trash2 className="h-5 w-5 flex-shrink-0" />
                     <span className="text-sm font-medium">Archive or delete session</span>
@@ -321,7 +314,7 @@ function SidebarSessionItem({
               <button
                 type="button"
                 onClick={() => setMobileOptionsOpen(false)}
-                className="mb-3 mt-2 min-h-11 w-full rounded-xl text-sm font-medium text-muted-foreground transition-colors active:bg-muted"
+                className="mb-3 mt-2 min-h-11 w-full rounded-lg text-sm font-medium text-muted-foreground transition-colors active:bg-muted"
               >
                 Cancel
               </button>
@@ -337,13 +330,8 @@ function SidebarSessionItem({
           href={`/session/${session.id}`}
           className={cn(
             buttonVariants({ variant: 'ghost' }),
-            'h-auto w-full justify-start rounded-md border bg-card p-2 pr-11 text-left font-normal transition-all duration-150',
-            isSelected ? 'border-primary/20 bg-primary/5' : 'border-border/30',
-            !isSelected && isProcessing
-              ? 'border-border/60 bg-muted/20 hover:bg-muted/25'
-              : !isSelected && sessionView.isActive
-                ? 'border-green-500/30 bg-green-50/5 hover:bg-green-50/10 dark:bg-green-900/5 dark:hover:bg-green-900/10'
-                : 'hover:bg-accent/50',
+            'h-auto w-full justify-start rounded-lg p-2 pr-11 text-left font-normal transition-colors duration-150',
+            isSelected ? 'sidebar-item-active' : 'hover:bg-muted',
           )}
           // Left-click keeps in-app navigation; Ctrl/Cmd/middle-click and the
           // native right-click menu use the href to open a new tab/window.
@@ -356,8 +344,7 @@ function SidebarSessionItem({
           <div className="flex w-full min-w-0 items-center gap-2">
             <div
               className={cn(
-                'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md',
-                isSelected ? 'bg-primary/10' : 'bg-muted/50',
+                'flex h-5 w-5 flex-shrink-0 items-center justify-center',
               )}
             >
               <LLMProviderLogo provider={session.__provider} className="h-3 w-3" />
@@ -370,6 +357,7 @@ function SidebarSessionItem({
                 >
                   {sessionView.sessionName}
                 </div>
+                {statusDot}
                 {isProcessing ? (
                   <span
                     className={cn(
@@ -395,7 +383,7 @@ function SidebarSessionItem({
                 )}
               </div>
               <div className="mt-0.5 flex items-center">
-                {sessionView.messageCount > 0 && <Badge variant="secondary" className="px-1 py-0 text-xs">{sessionView.messageCount}</Badge>}
+                {sessionView.messageCount > 0 && <span className="text-[11px] text-muted-foreground">{sessionView.messageCount}</span>}
               </div>
             </div>
           </div>

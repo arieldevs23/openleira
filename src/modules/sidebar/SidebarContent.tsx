@@ -186,7 +186,7 @@ export default function SidebarContent({
 
   return (
     <div
-      className="flex h-full flex-col bg-background/80 backdrop-blur-sm md:w-full md:select-none"
+      className="flex h-full flex-col bg-card md:w-full md:select-none"
       style={{}}
     >
       <SidebarHeader
@@ -394,7 +394,7 @@ export default function SidebarContent({
         ) : searchMode === 'running' ? (
           projectListProps.filteredProjects.length === 0 ? (
             <div className="px-4 py-12 text-center md:py-8">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border/70 bg-muted/50 md:mb-3">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">
                 <Activity className="h-6 w-6 text-muted-foreground" />
               </div>
               <h3 className="mb-2 text-base font-medium text-foreground md:mb-1">
@@ -408,7 +408,7 @@ export default function SidebarContent({
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="mx-2 flex items-center justify-between rounded-lg border border-border/60 bg-card/50 px-3 py-2 shadow-sm">
+              <div className="mx-2 flex items-center justify-between rounded-lg px-3 py-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                     <Activity className="h-3.5 w-3.5" />
@@ -441,7 +441,7 @@ export default function SidebarContent({
                 </div>
               </div>
               {[0, 1].map((skeleton) => (
-                <div key={skeleton} className="animate-pulse rounded-xl border border-border/50 bg-card/40 p-3">
+                <div key={skeleton} className="animate-pulse rounded-lg p-3">
                   <div className="flex items-center gap-2.5">
                     <div className="h-8 w-8 rounded-lg bg-muted" />
                     <div className="min-w-0 flex-1 space-y-2">
@@ -454,8 +454,8 @@ export default function SidebarContent({
             </div>
           ) : archivedProjects.length === 0 && groupedArchivedSessions.length === 0 ? (
             <div className="px-3 py-8 text-center">
-              <div className="mx-auto max-w-[240px] rounded-2xl border border-dashed border-border/80 bg-muted/20 px-5 py-7">
-                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-background shadow-sm">
+              <div className="mx-auto max-w-[240px] px-5 py-7">
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                   <Archive className="h-[18px] w-[18px] text-muted-foreground" />
                 </div>
                 <h3 className="text-sm font-medium text-foreground">
@@ -487,7 +487,7 @@ export default function SidebarContent({
                   </div>
                 </div>
                 <span
-                  className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] tabular-nums text-muted-foreground"
+                  className="px-1 text-[10px] tabular-nums text-muted-foreground"
                   title={visibleArchivedItemsCount !== archivedSessionsCount
                     ? `${visibleArchivedItemsCount} of ${archivedSessionsCount}`
                     : undefined}
@@ -503,10 +503,10 @@ export default function SidebarContent({
                 return (
                   <section
                     key={project.projectId}
-                    className="group/archive overflow-hidden rounded-xl border border-border/70 bg-card/45 shadow-[0_1px_0_hsl(var(--border)/0.2)] transition-colors hover:border-border"
+                    className="group/archive overflow-hidden rounded-lg transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-center gap-2.5 px-2.5 py-2.5">
-                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/45 text-muted-foreground">
+                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground">
                         <Folder className="h-4 w-4" />
                       </span>
                       <div className="min-w-0 flex-1">
@@ -525,7 +525,7 @@ export default function SidebarContent({
                         </p>
                       </div>
                       <button
-                        className="flex h-7 flex-shrink-0 items-center gap-1.5 rounded-lg border border-emerald-600/15 bg-emerald-500/10 px-2 text-[10px] font-medium text-emerald-700 transition-all hover:border-emerald-600/25 hover:bg-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 dark:text-emerald-300"
+                        className="flex h-7 flex-shrink-0 items-center gap-1.5 rounded-lg px-2 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => onRestoreArchivedProject(project.projectId)}
                         title={t('archived.restoreProject', 'Restore workspace')}
                         aria-label={`${t('archived.restoreProject', 'Restore workspace')}: ${project.displayName}`}
@@ -535,11 +535,11 @@ export default function SidebarContent({
                       </button>
                     </div>
                     {projectSessions.length > 0 && (
-                      <div className="border-t border-border/45 bg-muted/[0.08]">
+                      <div>
                         {projectSessions.map((session) => (
                           <button
                             key={String(session.id)}
-                            className="flex w-full items-center gap-2.5 border-b border-border/35 px-2.5 py-2 text-left transition-colors last:border-b-0 hover:bg-accent/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                             onClick={() => onArchivedSessionClick({
                               sessionId: String(session.id),
                               provider: session.__provider,
@@ -603,10 +603,10 @@ export default function SidebarContent({
               {groupedArchivedSessions.map((group) => (
                 <section
                   key={group.key}
-                  className="group/archive overflow-hidden rounded-xl border border-border/70 bg-card/45 shadow-[0_1px_0_hsl(var(--border)/0.2)] transition-colors hover:border-border"
+                  className="group/archive overflow-hidden rounded-lg transition-colors hover:bg-muted/50"
                 >
                   <div className="flex items-center gap-2.5 px-2.5 py-2.5">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/45 text-muted-foreground">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground">
                       <Folder className="h-4 w-4" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -625,11 +625,11 @@ export default function SidebarContent({
                       )}
                     </div>
                   </div>
-                  <div className="border-t border-border/45 bg-muted/[0.08]">
+                  <div>
                     {group.sessions.map((session) => (
                       <div
                         key={session.sessionId}
-                        className="group/session flex items-center gap-1 border-b border-border/35 px-2.5 py-2 last:border-b-0 hover:bg-accent/35"
+                        className="group/session flex items-center gap-1 rounded-lg px-2.5 py-2 hover:bg-muted"
                       >
                         <button
                           className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

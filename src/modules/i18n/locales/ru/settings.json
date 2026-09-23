@@ -448,7 +448,7 @@
   "pluginSettings": {
     "title": "Плагины",
     "description": "Расширяйте интерфейс с помощью кастомных плагинов. Установите из git или добавьте папку в ~/.claude-code-ui/plugins/",
-    "installPlaceholder": "https://github.com/user/my-plugin",
+    "installPlaceholder": "https://git.example.com/user/my-plugin.git",
     "installButton": "Установить",
     "installing": "Установка…",
     "securityWarning": "Устанавливайте только те плагины, исходный код которых вы проверили или от авторов, которым вы доверяете.",
@@ -466,8 +466,6 @@
     "uninstallFailed": "Ошибка удаления",
     "toggleFailed": "Ошибка переключения",
     "buildYourOwn": "Создайте свой плагин",
-    "starter": "Шаблон",
-    "docs": "Документация",
     "starterPlugin": {
       "name": "Статистика проекта",
       "badge": "шаблон",

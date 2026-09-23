@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Github, Plus, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Input } from '@/shared/ui';
@@ -46,7 +46,6 @@ export default function GithubCredentialsSection({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Github className="h-5 w-5" />
           <h3 className="text-lg font-semibold">{t('apiKeys.github.title')}</h3>
         </div>
         <Button size="sm" onClick={() => onShowNewGithubFormChange(!showNewGithubForm)}>
@@ -96,14 +95,6 @@ export default function GithubCredentialsSection({
             </Button>
           </div>
 
-          <a
-            href="https://github.com/settings/tokens"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-xs text-primary hover:underline"
-          >
-            {t('apiKeys.github.form.howToCreate')}
-          </a>
         </div>
       )}
 

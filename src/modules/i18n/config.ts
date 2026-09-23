@@ -138,7 +138,7 @@ const getSavedLanguage = (): string => {
   if (saved && languages.some(lang => lang.value === saved)) {
     return saved;
   }
-  return 'en';
+  return 'id';
 };
 
 // Initialize i18next

@@ -20,7 +20,7 @@
     "runClaudeCli": "Başlamak için bir proje dizininde Claude CLI çalıştır"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "OpenLeira",
     "subtitle": "AI kodlama asistanı arayüzü"
   },
   "sessions": {
@@ -35,7 +35,6 @@
     "showMore": "Daha fazla oturum göster"
   },
   "tooltips": {
-    "viewEnvironments": "Ortamları Görüntüle",
     "hideSidebar": "Kenar çubuğunu gizle",
     "createProject": "Yeni proje oluştur",
     "refresh": "Projeleri ve oturumları yenile (Ctrl+R)",
@@ -67,13 +66,7 @@
     "cancel": "İptal",
     "save": "Kaydet",
     "delete": "Sil",
-    "rename": "Yeniden Adlandır",
-    "joinCommunity": "Topluluğa Katıl",
-    "reportIssue": "Sorun Bildir",
-    "starOnGithub": "GitHub'da Yıldızla"
-  },
-  "branding": {
-    "openSource": "Açık Kaynak"
+    "rename": "Yeniden Adlandır"
   },
   "status": {
     "active": "Aktif",

@@ -1,43 +1,43 @@
 {
   "toolbar": {
     "changes": "perubahan",
-    "previousChange": "Perubahan sebelumnya",
-    "nextChange": "Perubahan berikutnya",
-    "hideDiff": "Sembunyikan penyorotan diff",
-    "showDiff": "Tampilkan penyorotan diff",
-    "settings": "Pengaturan Editor",
-    "collapse": "Ciutkan editor",
-    "expand": "Perluas editor ke lebar penuh"
+    "previousChange": "perubahan sebelumnya",
+    "nextChange": "perubahan berikutnya",
+    "hideDiff": "sembunyiin highlight diff",
+    "showDiff": "tampilin highlight diff",
+    "settings": "pengaturan editor",
+    "collapse": "kecilin editor",
+    "expand": "lebarin editor full"
   },
-  "loading": "Memuat {{fileName}}...",
+  "loading": "bentar, buka {{fileName}}...",
   "header": {
-    "showingChanges": "Menampilkan perubahan"
+    "showingChanges": "lagi nampilin perubahan"
   },
   "actions": {
-    "copyPath": "Salin path file",
-    "pathCopied": "Path file disalin",
-    "download": "Unduh file",
-    "save": "Simpan",
-    "saving": "Menyimpan...",
-    "saved": "Tersimpan!",
-    "exitFullscreen": "Keluar dari layar penuh",
-    "fullscreen": "Layar Penuh",
-    "close": "Tutup",
-    "previewMarkdown": "Pratinjau Markdown",
-    "editMarkdown": "Edit Markdown"
+    "copyPath": "copy path file",
+    "pathCopied": "path file udah kecopy",
+    "download": "download file",
+    "save": "simpen",
+    "saving": "nyimpen...",
+    "saved": "udah kesimpen",
+    "exitFullscreen": "keluar fullscreen",
+    "fullscreen": "fullscreen",
+    "close": "tutup",
+    "previewMarkdown": "preview markdown",
+    "editMarkdown": "edit markdown"
   },
   "footer": {
-    "lines": "Baris:",
-    "characters": "Karakter:",
-    "shortcuts": "Tekan Ctrl+S untuk menyimpan • Esc untuk menutup"
+    "lines": "baris:",
+    "characters": "karakter:",
+    "shortcuts": "ctrl+s buat simpen • esc buat tutup"
   },
   "binaryFile": {
-    "title": "File Biner",
-    "message": "File \"{{fileName}}\" tidak dapat ditampilkan di editor teks karena merupakan file biner."
+    "title": "file biner",
+    "message": "file \"{{fileName}}\" ga bisa dibuka di editor teks soalnya file biner."
   },
   "filePreview": {
-    "loading": "Memuat pratinjau...",
-    "error": "File ini tidak dapat ditampilkan.",
-    "openInNewTab": "Buka di tab baru"
+    "loading": "bentar, lagi load preview...",
+    "error": "file ini ga bisa ditampilin.",
+    "openInNewTab": "buka di tab baru"
   }
 }

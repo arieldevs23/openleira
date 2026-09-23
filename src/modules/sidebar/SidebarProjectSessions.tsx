@@ -88,11 +88,11 @@ export default function SidebarProjectSessions({
   const hasSessions = sessions.length > 0;
 
   return (
-    <div className="ml-3 space-y-1 border-l border-border pl-3">
+    <div className="ml-3 space-y-0.5 pl-2">
       {isCompact ? (
         <div className="px-3 pb-1 pt-1">
           <button
-            className="flex h-8 w-full items-center justify-center gap-2 rounded-md bg-primary text-xs font-medium text-primary-foreground transition-all duration-150 hover:bg-primary/90 active:scale-[0.98]"
+            className="flex h-8 w-full items-center gap-2 rounded-lg bg-transparent px-2 text-xs font-normal text-muted-foreground transition-colors duration-150 active:bg-muted"
             onClick={() => {
               onProjectSelect(project);
               onNewSession(project);
@@ -104,9 +104,9 @@ export default function SidebarProjectSessions({
         </div>
       ) : (
         <Button
-          variant="default"
+          variant="ghost"
           size="sm"
-          className="flex h-8 w-full justify-start gap-2 bg-primary text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className="flex h-8 w-full justify-start gap-2 bg-transparent px-2 text-xs font-normal text-muted-foreground hover:bg-muted hover:text-muted-foreground"
           onClick={() => onNewSession(project)}
         >
           <Plus className="h-3 w-3" />

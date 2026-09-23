@@ -466,8 +466,6 @@
     "uninstallFailed": "Deinstallation fehlgeschlagen",
     "toggleFailed": "Umschalten fehlgeschlagen",
     "buildYourOwn": "Eigenes Plugin erstellen",
-    "starter": "Starter",
-    "docs": "Dokumentation",
     "starterPlugin": {
       "name": "Projektstatistiken",
       "badge": "starter",

@@ -1,357 +1,357 @@
 {
   "codeBlock": {
-    "copy": "Salin",
-    "copied": "Disalin",
-    "copyCode": "Salin kode"
+    "copy": "copy",
+    "copied": "udah kecopy",
+    "copyCode": "copy kode"
   },
   "copyMessage": {
-    "copy": "Salin pesan",
-    "copied": "Pesan disalin",
-    "selectFormat": "Pilih format salinan",
-    "copyAsMarkdown": "Salin sebagai Markdown",
-    "copyAsText": "Salin sebagai teks"
+    "copy": "copy pesan",
+    "copied": "pesan udah kecopy",
+    "selectFormat": "pilih format copy",
+    "copyAsMarkdown": "copy sebagai markdown",
+    "copyAsText": "copy sebagai teks"
   },
   "messageTypes": {
-    "user": "P",
-    "error": "Kesalahan",
-    "tool": "Tool",
+    "user": "U",
+    "error": "error",
+    "tool": "tool",
     "claude": "Claude",
     "cursor": "Cursor",
     "codex": "Codex",
     "opencode": "OpenCode"
   },
   "tools": {
-    "settings": "Pengaturan Tool",
-    "error": "Kesalahan Tool",
-    "result": "Hasil Tool",
-    "viewParams": "Lihat parameter input",
-    "viewRawParams": "Lihat parameter mentah",
-    "viewDiff": "Lihat diff edit untuk",
-    "creatingFile": "Membuat file baru:",
-    "updatingTodo": "Memperbarui Daftar Tugas",
-    "read": "Baca",
-    "readFile": "Baca file",
-    "updateTodo": "Perbarui daftar tugas",
-    "readTodo": "Baca daftar tugas",
+    "settings": "pengaturan tool",
+    "error": "tool error",
+    "result": "hasil tool",
+    "viewParams": "liat parameter input",
+    "viewRawParams": "liat parameter mentah",
+    "viewDiff": "liat diff edit buat",
+    "creatingFile": "bikin file baru:",
+    "updatingTodo": "update todo list",
+    "read": "baca",
+    "readFile": "baca file",
+    "updateTodo": "update todo list",
+    "readTodo": "baca todo list",
     "searchResults": "hasil"
   },
   "search": {
-    "found": "Ditemukan {{count}} {{type}}",
+    "found": "nemu {{count}} {{type}}",
     "file": "file",
     "files": "file",
     "pattern": "pola:",
     "in": "di:"
   },
   "fileOperations": {
-    "updated": "File berhasil diperbarui",
-    "created": "File berhasil dibuat",
-    "written": "File berhasil ditulis",
-    "diff": "Diff",
-    "newFile": "File Baru",
-    "viewContent": "Lihat isi file",
-    "viewFullOutput": "Lihat output lengkap ({{count}} karakter)",
-    "contentDisplayed": "Isi file ditampilkan pada tampilan diff di atas"
+    "updated": "file udah diupdate",
+    "created": "file udah dibikin",
+    "written": "file udah ditulis",
+    "diff": "diff",
+    "newFile": "file baru",
+    "viewContent": "liat isi file",
+    "viewFullOutput": "liat output lengkap ({{count}} karakter)",
+    "contentDisplayed": "isi file udah ditampilin di diff atas"
   },
   "interactive": {
-    "title": "Prompt Interaktif",
-    "waiting": "Menunggu respons di CLI",
-    "instruction": "Pilih opsi di terminal tempat Claude sedang berjalan.",
-    "selectedOption": "✓ Claude memilih opsi {{number}}",
-    "instructionDetail": "Di CLI, opsi ini dipilih secara interaktif menggunakan tombol panah atau dengan mengetik nomor."
+    "title": "prompt interaktif",
+    "waiting": "nunggu respons di CLI",
+    "instruction": "pilih opsi di terminal tempat Claude lagi jalan.",
+    "selectedOption": "✓ Claude milih opsi {{number}}",
+    "instructionDetail": "di CLI, opsi ini dipilih pake tombol panah atau ketik nomornya."
   },
   "thinking": {
-    "title": "Berpikir...",
-    "emoji": "💭 Berpikir..."
+    "title": "mikir...",
+    "emoji": "mikir..."
   },
   "json": {
-    "response": "Respons JSON"
+    "response": "respons JSON"
   },
   "permissions": {
-    "grant": "Berikan izin untuk {{tool}}",
-    "added": "Izin ditambahkan",
-    "addTo": "Menambahkan {{entry}} ke Tool yang Diizinkan.",
-    "retry": "Izin disimpan. Coba lagi permintaan untuk menggunakan tool.",
-    "error": "Tidak dapat memperbarui izin. Silakan coba lagi.",
-    "openSettings": "Buka pengaturan"
+    "grant": "kasih izin buat {{tool}}",
+    "added": "izin udah ditambahin",
+    "addTo": "nambahin {{entry}} ke tool yang diizinin.",
+    "retry": "izin udah kesimpen. coba lagi request pake tool-nya.",
+    "error": "gagal update izin. coba lagi.",
+    "openSettings": "buka pengaturan"
   },
   "todo": {
-    "updated": "Daftar tugas berhasil diperbarui",
-    "current": "Daftar Tugas Saat Ini"
+    "updated": "todo list udah diupdate",
+    "current": "todo list sekarang"
   },
   "plan": {
-    "viewPlan": "📋 Lihat rencana implementasi",
-    "title": "Rencana Implementasi"
+    "viewPlan": "liat rencana implementasi",
+    "title": "rencana implementasi"
   },
   "usageLimit": {
-    "resetAt": "Batas penggunaan Claude tercapai. Batas akan direset pada **{{time}} {{timezone}}** - {{date}}"
+    "resetAt": "limit Claude lo abis. bakal reset jam **{{time}} {{timezone}}** - {{date}}"
   },
   "codex": {
-    "permissionMode": "Mode Izin",
+    "permissionMode": "mode izin",
     "modes": {
-      "default": "Mode Default",
-      "auto": "Mode Otomatis",
-      "acceptEdits": "Terima Edit",
-      "bypassPermissions": "Lewati Izin",
-      "plan": "Mode Rencana"
+      "default": "mode default",
+      "auto": "mode auto",
+      "acceptEdits": "terima edit",
+      "bypassPermissions": "bypass izin",
+      "plan": "mode plan"
     },
     "descriptions": {
-      "default": "Hanya perintah tepercaya (ls, cat, grep, git status, dll.) yang berjalan otomatis. Perintah lain dilewati. Dapat menulis ke workspace.",
-      "auto": "Model classifier memutuskan setiap pemanggilan tool akan disetujui atau ditolak. Berjalan otomatis, tetapi lebih aman daripada Bypass — penolakan masih dapat terjadi.",
-      "acceptEdits": "Semua perintah berjalan otomatis di dalam workspace. Mode otomatis penuh dengan eksekusi dalam sandbox.",
-      "bypassPermissions": "Akses penuh ke sistem tanpa pembatasan. Semua perintah berjalan otomatis dengan akses penuh ke disk dan jaringan. Gunakan dengan hati-hati.",
-      "plan": "Mode perencanaan - tidak ada perintah yang dijalankan"
+      "default": "cuma command yang aman (ls, cat, grep, git status, dll) yang jalan otomatis. sisanya diskip. bisa nulis ke workspace.",
+      "auto": "model classifier yang mutusin tiap tool call disetujuin atau ditolak. jalan otomatis, tapi lebih aman dari bypass — tetep bisa ada yang ditolak.",
+      "acceptEdits": "semua command jalan otomatis di dalem workspace. full auto, eksekusinya di sandbox.",
+      "bypassPermissions": "akses full ke sistem tanpa batasan. semua command jalan otomatis dengan akses full ke disk dan network. hati-hati pakenya.",
+      "plan": "mode plan - ga ada command yang dijalanin"
     },
-    "technicalDetails": "Detail teknis"
+    "technicalDetails": "detail teknis"
   },
   "voice": {
-    "input": "Input suara",
-    "stopRecording": "Hentikan rekaman",
-    "transcribing": "Mentranskripsikan…",
-    "speak": "Bacakan",
-    "stopSpeaking": "Hentikan",
-    "loading": "Memuat…"
+    "input": "input suara",
+    "stopRecording": "stop rekam",
+    "transcribing": "lagi transkrip…",
+    "speak": "bacain",
+    "stopSpeaking": "stop",
+    "loading": "bentar…"
   },
   "input": {
-    "placeholder": "Ketik / untuk perintah, @ untuk file, atau tanyakan apa saja kepada {{provider}}...",
-    "placeholderDefault": "Ketik pesan...",
-    "disabled": "Input dinonaktifkan",
-    "attachFiles": "Lampirkan file",
-    "attachImages": "Lampirkan gambar",
-    "send": "Kirim",
-    "stop": "Hentikan",
+    "placeholder": "ketik / buat command, @ buat file, atau tanya apa aja ke {{provider}}...",
+    "placeholderDefault": "ketik pesan...",
+    "disabled": "input lagi dimatiin",
+    "attachFiles": "lampirin file",
+    "attachImages": "lampirin gambar",
+    "send": "kirim",
+    "stop": "stop",
     "hintText": {
-      "ctrlEnter": "Ctrl+Enter untuk mengirim • Shift+Enter untuk baris baru • Tab untuk mengganti mode • / untuk slash command",
-      "enter": "Enter untuk mengirim • Shift+Enter untuk baris baru • Tab untuk mengganti mode • / untuk slash command",
-      "queue": "Enter untuk mengantrekan pesan berikutnya",
-      "updateQueued": "Enter untuk memperbarui pesan yang diantrekan"
+      "ctrlEnter": "ctrl+enter buat kirim • shift+enter buat baris baru • tab buat ganti mode • / buat slash command",
+      "enter": "enter buat kirim • shift+enter buat baris baru • tab buat ganti mode • / buat slash command",
+      "queue": "enter buat antriin pesan berikutnya",
+      "updateQueued": "enter buat update pesan yang udah diantriin"
     },
-    "clickToChangeMode": "Klik untuk mengganti mode izin (atau tekan Tab di input)",
-    "showAllCommands": "Tampilkan semua perintah",
-    "clearInput": "Kosongkan input",
-    "scrollToBottom": "Gulir ke bawah",
+    "clickToChangeMode": "klik buat ganti mode izin (atau pencet tab di input)",
+    "showAllCommands": "tampilin semua command",
+    "clearInput": "kosongin input",
+    "scrollToBottom": "scroll ke bawah",
     "queue": {
-      "sendNext": "Antrekan pesan berikutnya",
-      "update": "Perbarui pesan antrean",
-      "label": "Diantrekan",
-      "willSend": "Akan dikirim setelah proses ini selesai",
-      "edit": "Edit pesan antrean",
-      "delete": "Hapus pesan antrean"
+      "sendNext": "antriin pesan berikutnya",
+      "update": "update pesan antrean",
+      "label": "diantriin",
+      "willSend": "bakal dikirim abis proses ini kelar",
+      "edit": "edit pesan antrean",
+      "delete": "hapus pesan antrean"
     }
   },
   "composer": {
-    "reasoning": "Penalaran",
-    "model": "Model",
-    "effortDefault": "Default",
-    "loadingModels": "Memuat model…",
-    "modelMenu": "Pilih model dan tingkat penalaran",
-    "permissionHeading": "Bagaimana tindakan {{provider}} harus disetujui?",
+    "reasoning": "reasoning",
+    "model": "model",
+    "effortDefault": "default",
+    "loadingModels": "bentar, load model…",
+    "modelMenu": "pilih model sama level reasoning",
+    "permissionHeading": "aksi {{provider}} mau disetujuin gimana?",
     "editing": {
-      "title": "Mengganti pesan sebelumnya",
-      "filesNotReverted": "file yang sudah diubah agen tidak dikembalikan",
-      "cancel": "Batal"
+      "title": "ganti pesan sebelumnya",
+      "filesNotReverted": "file yang udah diubah agent ga dibalikin",
+      "cancel": "batal"
     }
   },
   "providerSelection": {
-    "title": "Pilih Asisten AI",
-    "description": "Pilih provider untuk memulai percakapan baru",
-    "selectModel": "Pilih Model",
+    "title": "pilih asisten AI",
+    "description": "pilih provider buat mulai obrolan baru",
+    "selectModel": "pilih model",
     "providerInfo": {
-      "anthropic": "oleh Anthropic",
-      "openai": "oleh OpenAI",
-      "cursorEditor": "Editor Kode AI",
-      "google": "oleh Google"
+      "anthropic": "dari Anthropic",
+      "openai": "dari OpenAI",
+      "cursorEditor": "editor kode AI",
+      "google": "dari Google"
     },
     "readyPrompt": {
-      "claude": "Siap menggunakan Claude dengan {{model}}. Mulai ketik pesan di bawah.",
-      "cursor": "Siap menggunakan Cursor dengan {{model}}. Mulai ketik pesan di bawah.",
-      "codex": "Siap menggunakan Codex dengan {{model}}. Mulai ketik pesan di bawah.",
-      "opencode": "Siap menggunakan OpenCode dengan {{model}}. Mulai ketik pesan di bawah.",
-      "default": "Pilih provider di atas untuk memulai"
+      "claude": "siap pake Claude dengan {{model}}. langsung ketik pesan di bawah.",
+      "cursor": "siap pake Cursor dengan {{model}}. langsung ketik pesan di bawah.",
+      "codex": "siap pake Codex dengan {{model}}. langsung ketik pesan di bawah.",
+      "opencode": "siap pake OpenCode dengan {{model}}. langsung ketik pesan di bawah.",
+      "default": "pilih provider di atas buat mulai"
     },
-    "pressToSearch": "Tekan <kbd>{{shortcut}}</kbd> untuk mencari sesi, file, dan commit",
-    "chooseModel": "Pilih model",
-    "chooseModelDescription": "Model bawaan dan kustom dalam satu daftar",
-    "addModel": "Tambah model",
-    "searchModels": "Cari model...",
-    "manageModels": "Kelola model",
-    "noModelsFound": "Tidak ada model.",
-    "loadingModels": "Memuat model…",
-    "clickToChange": "Klik untuk mengganti model"
+    "pressToSearch": "pencet <kbd>{{shortcut}}</kbd> buat nyari session, file, sama commit",
+    "chooseModel": "pilih model",
+    "chooseModelDescription": "model bawaan sama custom dalam satu list",
+    "addModel": "tambah model",
+    "searchModels": "cari model...",
+    "manageModels": "atur model",
+    "noModelsFound": "ga ada model.",
+    "loadingModels": "bentar, load model…",
+    "clickToChange": "klik buat ganti model"
   },
   "session": {
     "continue": {
-      "title": "Lanjutkan percakapan",
-      "description": "Ajukan pertanyaan tentang kode, minta perubahan, atau dapatkan bantuan untuk tugas development"
+      "title": "lanjutin obrolan",
+      "description": "tanya soal kode, minta ubah sesuatu, atau minta bantuan buat urusan development"
     },
     "loading": {
-      "olderMessages": "Memuat pesan lama...",
-      "sessionMessages": "Memuat pesan sesi..."
+      "olderMessages": "bentar, load pesan lama...",
+      "sessionMessages": "bentar, load pesan session..."
     },
     "messages": {
-      "showingOf": "Menampilkan {{shown}} dari {{total}} pesan",
-      "scrollToLoad": "Gulir ke atas untuk memuat lainnya",
-      "showingLast": "Menampilkan {{count}} pesan terakhir (total {{total}})",
-      "loadEarlier": "Muat pesan sebelumnya",
-      "loadAll": "Muat semua pesan",
-      "loadingAll": "Memuat semua pesan...",
-      "allLoaded": "Semua pesan telah dimuat",
-      "perfWarning": "Semua pesan telah dimuat — scrolling mungkin lebih lambat. Klik \"Gulir ke bawah\" untuk memulihkan performa."
+      "showingOf": "nampilin {{shown}} dari {{total}} pesan",
+      "scrollToLoad": "scroll ke atas buat load lagi",
+      "showingLast": "nampilin {{count}} pesan terakhir (total {{total}})",
+      "loadEarlier": "load pesan sebelumnya",
+      "loadAll": "load semua pesan",
+      "loadingAll": "bentar, load semua pesan...",
+      "allLoaded": "semua pesan udah ke-load",
+      "perfWarning": "semua pesan udah ke-load — scroll bisa agak lemot. klik \"scroll ke bawah\" biar enteng lagi."
     }
   },
   "shell": {
     "selectProject": {
-      "title": "Pilih Proyek",
-      "description": "Pilih proyek untuk membuka shell interaktif di direktori tersebut"
+      "title": "pilih project",
+      "description": "pilih project buat buka shell interaktif di direktori itu"
     },
     "status": {
-      "newSession": "Sesi Baru",
-      "initializing": "Menginisialisasi...",
-      "restarting": "Memulai ulang..."
+      "newSession": "session baru",
+      "initializing": "lagi nyiapin...",
+      "restarting": "lagi restart..."
     },
     "actions": {
-      "disconnect": "Putuskan",
-      "disconnectTitle": "Putuskan dari shell",
-      "restart": "Mulai Ulang",
-      "restartTitle": "Mulai Ulang Shell",
-      "connect": "Lanjutkan di Shell",
-      "connectTitle": "Hubungkan ke shell",
-      "bypass": "Bypass",
-      "bypassOnTitle": "Bypass izin aktif — klik untuk menonaktifkan (memulai ulang CLI)",
-      "bypassOffTitle": "Bypass izin nonaktif — klik untuk mengaktifkan (memulai ulang CLI)"
+      "disconnect": "putusin",
+      "disconnectTitle": "putusin dari shell",
+      "restart": "restart",
+      "restartTitle": "restart shell",
+      "connect": "lanjut di shell",
+      "connectTitle": "connect ke shell",
+      "bypass": "bypass",
+      "bypassOnTitle": "bypass izin nyala — klik buat matiin (CLI bakal restart)",
+      "bypassOffTitle": "bypass izin mati — klik buat nyalain (CLI bakal restart)"
     },
-    "loading": "Memuat terminal...",
-    "connecting": "Menghubungkan ke shell...",
-    "startSession": "Mulai sesi Claude baru",
-    "resumeSession": "Lanjutkan sesi: {{displayName}}...",
-    "runCommand": "Jalankan {{command}} di {{projectName}}",
-    "startCli": "Memulai Claude CLI di {{projectName}}",
-    "defaultCommand": "perintah"
+    "loading": "bentar, load terminal...",
+    "connecting": "lagi connect ke shell...",
+    "startSession": "mulai session Claude baru",
+    "resumeSession": "lanjutin session: {{displayName}}...",
+    "runCommand": "jalanin {{command}} di {{projectName}}",
+    "startCli": "lagi start Claude CLI di {{projectName}}",
+    "defaultCommand": "command"
   },
   "claudeStatus": {
     "actions": {
-      "thinking": "Berpikir",
-      "processing": "Memproses",
-      "analyzing": "Menganalisis",
-      "working": "Bekerja",
-      "computing": "Menghitung",
-      "reasoning": "Menalar"
+      "thinking": "mikir",
+      "processing": "proses",
+      "analyzing": "nganalisis",
+      "working": "ngerjain",
+      "computing": "ngitung",
+      "reasoning": "nalar"
     },
     "state": {
-      "live": "Aktif",
-      "paused": "Dijeda"
+      "live": "live",
+      "paused": "dijeda"
     },
     "elapsed": {
       "seconds": "{{count}} dtk",
       "minutesSeconds": "{{minutes}} mnt {{seconds}} dtk",
-      "label": "{{time}} berlalu",
-      "startingNow": "Baru dimulai"
+      "label": "udah {{time}}",
+      "startingNow": "baru mulai"
     },
-    "stop": "Hentikan",
+    "stop": "stop",
     "controls": {
-      "stopGeneration": "Hentikan Generasi",
-      "pressEscToStop": "Tekan Esc kapan saja untuk menghentikan"
+      "stopGeneration": "stop generate",
+      "pressEscToStop": "pencet esc kapan aja buat stop"
     },
     "providers": {
-      "assistant": "Asisten"
+      "assistant": "asisten"
     }
   },
   "projectSelection": {
-    "startChatWithProvider": "Pilih proyek untuk mulai chat dengan {{provider}}"
+    "startChatWithProvider": "pilih project buat mulai chat sama {{provider}}"
   },
   "tasks": {
-    "nextTaskPrompt": "Mulai tugas berikutnya"
+    "nextTaskPrompt": "mulai task berikutnya"
   },
   "message": {
-    "editAndResend": "Edit dan kirim ulang",
-    "forkFromHere": "Fork dari sini"
+    "editAndResend": "edit terus kirim ulang",
+    "forkFromHere": "fork dari sini"
   },
   "export": {
-    "trigger": "Ekspor percakapan",
-    "heading": "Ekspor sebagai",
-    "untitled": "Percakapan",
+    "trigger": "export obrolan",
+    "heading": "export sebagai",
+    "untitled": "obrolan",
     "html": {
-      "label": "Halaman web (.html)",
-      "description": "Mandiri, tampil seperti aplikasi, dan dapat dicetak ke PDF."
+      "label": "halaman web (.html)",
+      "description": "standalone, tampilannya kayak di app, bisa diprint ke PDF."
     },
     "markdown": {
-      "label": "Markdown (.md)",
-      "description": "Teks biasa dengan pemanggilan tool dan diff."
+      "label": "markdown (.md)",
+      "description": "teks biasa plus tool call sama diff."
     },
     "json": {
       "label": "JSON (.json)",
-      "description": "Semua pesan tanpa format, untuk tooling."
+      "description": "semua pesan mentahan, buat tooling."
     }
   },
   "schedule": {
-    "trigger": "Jadwalkan pesan ini",
-    "heading": "Kirim nanti",
-    "customLabel": "Atau pilih waktu",
-    "confirm": "Jadwalkan",
+    "trigger": "jadwalin pesan ini",
+    "heading": "kirim nanti",
+    "customLabel": "atau pilih waktu",
+    "confirm": "jadwalin",
     "in": {
-      "15": "Dalam 15 menit",
-      "60": "Dalam satu jam",
-      "480": "Dalam 8 jam",
-      "1440": "Besok"
+      "15": "15 menit lagi",
+      "60": "sejam lagi",
+      "480": "8 jam lagi",
+      "1440": "besok"
     },
-    "pending": "Dijadwalkan untuk {{when}}",
-    "failed": "Tidak terkirim — {{reason}}",
-    "cancel": "Batalkan pesan terjadwal",
-    "dismiss": "Tutup pemberitahuan kegagalan"
+    "pending": "dijadwalin {{when}}",
+    "failed": "ga kekirim — {{reason}}",
+    "cancel": "batalin pesan terjadwal",
+    "dismiss": "tutup notif gagal"
   },
   "misc": {
-    "copyToClipboard": "Salin ke clipboard",
-    "copyCommand": "Salin perintah",
-    "runningTask": "Menjalankan tugas",
-    "userAskedRevise": "Pengguna meminta revisi rencana",
-    "typeAnswer": "Ketik jawaban...",
-    "skipOne": "Lewati",
-    "skipAll": "Lewati semua",
-    "exportChat": "Ekspor chat",
-    "closeImagePreview": "Tutup pratinjau gambar",
-    "availableCommands": "Perintah yang tersedia",
-    "filterCommands": "Filter perintah...",
-    "closeModal": "Tutup modal hasil perintah",
-    "noDescription": "Tidak ada deskripsi.",
-    "modelChangeFailed": "Model tidak dapat diganti saat ini.",
-    "choiceSavedHint": "Pilihan disimpan untuk sesi ini dan menjadi default untuk chat baru.",
-    "docsSearchSubtitle": "Cari perintah bawaan, pola sintaks, dan penggunaan perintah tanpa meninggalkan chat.",
-    "enterModelInfo": "Masukkan nama model dan ID model.",
-    "modelSaveFailed": "Model ini tidak dapat disimpan.",
-    "modelDeleteFailed": "Model ini tidak dapat dihapus.",
-    "cancelEditing": "Batalkan edit",
-    "userDeniedTool": "Pengguna menolak penggunaan tool",
-    "showTokenUsage": "Tampilkan penggunaan token",
+    "copyToClipboard": "copy ke clipboard",
+    "copyCommand": "copy command",
+    "runningTask": "lagi jalanin task",
+    "userAskedRevise": "user minta revisi plan",
+    "typeAnswer": "ketik jawaban...",
+    "skipOne": "skip",
+    "skipAll": "skip semua",
+    "exportChat": "export chat",
+    "closeImagePreview": "tutup preview gambar",
+    "availableCommands": "command yang ada",
+    "filterCommands": "filter command...",
+    "closeModal": "tutup modal hasil command",
+    "noDescription": "ga ada deskripsi.",
+    "modelChangeFailed": "model ga bisa diganti sekarang.",
+    "choiceSavedHint": "pilihan kesimpen buat session ini dan jadi default buat chat baru.",
+    "docsSearchSubtitle": "cari command bawaan, pola sintaks, sama cara pake command tanpa keluar dari chat.",
+    "enterModelInfo": "isi nama model sama ID model.",
+    "modelSaveFailed": "model ini ga bisa disimpen.",
+    "modelDeleteFailed": "model ini ga bisa dihapus.",
+    "cancelEditing": "batal edit",
+    "userDeniedTool": "user nolak pake tool",
+    "showTokenUsage": "tampilin pemakaian token",
     "fallbackCommands": {
-      "models": "Telusuri model yang tersedia untuk provider aktif.",
-      "cost": "Tinjau penggunaan token untuk sesi aktif.",
-      "status": "Periksa status runtime, versi, provider, dan environment.",
-      "memory": "Buka file memori CLAUDE.md proyek.",
-      "config": "Buka pengaturan dan konfigurasi.",
-      "help": "Tampilkan dokumentasi dan sintaks perintah."
+      "models": "liat model yang ada buat provider aktif.",
+      "cost": "cek pemakaian token session aktif.",
+      "status": "cek status runtime, versi, provider, sama environment.",
+      "memory": "buka file memori CLAUDE.md project.",
+      "config": "buka pengaturan sama konfigurasi.",
+      "help": "tampilin dokumentasi sama sintaks command."
     },
     "modalMeta": {
-      "helpEyebrow": "Pusat perintah",
-      "helpTitle": "Bantuan & Pintasan",
-      "helpSubtitle": "Cari perintah bawaan, pola sintaks, dan penggunaan perintah tanpa meninggalkan chat.",
-      "modelsEyebrow": "Pemilihan model",
-      "modelsTitle": "Pilih Model",
-      "modelsSubtitle": "Pilih model yang akan digunakan provider ini.",
-      "costEyebrow": "Telemetri sesi",
-      "costTitle": "Penggunaan Token",
-      "costSubtitle": "Jumlah token input, output, dan total untuk sesi ini.",
-      "statusEyebrow": "Kondisi runtime",
-      "statusTitle": "Status Sistem",
-      "statusSubtitle": "Detail versi, provider, runtime, dan environment dalam satu tempat.",
-      "commandResult": "Hasil Perintah"
+      "helpEyebrow": "pusat command",
+      "helpTitle": "bantuan & shortcut",
+      "helpSubtitle": "cari command bawaan, pola sintaks, sama cara pake command tanpa keluar dari chat.",
+      "modelsEyebrow": "pilih model",
+      "modelsTitle": "pilih model",
+      "modelsSubtitle": "pilih model yang dipake provider ini.",
+      "costEyebrow": "telemetri session",
+      "costTitle": "pemakaian token",
+      "costSubtitle": "jumlah token input, output, sama total buat session ini.",
+      "statusEyebrow": "kondisi runtime",
+      "statusTitle": "status sistem",
+      "statusSubtitle": "detail versi, provider, runtime, sama environment di satu tempat.",
+      "commandResult": "hasil command"
     },
-    "choiceSavedSession": "Pilihan disimpan untuk sesi ini dan menjadi default untuk chat baru.",
-    "choiceSavedDefault": "Pilihan menjadi model default untuk chat baru.",
-    "tokensUsed_one": "{{count}} token digunakan",
-    "tokensUsed_other": "{{count}} token digunakan",
-    "expandImage": "Perbesar {{name}}",
+    "choiceSavedSession": "pilihan kesimpen buat session ini dan jadi default buat chat baru.",
+    "choiceSavedDefault": "pilihan jadi model default buat chat baru.",
+    "tokensUsed_one": "{{count}} token kepake",
+    "tokensUsed_other": "{{count}} token kepake",
+    "expandImage": "gedein {{name}}",
     "tokensLabel_one": "token",
     "tokensLabel_other": "token",
-    "escClosesModal": "Esc menutup modal.",
-    "close": "Tutup"
+    "escClosesModal": "esc buat nutup modal.",
+    "close": "tutup"
   }
 }

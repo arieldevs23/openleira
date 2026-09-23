@@ -466,9 +466,6 @@
     "installFailed": "Yükleme başarısız",
     "uninstallFailed": "Kaldırma başarısız",
     "toggleFailed": "Açıp kapama başarısız",
-    "starterPluginLabel": "Başlangıç Eklentisi",
-    "starter": "Başlangıç",
-    "docs": "Dokümanlar",
     "starterPlugin": {
       "name": "Proje İstatistikleri",
       "badge": "başlangıç",

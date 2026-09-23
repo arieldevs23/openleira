@@ -448,7 +448,7 @@
   "pluginSettings": {
     "title": "プラグイン",
     "description": "カスタムプラグインでインターフェースを拡張します。gitからインストールするか、~/.claude-code-ui/plugins/ にフォルダを配置してください。",
-    "installPlaceholder": "https://github.com/user/my-plugin",
+    "installPlaceholder": "https://git.example.com/user/my-plugin.git",
     "installButton": "インストール",
     "installing": "インストール中…",
     "securityWarning": "信頼できる作成者のプラグイン、またはソースコードを確認済みのプラグインのみをインストールしてください。",
@@ -466,8 +466,6 @@
     "uninstallFailed": "削除に失敗しました",
     "toggleFailed": "切り替えに失敗しました",
     "buildYourOwn": "プラグインを自作する",
-    "starter": "スターター",
-    "docs": "ドキュメント",
     "starterPlugin": {
       "name": "プロジェクト統計",
       "badge": "スターター",

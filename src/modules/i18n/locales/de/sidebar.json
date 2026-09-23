@@ -20,7 +20,7 @@
     "runClaudeCli": "Führ Claude CLI in einem Projektverzeichnis aus, um zu beginnen"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "OpenLeira",
     "subtitle": "KI-Programmierassistent-Oberfläche"
   },
   "sessions": {
@@ -35,7 +35,6 @@
     "showMore": "Weitere Sitzungen anzeigen"
   },
   "tooltips": {
-    "viewEnvironments": "Umgebungen anzeigen",
     "hideSidebar": "Seitenleiste ausblenden",
     "createProject": "Neues Projekt erstellen",
     "refresh": "Projekte und Sitzungen aktualisieren (Strg+R)",
@@ -67,13 +66,7 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "delete": "Löschen",
-    "rename": "Umbenennen",
-    "joinCommunity": "Community beitreten",
-    "reportIssue": "Problem melden",
-    "starOnGithub": "Stern auf GitHub"
-  },
-  "branding": {
-    "openSource": "Open Source"
+    "rename": "Umbenennen"
   },
   "status": {
     "active": "Aktiv",

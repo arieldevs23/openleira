@@ -465,9 +465,6 @@
     "installFailed": "Installazione fallita",
     "uninstallFailed": "Disinstallazione fallita",
     "toggleFailed": "Attivazione/disattivazione fallita",
-    "starterPluginLabel": "Plugin iniziale",
-    "starter": "Iniziale",
-    "docs": "Documentazione",
     "starterPlugin": {
       "name": "Statistiche progetto",
       "badge": "iniziale",
