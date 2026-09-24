@@ -164,5 +164,20 @@
   "files": {
     "open": "Files",
     "opening": "Opening files..."
+  },
+  "contextMenu": {
+    "sessionMenuLabel": "Session options for {{name}}",
+    "projectMenuLabel": "Project options for {{name}}",
+    "providerSession": "{{provider}} session",
+    "renameSession": "Rename session",
+    "sessionName": "Session name",
+    "openInNewTab": "Open in new tab",
+    "tryAgain": "Click to try again.",
+    "forkSession": "Fork session",
+    "forkDescription": "Continue from a copy, leaving this one untouched.",
+    "deleteSession": "Archive or delete session",
+    "renameProject": "Rename project",
+    "deleteProject": "Remove project",
+    "starred": "Starred"
   }
 }

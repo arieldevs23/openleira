@@ -18,9 +18,10 @@ import type { Project, SessionWithProvider, SidebarProjectListProps } from '@/sh
 const recordedOptionsProps: Record<string, unknown>[] = [];
 
 vi.mock('@/modules/sidebar/SessionOptions', () => ({
-  default: (props: Record<string, unknown>) => {
+  // SessionOptions wraps the row, so the stub still renders it.
+  default: (props: Record<string, unknown> & { children?: React.ReactNode }) => {
     recordedOptionsProps.push(props);
-    return null;
+    return props.children ?? null;
   },
 }));
 

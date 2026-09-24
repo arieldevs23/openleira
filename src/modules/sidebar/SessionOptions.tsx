@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { Check, Edit2, GitBranch, MoreHorizontal, Trash2, X } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Check, Edit2, ExternalLink, GitBranch, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { ActionMenu } from '@/shared/ui';
+import { ContextMenu, useContextMenu } from '@/shared/ui';
 import { cn } from '@/shared/utils';
 import type { LLMProvider } from '@/shared/types';
 import { useSessionForkingProviders } from '@/shared/hooks/useProviderCapabilities';
@@ -32,17 +33,19 @@ type SessionOptionsProps = {
   /** Withheld where the row has nowhere to send a delete. */
   canDelete?: boolean;
   className?: string;
+  /** The row itself; right-click or a long-press anywhere on it opens the menu. */
+  children: ReactNode;
   t: TFunction;
 };
 
 /**
- * A session row's controls: the options menu, and the inline rename that
- * replaces it while a rename is open.
+ * A session row's actions: a context menu on right-click (desktop) or long-press
+ * (touch), and the inline rename that overlays the row while a rename is open.
+ * The row itself carries no action buttons.
  *
  * Shared by the Projects list and the Conversations list so the two rows cannot
- * drift — the first cut of the Conversations row copied this markup, which is
- * how two rows end up diverging one fix at a time. Callers keep only what is
- * genuinely theirs: where the controls sit, and whether deleting is offered.
+ * drift. Callers keep only what is genuinely theirs: the row markup, and whether
+ * deleting is offered.
  */
 export default function SessionOptions({
   sessionId,
@@ -60,12 +63,15 @@ export default function SessionOptions({
   onFork,
   canDelete = true,
   className,
+  children,
   t,
 }: SessionOptionsProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const renamePanelRef = useRef<HTMLDivElement>(null);
   const providerLabel = PROVIDER_LABELS[provider];
   const { copyState, copyLabel, setOptionsOpen, handleCopyAction, isCopyPending, CopyStateIcon } =
     useProviderSessionIdCopy(sessionId, providerLabel);
+  // The provider id is fetched when the menu opens and dropped when it closes.
+  const { triggerHandlers, position, close } = useContextMenu({ enabled: !isEditing, onOpenChange: setOptionsOpen });
 
   // Read from the backend capability matrix rather than branching on the
   // provider id here; the request is cached module-side, so every row shares one.
@@ -80,8 +86,8 @@ export default function SessionOptions({
     }
 
     const handlePointerDown = (event: MouseEvent) => {
-      const container = containerRef.current;
-      if (container && !container.contains(event.target as Node)) {
+      const panel = renamePanelRef.current;
+      if (panel && !panel.contains(event.target as Node)) {
         onCancelEditingSession();
       }
     };
@@ -98,13 +104,62 @@ export default function SessionOptions({
     onSaveEditingSession(projectId, sessionId, renameDraft, provider);
   };
 
+  const items = [
+    ...(projectId !== null ? [{
+      key: 'rename',
+      label: t('contextMenu.renameSession', 'Rename session'),
+      icon: Edit2,
+      onSelect: () => onStartEditingSession(projectId, sessionId, sessionName),
+    }] : []),
+    {
+      key: 'open-tab',
+      label: t('contextMenu.openInNewTab', 'Open in new tab'),
+      icon: ExternalLink,
+      onSelect: () => window.open(`/session/${sessionId}`, '_blank', 'noopener'),
+    },
+    {
+      key: 'copy',
+      label: copyLabel,
+      description: copyState === 'error' ? t('contextMenu.tryAgain', 'Click to try again.') : undefined,
+      icon: CopyStateIcon,
+      loading: isCopyPending,
+      closeOnSelect: false,
+      onSelect: handleCopyAction,
+    },
+    ...(canFork && onFork ? [{
+      key: 'fork',
+      label: t('contextMenu.forkSession', 'Fork session'),
+      description: t('contextMenu.forkDescription', 'Continue from a copy, leaving this one untouched.'),
+      icon: GitBranch,
+      onSelect: onFork,
+    }] : []),
+    ...(canDelete && !isProcessing ? [{
+      key: 'delete',
+      label: t('contextMenu.deleteSession', 'Archive or delete session'),
+      icon: Trash2,
+      isDanger: true,
+      showDividerBefore: true,
+      onSelect: () => onDeleteSession(sessionId, sessionName),
+    }] : []),
+  ];
+
   return (
-    <div ref={containerRef} className={cn('flex items-center gap-1', className)}>
-      {isEditing ? (
-        <>
+    <div
+      className={cn('relative [-webkit-touch-callout:none]', className)}
+      {...triggerHandlers}
+    >
+      {children}
+
+      {isEditing && (
+        <div
+          ref={renamePanelRef}
+          className="glass-surface absolute inset-0 z-10 flex items-center gap-1 rounded-lg px-2"
+          onClick={(event) => event.stopPropagation()}
+        >
           <input
             type="text"
             value={renameDraft}
+            aria-label={t('contextMenu.sessionName', 'Session name')}
             onChange={(event) => onRenameDraftChange(event.target.value)}
             onKeyDown={(event) => {
               event.stopPropagation();
@@ -114,83 +169,44 @@ export default function SessionOptions({
                 onCancelEditingSession();
               }
             }}
-            onClick={(event) => event.stopPropagation()}
-            className="w-32 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+            // 16px on touch keeps iOS Safari from zooming the viewport on focus.
+            className="min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-base text-foreground focus:outline-none focus:ring-1 focus:ring-primary md:text-xs"
             autoFocus
+            autoComplete="off"
           />
           <button
-            className="flex h-6 w-6 items-center justify-center rounded bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40"
-            onClick={(event) => {
-              event.stopPropagation();
-              saveRename();
-            }}
-            title={t('tooltips.save')}
+            type="button"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-green-600 hover:bg-green-500/10 dark:text-green-400"
+            onClick={saveRename}
+            aria-label={t('tooltips.save')}
           >
-            <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+            <Check className="h-3.5 w-3.5" />
           </button>
           <button
-            className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40"
-            onClick={(event) => {
-              event.stopPropagation();
-              onCancelEditingSession();
-            }}
-            title={t('tooltips.cancel')}
+            type="button"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+            onClick={onCancelEditingSession}
+            aria-label={t('tooltips.cancel')}
           >
-            <X className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+            <X className="h-3.5 w-3.5" />
           </button>
-        </>
-      ) : (
-        <ActionMenu
-          label="Session options"
-          ariaLabel={`Session options for ${sessionName}`}
-          icon={MoreHorizontal}
-          iconOnly
-          portal
-          variant="ghost"
-          size="icon"
-          onOpenChange={setOptionsOpen}
-          triggerClassName="h-7 w-7 text-muted-foreground opacity-70 hover:bg-muted hover:opacity-100"
-          menuClassName="w-[260px] rounded-lg p-1.5 shadow-xl"
+        </div>
+      )}
+
+      {position && (
+        <ContextMenu
+          position={position}
+          onClose={close}
+          ariaLabel={t('contextMenu.sessionMenuLabel', { name: sessionName, defaultValue: 'Session options for {{name}}' })}
           header={(
-            <div className="mb-1 border-b border-border px-3 py-2">
-              <p className="truncate text-xs font-medium text-foreground" title={sessionName}>
-                {sessionName}
+            <div className="mb-1 border-b border-foreground/[0.08] px-2.5 py-1.5">
+              <p className="truncate text-xs font-medium text-foreground" title={sessionName}>{sessionName}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {t('contextMenu.providerSession', { provider: providerLabel, defaultValue: '{{provider}} session' })}
               </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{providerLabel} session</p>
             </div>
           )}
-          items={[
-            ...(projectId !== null ? [{
-              key: 'rename',
-              label: 'Rename session',
-              icon: Edit2,
-              onSelect: () => onStartEditingSession(projectId, sessionId, sessionName),
-            }] : []),
-            {
-              key: 'copy',
-              label: copyLabel,
-              description: copyState === 'error' ? 'Click to try again.' : undefined,
-              icon: CopyStateIcon,
-              loading: isCopyPending,
-              closeOnSelect: false,
-              onSelect: handleCopyAction,
-            },
-            ...(canFork && onFork ? [{
-              key: 'fork',
-              label: 'Fork session',
-              description: 'Continue from a copy, leaving this one untouched.',
-              icon: GitBranch,
-              onSelect: onFork,
-            }] : []),
-            ...(canDelete && !isProcessing ? [{
-              key: 'delete',
-              label: 'Archive or delete session',
-              icon: Trash2,
-              isDanger: true,
-              showDividerBefore: true,
-              onSelect: () => onDeleteSession(sessionId, sessionName),
-            }] : []),
-          ]}
+          items={items}
         />
       )}
     </div>

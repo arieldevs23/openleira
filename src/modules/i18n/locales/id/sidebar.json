@@ -163,5 +163,20 @@
   "files": {
     "open": "files",
     "opening": "bentar, lagi buka files..."
+  },
+  "contextMenu": {
+    "sessionMenuLabel": "opsi sesi {{name}}",
+    "projectMenuLabel": "opsi project {{name}}",
+    "providerSession": "sesi {{provider}}",
+    "renameSession": "ganti nama sesi",
+    "sessionName": "nama sesi",
+    "openInNewTab": "buka di tab baru",
+    "tryAgain": "klik buat coba lagi",
+    "forkSession": "fork sesi",
+    "forkDescription": "lanjut dari salinannya, yg ini ga diutak-atik",
+    "deleteSession": "arsipin atau hapus sesi",
+    "renameProject": "ganti nama project",
+    "deleteProject": "hapus project",
+    "starred": "difavoritin"
   }
 }

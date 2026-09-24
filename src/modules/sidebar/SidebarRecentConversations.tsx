@@ -131,7 +131,32 @@ export default function SidebarRecentConversations({
           };
 
           return (
-            <div key={conversation.sessionId} className="group relative">
+            <SessionOptions
+              key={conversation.sessionId}
+              sessionId={conversation.sessionId}
+              sessionName={conversation.sessionTitle}
+              provider={conversation.provider}
+              projectId={conversation.projectId}
+              isProcessing={isProcessing}
+              isEditing={sessionRename !== null}
+              renameDraft={sessionRename?.draft ?? ''}
+              onRenameDraftChange={sessionActions.onRenameDraftChange}
+              onStartEditingSession={sessionActions.onStartEditingSession}
+              onCancelEditingSession={sessionActions.onCancelEditingSession}
+              onSaveEditingSession={sessionActions.onSaveEditingSession}
+              onDeleteSession={sessionActions.onDeleteSession}
+              // The fork path reads only the id, provider and owning project,
+              // which is all a recents row knows about the session.
+              onFork={sessionActions.onForkSession
+                ? () => sessionActions.onForkSession?.({
+                  id: conversation.sessionId,
+                  summary: conversation.sessionTitle,
+                  __provider: conversation.provider,
+                  __projectId: conversation.projectId ?? undefined,
+                })
+                : undefined}
+              t={t}
+            >
               {/*
                 * Only the amber "needs attention" dot, and the spinner below. The
                 * Projects row also has a green dot for a session touched recently,
@@ -157,7 +182,7 @@ export default function SidebarRecentConversations({
                 onClick={handleClick}
                 data-testid="recent-conversation-row"
                 className={cn(
-                  'flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 pr-11 text-left transition-colors',
+                  'flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors',
                   isSelected
                     ? 'bg-primary/10 text-foreground'
                     : 'text-foreground hover:bg-accent/60',
@@ -207,34 +232,7 @@ export default function SidebarRecentConversations({
                   </span>
                 </span>
               </a>
-
-              <SessionOptions
-                className="absolute right-2 top-1/2 -translate-y-1/2 transform"
-                sessionId={conversation.sessionId}
-                sessionName={conversation.sessionTitle}
-                provider={conversation.provider}
-                projectId={conversation.projectId}
-                isProcessing={isProcessing}
-                isEditing={sessionRename !== null}
-                renameDraft={sessionRename?.draft ?? ''}
-                onRenameDraftChange={sessionActions.onRenameDraftChange}
-                onStartEditingSession={sessionActions.onStartEditingSession}
-                onCancelEditingSession={sessionActions.onCancelEditingSession}
-                onSaveEditingSession={sessionActions.onSaveEditingSession}
-                onDeleteSession={sessionActions.onDeleteSession}
-                // The fork path reads only the id, provider and owning project,
-                // which is all a recents row knows about the session.
-                onFork={sessionActions.onForkSession
-                  ? () => sessionActions.onForkSession?.({
-                    id: conversation.sessionId,
-                    summary: conversation.sessionTitle,
-                    __provider: conversation.provider,
-                    __projectId: conversation.projectId ?? undefined,
-                  })
-                  : undefined}
-                t={t}
-              />
-            </div>
+            </SessionOptions>
           );
         })}
       </div>
