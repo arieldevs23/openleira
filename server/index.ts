@@ -55,6 +55,7 @@ import browserUseMcpRoutes from './modules/browser-use/browser-use-mcp.routes.js
 import { browserUseService } from './modules/browser-use/browser-use.service.js';
 import { initializeDatabase, sessionsDb } from './modules/database/index.js';
 import { configureWebPush } from './modules/notifications/index.js';
+import compression from 'compression';
 
 const __dirname = getModuleDirectory(import.meta.url);
 // The server source runs from /server, while the compiled output runs from /dist-server/server.
@@ -82,6 +83,7 @@ const systemRoutes = createSystemModule({
 console.log('SERVER_PORT from env:', process.env.SERVER_PORT);
 
 const app = express();
+app.use(compression());
 const server = http.createServer(app);
 const queryClaude = providerRuntimeService.getRunner('claude');
 const queryCursor = providerRuntimeService.getRunner('cursor');
