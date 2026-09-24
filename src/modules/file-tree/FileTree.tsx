@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Check, X, Loader2, Folder, Upload } from 'lucide-react';
 
-import { cn } from '@/shared/utils';
+import { cn, isHomeBrowserProject } from '@/shared/utils';
 import { ICON_SIZE_CLASS, getFileIconData } from '@/modules/file-tree/utils/fileIcons';
 import { useExpandedDirectories } from '@/modules/file-tree/hooks/useExpandedDirectories';
 import { useFileTreeData } from '@/modules/file-tree/hooks/useFileTreeData';
@@ -176,7 +176,7 @@ export default function FileTree({ selectedProject, onFileOpen, revealDirectory 
   return (
     <div
       ref={treeRef}
-      className="relative flex h-full flex-col bg-background"
+      className="relative flex h-full flex-col bg-transparent"
       onDragEnter={upload.handleDragEnter}
       onDragOver={upload.handleDragOver}
       onDragLeave={upload.handleDragLeave}
@@ -274,7 +274,8 @@ export default function FileTree({ selectedProject, onFileOpen, revealDirectory 
           formatFileSize={formatFileSize}
           formatRelativeTime={formatRelativeTimeLabel}
           onRename={operations.handleStartRename}
-          onDelete={operations.handleStartDelete}
+          // The home browser is rooted at ~, where one recursive delete could wipe every project.
+          onDelete={isHomeBrowserProject(selectedProject) ? undefined : operations.handleStartDelete}
           onNewFile={(path) => operations.handleStartCreate(path, 'file')}
           onNewFolder={(path) => operations.handleStartCreate(path, 'directory')}
           onCopyPath={operations.handleCopyPath}

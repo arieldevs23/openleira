@@ -64,3 +64,15 @@ export function formatUsageLimitText(text: string) {
     return text;
   }
 }
+
+/**
+ * Collapses a tool input to the one-line summary shown in compact tool rows:
+ * first line only, whitespace squashed, cut at `maxLength` with an ellipsis.
+ */
+export function summarizeToolText(text: string, maxLength = 60) {
+  const firstLine = (text || '').split('\n').find((line) => line.trim()) ?? '';
+  const squashed = firstLine.replace(/\s+/g, ' ').trim();
+  const hasMoreLines = (text || '').trim().includes('\n');
+  if (squashed.length > maxLength) return `${squashed.slice(0, maxLength - 1)}…`;
+  return hasMoreLines ? `${squashed} …` : squashed;
+}

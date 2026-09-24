@@ -95,8 +95,13 @@ export default function FileContextMenu({
   }, [closeContextMenu]);
 
   const menuActions = useMemo<ContextMenuAction[]>(() => {
+    // Trees opened without a delete handler (the home browser) never offer Delete.
+    const withoutUnavailable = (actions: ContextMenuAction[]) => (
+      onDelete ? actions : actions.filter((action) => action.key !== 'delete')
+    );
+
     if (item?.type === 'file') {
-      return [
+      return withoutUnavailable([
         {
           key: 'rename',
           icon: Pencil,
@@ -123,11 +128,11 @@ export default function FileContextMenu({
           label: t('fileTree.context.download', 'Download'),
           onSelect: () => onDownload?.(item),
         },
-      ];
+      ]);
     }
 
     if (item?.type === 'directory') {
-      return [
+      return withoutUnavailable([
         {
           key: 'newFile',
           icon: FileText,
@@ -173,7 +178,7 @@ export default function FileContextMenu({
           label: t('fileTree.context.download', 'Download'),
           onSelect: () => onDownload?.(item),
         },
-      ];
+      ]);
     }
 
     return [
@@ -284,7 +289,7 @@ export default function FileContextMenu({
           style={{ position: 'fixed', left: menuPosition.x, top: menuPosition.y, zIndex: 9999 }}
           className={cn(
             'min-w-[180px] py-1 px-1',
-            'bg-popover border border-border rounded-lg shadow-lg',
+            'glass-surface animate-pop-in rounded-lg shadow-lg',
             'animate-in fade-in-0 zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           )}

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ChevronDown, FileText, Search, Terminal, Wrench } from 'lucide-react';
 
 import { copyTextToClipboard } from '@/shared/utils';
 import { ToolStatusBadge } from '@/modules/chat/tools/ToolStatusBadge';
+import { summarizeToolText } from '@/modules/chat/utils/chatFormatting';
 import type { ToolStatus } from '@/shared/types';
 
 type ActionType = 'copy' | 'open-file' | 'jump-to-results' | 'none';
@@ -16,6 +18,7 @@ type OneLineDisplayProps = {
   action?: ActionType;
   onAction?: () => void;
   style?: string;
+  /** Kept for config compatibility; compact rows always truncate to one line. */
   wrapText?: boolean;
   colorScheme?: {
     primary?: string;
@@ -45,7 +48,6 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
   action = 'none',
   onAction,
   style,
-  wrapText = false,
   colorScheme = {
     primary: 'text-foreground',
     secondary: 'text-muted-foreground',
@@ -91,33 +93,20 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
     </button>
   );
 
-  // Terminal style: dark pill around the command
+  const rowClassName = 'group my-px flex h-7 items-center gap-1.5 rounded-md px-1.5 font-mono text-[11px] leading-none text-muted-foreground transition-colors duration-150 hover:bg-muted/60';
+  const nameLabel = label || toolName;
+  const summary = summarizeToolText(value);
+
+  // Terminal style: same compact row as Bash, prefixed with a terminal icon
   if (isTerminal) {
     return (
-      <div className="group my-1">
-        <div className="flex items-start gap-2">
-          <div className="flex flex-shrink-0 items-center gap-1.5 pt-0.5">
-            <svg className="h-3 w-3 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div className="flex min-w-0 flex-1 items-start gap-2">
-            <div className="min-w-0 flex-1 rounded bg-gray-900 px-2.5 py-1 dark:bg-black">
-              <code className={`font-mono text-xs text-green-400 ${wrapText ? 'whitespace-pre-wrap break-all' : 'block truncate'}`}>
-                <span className="select-none text-green-600 dark:text-green-500">$ </span>{value}
-              </code>
-            </div>
-            {status && <ToolStatusBadge status={status} className="mt-0.5" />}
-            {action === 'copy' && renderCopyButton()}
-          </div>
-        </div>
-        {secondary && (
-          <div className="ml-7 mt-1">
-            <span className="text-[11px] italic text-muted-foreground/60">
-              {secondary}
-            </span>
-          </div>
-        )}
+      <div className={rowClassName} title={value}>
+        <Terminal className="h-3 w-3 flex-shrink-0 opacity-70" />
+        {nameLabel && <span className="flex-shrink-0 font-medium text-foreground/70">{nameLabel}</span>}
+        <span className="min-w-0 flex-1 truncate">{summary}</span>
+        {secondary && <span className="flex-shrink-0 truncate font-sans italic opacity-70">{secondary}</span>}
+        {status && <ToolStatusBadge status={status} />}
+        {action === 'copy' && renderCopyButton()}
       </div>
     );
   }
@@ -126,15 +115,15 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
   if (action === 'open-file') {
     const displayName = value.split('/').pop() || value;
     return (
-      <div className={`group flex items-center gap-1.5 border-l-2 ${colorScheme.border} my-0.5 py-0.5 pl-3`}>
-        <span className="flex-shrink-0 text-xs text-muted-foreground">{label || toolName}</span>
-        <span className="text-[10px] text-muted-foreground/40">/</span>
+      <div className={rowClassName}>
+        <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
+        <span className="flex-shrink-0 font-medium text-foreground/70">{nameLabel}</span>
         <button
           onClick={handleAction}
-          className="truncate font-mono text-xs text-primary transition-colors hover:text-primary/80 hover:underline"
+          className="min-w-0 truncate text-left text-primary/90 transition-colors hover:text-primary hover:underline"
           title={value}
         >
-          {displayName}
+          {summarizeToolText(displayName)}
         </button>
         {status && <ToolStatusBadge status={status} className="ml-auto" />}
       </div>
@@ -144,26 +133,22 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
   // Search / jump-to-results style
   if (action === 'jump-to-results') {
     return (
-      <div className={`group flex items-center gap-1.5 border-l-2 ${colorScheme.border} my-0.5 py-0.5 pl-3`}>
-        <span className="flex-shrink-0 text-xs text-muted-foreground">{label || toolName}</span>
-        <span className="text-[10px] text-muted-foreground/40">/</span>
-        <span className={`min-w-0 flex-1 truncate font-mono text-xs ${colorScheme.primary}`}>
-          {value}
+      <div className={rowClassName} title={value}>
+        <Search className="h-3 w-3 flex-shrink-0 opacity-70" />
+        <span className="flex-shrink-0 font-medium text-foreground/70">{nameLabel}</span>
+        <span className={`min-w-0 flex-1 truncate ${colorScheme.primary === 'text-foreground' ? '' : colorScheme.primary ?? ''}`}>
+          {summary}
         </span>
         {secondary && (
-          <span className="flex-shrink-0 text-[11px] italic text-muted-foreground/60">
-            {secondary}
-          </span>
+          <span className="flex-shrink-0 truncate font-sans italic opacity-70">{secondary}</span>
         )}
         {status && <ToolStatusBadge status={status} />}
         {toolResult && (
           <a
             href={`#tool-result-${toolId}`}
-            className="flex flex-shrink-0 items-center gap-0.5 text-[11px] text-primary transition-colors hover:text-primary/80"
+            className="flex flex-shrink-0 items-center text-primary/80 transition-colors hover:text-primary"
           >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDown className="h-3 w-3" />
           </a>
         )}
       </div>
@@ -172,23 +157,18 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
 
   // Default one-line style
   return (
-    <div className={`group flex items-center gap-1.5 ${colorScheme.background || ''} border-l-2 ${colorScheme.border} my-0.5 py-0.5 pl-3`}>
-      {icon && icon !== 'terminal' && (
-        <span className={`${colorScheme.icon} flex-shrink-0 text-xs`}>{icon}</span>
+    <div className={rowClassName} title={value}>
+      {icon && icon !== 'terminal' ? (
+        <span className="flex-shrink-0 opacity-70">{icon}</span>
+      ) : (
+        <Wrench className="h-3 w-3 flex-shrink-0 opacity-70" />
       )}
-      {!icon && (label || toolName) && (
-        <span className="flex-shrink-0 text-xs text-muted-foreground">{label || toolName}</span>
-      )}
-      {(icon || label || toolName) && (
-        <span className="text-[10px] text-muted-foreground/40">/</span>
-      )}
-      <span className={`font-mono text-xs ${wrapText ? 'whitespace-pre-wrap break-all' : 'truncate'} min-w-0 flex-1 ${colorScheme.primary}`}>
-        {value}
+      {nameLabel && <span className="flex-shrink-0 font-medium text-foreground/70">{nameLabel}</span>}
+      <span className="min-w-0 flex-1 truncate">
+        {summary}
       </span>
       {secondary && (
-        <span className={`text-[11px] ${colorScheme.secondary} flex-shrink-0 italic`}>
-          {secondary}
-        </span>
+        <span className="flex-shrink-0 truncate font-sans italic opacity-70">{secondary}</span>
       )}
       {status && <ToolStatusBadge status={status} />}
       {action === 'copy' && renderCopyButton()}

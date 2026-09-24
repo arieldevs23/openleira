@@ -9,7 +9,10 @@
     "copied": "pesan udah kecopy",
     "selectFormat": "pilih format copy",
     "copyAsMarkdown": "copy sebagai markdown",
-    "copyAsText": "copy sebagai teks"
+    "copyAsText": "copy sebagai teks",
+    "copyText": "copy teks",
+    "copyMarkdown": "copy markdown",
+    "menuLabel": "aksi pesan"
   },
   "messageTypes": {
     "user": "U",

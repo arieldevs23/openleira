@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranchIcon, PencilIcon } from 'lucide-react';
 
@@ -11,7 +11,7 @@ import ChatMessageImages from '@/modules/chat/transcript/ChatMessageImages';
 import ChatMessageFiles from '@/modules/chat/transcript/ChatMessageFiles';
 import { Markdown } from '@/modules/chat/transcript/Markdown';
 import StreamingMarkdown from '@/modules/chat/transcript/StreamingMarkdown';
-import MessageCopyControl from '@/modules/chat/transcript/MessageCopyControl';
+import { useMessageContextMenu } from '@/modules/chat/transcript/MessageContextMenu';
 import MessageSpeakControl from '@/modules/chat/transcript/MessageSpeakControl';
 import { useIsExportingTranscript } from '@/modules/chat/context/TranscriptRenderContext';
 import { MemoryCitations } from '@/modules/chat/transcript/MemoryCitations';
@@ -41,6 +41,7 @@ type MessageComponentProps = {
 };
 
 const COPY_HIDDEN_TOOL_NAMES = new Set(['Bash', 'Edit', 'Write', 'ApplyPatch']);
+const FRESH_BUBBLE_WINDOW_MS = 4000;
 
 /**
  * Rendered by chat's ChatMessagesPane and ToolGroupContainer to draw one
@@ -81,7 +82,24 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
     assistantCopyContent.trim().length > 0 &&
     !isCommandOrFileEditToolResponse &&
     !message.isThinking;
+  const shouldEnableThinkingCopy = !isExporting && Boolean(message.isThinking) && String(message.content || '').trim().length > 0;
+  // One menu per row: only one of the user / assistant / thinking bubbles renders.
+  const { bubbleHandlers, menu: copyMenu } = useMessageContextMenu(
+    message.type === 'user'
+      ? userCopyContent
+      : message.isThinking
+        ? String(message.content || '')
+        : assistantCopyContent,
+    shouldShowUserCopyControl || shouldShowAssistantCopyControl || shouldEnableThinkingCopy,
+  );
 
+  // Decided once at mount: only turns that just arrived slide in. Rows remounted
+  // by lazy rendering or history loads carry old timestamps and stay still.
+  const [isFreshBubble] = useState(() => {
+    const sentAt = Date.parse(String(message.timestamp || ''));
+    return !isExporting && Number.isFinite(sentAt) && Date.now() - sentAt < FRESH_BUBBLE_WINDOW_MS;
+  });
+  const enterClassName = isFreshBubble ? ' chat-bubble-enter' : '';
 
   const formattedTime = useMemo(() => new Date(message.timestamp).toLocaleTimeString(), [message.timestamp]);
   const shouldHideThinkingMessage = Boolean(message.isThinking && !showThinking);
@@ -110,7 +128,8 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
               <ChatMessageFiles files={message.files} />
             )}
             {userCopyContent.trim().length > 0 || (!message.images?.length && !message.files?.length) ? (
-              <div className="chat-bubble-user group max-w-full">
+              <div className={`chat-bubble-user group max-w-full${enterClassName}`} {...bubbleHandlers}>
+                {copyMenu}
                 <div dir="auto" className="break-words text-sm">
                   <Markdown
                     breaks
@@ -141,9 +160,6 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                     >
                       <GitBranchIcon className="h-3.5 w-3.5" />
                     </button>
-                  )}
-                  {shouldShowUserCopyControl && (
-                    <MessageCopyControl content={userCopyContent} messageType="user" />
                   )}
                   <span>{formattedTime}</span>
                 </div>
@@ -327,18 +343,17 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
               <Reasoning defaultOpen={isExporting}>
                 <ReasoningTrigger />
                 <ReasoningContent>
-                  <Markdown className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert">
-                    {message.content}
-                  </Markdown>
-                  {!isExporting && (
-                    <div className="mt-3 flex items-center text-[11px]">
-                      <MessageCopyControl content={String(message.content || '')} messageType="assistant" />
-                    </div>
-                  )}
+                  <div {...bubbleHandlers}>
+                    {copyMenu}
+                    <Markdown className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert">
+                      {message.content}
+                    </Markdown>
+                  </div>
                 </ReasoningContent>
               </Reasoning>
             ) : (
-              <div dir="auto" className="chat-bubble-assistant text-sm">
+              <div dir="auto" className={`chat-bubble-assistant text-sm${enterClassName}`} {...bubbleHandlers}>
+                {copyMenu}
                 {/* Reasoning accordion */}
                 {showThinking && message.reasoning && (
                   <Reasoning className="mb-3" defaultOpen={false}>
@@ -410,9 +425,6 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
 
             {(shouldShowAssistantCopyControl || !isGrouped) && (
               <div className="mt-1 flex w-full items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
-                {shouldShowAssistantCopyControl && (
-                  <MessageCopyControl content={assistantCopyContent} messageType="assistant" />
-                )}
                 {shouldShowAssistantCopyControl && (
                   <MessageSpeakControl content={assistantCopyContent} />
                 )}

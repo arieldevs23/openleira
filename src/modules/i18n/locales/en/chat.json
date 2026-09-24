@@ -9,7 +9,10 @@
     "copied": "Message copied",
     "selectFormat": "Select copy format",
     "copyAsMarkdown": "Copy as markdown",
-    "copyAsText": "Copy as text"
+    "copyAsText": "Copy as text",
+    "copyText": "Copy text",
+    "copyMarkdown": "Copy markdown",
+    "menuLabel": "Message actions"
   },
   "messageTypes": {
     "user": "U",

@@ -7,6 +7,7 @@ import MessageComponent from '@/modules/chat/transcript/MessageComponent';
 import { useIsExportingTranscript } from '@/modules/chat/context/TranscriptRenderContext';
 import { DiffStatsBadge } from '@/modules/chat/tools/DiffStatsBadge';
 import { parseToolPayload, summarizeDiff } from '@/modules/chat/utils/messageTransforms';
+import { summarizeToolText } from '@/modules/chat/utils/chatFormatting';
 
 type ToolGroupContainerProps = {
   group: ToolGroupItem;
@@ -94,8 +95,6 @@ function ToolGroupContainer({
   const showChildren = isExpanded || isExporting;
   const config = getToolConfig(group.toolName).input;
   const label = config.label || group.toolName;
-  const borderClass = config.colorScheme?.border || 'border-border';
-  const iconClass = config.colorScheme?.icon || 'text-muted-foreground';
   const icon = getToolGroupIcon(config.icon, group.toolName);
 
   const preview = group.preview;
@@ -105,32 +104,31 @@ function ToolGroupContainer({
     <div className="chat-message tool px-3 sm:px-0" data-message-timestamp={group.timestamp || undefined}>
       <button
         type="button"
-        className={`group flex w-full items-center gap-2 border-l-2 ${borderClass} rounded-r-md bg-muted/25 px-3 py-2 text-left transition-colors hover:bg-muted/40 dark:bg-muted/10 dark:hover:bg-muted/20`}
+        className="group flex h-7 w-full items-center gap-1.5 rounded-md px-1.5 text-left font-mono text-[11px] leading-none text-muted-foreground transition-colors duration-150 hover:bg-muted/60 hover:text-foreground"
         onClick={() => setIsExpanded((current) => !current)}
         aria-expanded={isExpanded}
       >
         <ChevronRight
-          className={`h-3.5 w-3.5 flex-shrink-0 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+          className={`h-3 w-3 flex-shrink-0 opacity-60 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
           aria-hidden
         />
-        <span className={`${iconClass} flex h-5 w-5 flex-shrink-0 items-center justify-center rounded bg-background/80 text-xs font-medium`}>
+        <span className="flex h-3 w-3 flex-shrink-0 items-center justify-center opacity-70 [&_svg]:h-3 [&_svg]:w-3">
           {icon}
         </span>
-        <span className="min-w-0 flex-shrink-0 text-xs font-medium text-foreground">{label}</span>
-        <span className="flex-shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="min-w-0 flex-shrink-0 font-medium text-foreground/70">{label}</span>
+        <span className="flex-shrink-0 text-[10px] opacity-70">
           x{group.messages.length}
         </span>
         {preview && (
           <>
-            <span className="text-[10px] text-muted-foreground/40">/</span>
-            <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{preview}</span>
+            <span className="min-w-0 truncate" title={preview}>{summarizeToolText(preview)}</span>
           </>
         )}
         {groupDiffStats && <DiffStatsBadge stats={groupDiffStats} className="ml-auto pl-2" />}
       </button>
 
       {showChildren && (
-        <div className="mt-2 space-y-3 sm:space-y-4">
+        <div className="mt-0.5 space-y-1 pl-[1.1rem]">
           {group.messages.map((message, index) => (
             <MessageComponent
               key={getMessageKey(message)}

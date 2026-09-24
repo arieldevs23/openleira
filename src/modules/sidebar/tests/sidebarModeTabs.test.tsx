@@ -15,6 +15,7 @@ import SidebarModeTabs from '@/modules/sidebar/SidebarModeTabs';
  */
 
 const LABELS: Record<string, string> = {
+  'search.modeObrolan': 'Chats',
   'search.modeProjects': 'Projects',
   'search.modeConversations': 'Conversations',
   'search.runningTooltip': 'Running sessions',
@@ -49,8 +50,9 @@ const renderTabs = (rowWidth: number, searchMode: SidebarSearchMode) => {
 };
 
 test('a wide row shows every tab and no overflow menu', () => {
-  renderTabs(400, 'projects');
+  renderTabs(500, 'projects');
 
+  assert.ok(screen.getByRole('button', { name: 'Chats' }));
   assert.ok(screen.getByRole('button', { name: 'Projects' }));
   assert.ok(screen.getByRole('button', { name: 'Conversations' }));
   assert.ok(screen.getByRole('button', { name: 'Running sessions' }));

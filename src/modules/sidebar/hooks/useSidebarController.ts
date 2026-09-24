@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 
 import { api } from '@/shared/api';
 import { subscribeToUserPreferences } from '@/shared/userSettings';
+import { isBuiltInWorkspaceProject } from '@/shared/utils';
 import { usePaletteOps } from '@/modules/command-palette';
 import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationProjectResult, ConversationSearchResults, LLMProvider, Project, ProjectSession, ProjectSortOrder, RecentConversationListItem, SearchProgress, ActiveSidebarRename, PendingSidebarDeletion, SessionTitleSearchResult, SessionWithProvider, SidebarSearchMode } from '@/shared/types';
 import {
@@ -697,8 +698,15 @@ export function useSidebarController({
     }, []);
   }, [activeSessionIds, sortedProjects]);
 
+  // The obrolan and home workspaces are projects only on the backend; the
+  // project list never shows them (running work in them still does).
   const filteredProjects = useMemo(
-    () => filterProjects(searchMode === 'running' ? runningProjects : sortedProjects, debouncedSearchQuery),
+    () => filterProjects(
+      searchMode === 'running'
+        ? runningProjects
+        : sortedProjects.filter((project) => !isBuiltInWorkspaceProject(project)),
+      debouncedSearchQuery,
+    ),
     [debouncedSearchQuery, runningProjects, searchMode, sortedProjects],
   );
 

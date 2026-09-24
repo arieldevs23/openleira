@@ -1099,3 +1099,115 @@ h1, h2, h3, h4 {
 .sidebar-item-active .text-foreground {
   font-weight: 500;
 }
+
+/* ---------------------------------------------------------------------------
+   Liquid glass. Only large containers (sidebar, main panel, composer, modals,
+   menus) get backdrop-filter; message rows never do, so scrolling a long
+   transcript does not pay for a blur per row.
+   --------------------------------------------------------------------------- */
+:root {
+  --glass-bg: rgb(255 255 255 / 0.62);
+  --glass-bg-strong: rgb(255 255 255 / 0.75);
+  --glass-border: rgb(255 255 255 / 0.3);
+  --glass-edge: rgb(15 23 42 / 0.06);
+  --glass-filter: blur(20px) saturate(180%);
+}
+
+.dark {
+  --glass-bg: rgb(28 28 30 / 0.5);
+  --glass-bg-strong: rgb(28 28 30 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --glass-edge: rgb(0 0 0 / 0.3);
+}
+
+/* Soft off-white → very light blue canvas so the glass has something to refract. */
+.app-canvas {
+  background:
+    radial-gradient(1200px 800px at 85% -10%, rgb(219 234 254 / 0.9), transparent 60%),
+    radial-gradient(900px 700px at -10% 110%, rgb(224 231 255 / 0.7), transparent 60%),
+    linear-gradient(160deg, #F8F8F6 0%, #F1F5FD 55%, #EAF1FC 100%);
+}
+
+.dark .app-canvas {
+  background:
+    radial-gradient(1200px 800px at 85% -10%, rgb(30 58 138 / 0.25), transparent 60%),
+    radial-gradient(900px 700px at -10% 110%, rgb(49 46 129 / 0.2), transparent 60%),
+    linear-gradient(160deg, #111113 0%, #13151b 100%);
+}
+
+.glass-panel,
+.glass-surface,
+.glass-surface-strong {
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border-color: var(--glass-border);
+}
+
+/* Full-height panels: only the edges they already had get a hairline. */
+.glass-panel {
+  background-color: var(--glass-bg);
+}
+
+.glass-surface,
+.glass-surface-strong {
+  border-width: 1px;
+  border-style: solid;
+  box-shadow: 0 0 0 0.5px var(--glass-edge), 0 8px 32px -12px rgb(15 23 42 / 0.18);
+}
+
+.glass-surface {
+  background-color: var(--glass-bg);
+}
+
+.glass-surface-strong {
+  background-color: var(--glass-bg-strong);
+}
+
+/* Browsers without backdrop-filter get an opaque surface instead of a see-through one. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel,
+  .glass-surface,
+  .glass-surface-strong {
+    background-color: hsl(var(--card));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Micro-interactions. The global reduced-motion rule in @layer base already
+   shortens every animation/transition; the block below also drops transforms.
+   --------------------------------------------------------------------------- */
+@keyframes chat-bubble-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.chat-bubble-enter {
+  animation: chat-bubble-enter 200ms ease-out both;
+}
+
+.animate-pop-in {
+  animation: pop-in 180ms ease-out both;
+  transform-origin: top left;
+}
+
+/* Primary buttons press in slightly. */
+.bg-primary:is(button, [role="button"]):active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-bubble-enter,
+  .animate-pop-in {
+    animation: none;
+  }
+
+  .bg-primary:is(button, [role="button"]):active:not(:disabled) {
+    transform: none;
+  }
+}

@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 import type { Project, ProjectSession } from '@/shared/types';
+import { HOME_BROWSER_PATH, OBROLAN_WORKSPACE_PATH } from '@/shared/constants';
 
 //----------------- DEPLOYMENT MODE ------------
 
@@ -223,3 +224,24 @@ export const getPageTitle = (
   const displayName = selectedProject?.displayName?.trim();
   return displayName ? `${displayName} - ${DEFAULT_PAGE_TITLE}` : DEFAULT_PAGE_TITLE;
 };
+
+const normalizeWorkspacePath = (value: unknown): string => (
+  typeof value === 'string' ? value.replace(/\/+$/, '') : ''
+);
+
+/** True for the hidden project backing the sidebar's "obrolan" chats. */
+export const isObrolanProject = (project: Pick<Project, 'fullPath' | 'path'> | null | undefined): boolean => (
+  Boolean(project)
+  && normalizeWorkspacePath(project?.fullPath || project?.path) === normalizeWorkspacePath(OBROLAN_WORKSPACE_PATH)
+);
+
+/** True for the hidden project backing the sidebar's home "files" browser. */
+export const isHomeBrowserProject = (project: Pick<Project, 'fullPath' | 'path'> | null | undefined): boolean => (
+  Boolean(project)
+  && normalizeWorkspacePath(project?.fullPath || project?.path) === normalizeWorkspacePath(HOME_BROWSER_PATH)
+);
+
+/** Built-in workspaces are real projects on the backend but never listed as projects in the UI. */
+export const isBuiltInWorkspaceProject = (project: Pick<Project, 'fullPath' | 'path'> | null | undefined): boolean => (
+  isObrolanProject(project) || isHomeBrowserProject(project)
+);

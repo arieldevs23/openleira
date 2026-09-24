@@ -346,7 +346,7 @@ const removeSessionFromProject = (project: Project, sessionIdToDelete: string): 
   return updatedProject;
 };
 
-const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'git', 'tasks', 'browser']);
+const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'tasks', 'browser']);
 
 const isValidTab = (tab: string): tab is AppTab => {
   return VALID_TABS.has(tab) || tab.startsWith('plugin:');
@@ -1059,6 +1059,21 @@ export function useProjectsState({
     [isMobile, navigate],
   );
 
+  // Opens a project straight on its Files tab; the sidebar uses it for the home browser.
+  const handleOpenFileBrowser = useCallback(
+    (project: Project) => {
+      setSelectedProject(project);
+      setSelectedSession(null);
+      setActiveTab('files');
+      navigate('/');
+
+      if (isMobile) {
+        setSidebarOpen(false);
+      }
+    },
+    [isMobile, navigate],
+  );
+
   const handleSessionDelete = useCallback(
     (sessionIdToDelete: string) => {
       clearSessionAttention(sessionIdToDelete);
@@ -1191,6 +1206,7 @@ export function useProjectsState({
       onProjectSelect: handleProjectSelect,
       onSessionSelect: handleSessionSelect,
       onNewSession: handleNewSession,
+      onOpenFileBrowser: handleOpenFileBrowser,
       onSessionDelete: handleSessionDelete,
       onLoadMoreSessions: loadMoreProjectSessions,
       onProjectDelete: handleProjectDelete,
@@ -1206,6 +1222,7 @@ export function useProjectsState({
     [
       attentionSessionIds,
       handleNewSession,
+      handleOpenFileBrowser,
       handleProjectDelete,
       handleProjectSelect,
       handleSessionDelete,

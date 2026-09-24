@@ -115,9 +115,9 @@
   },
   "search": {
     "modeProjects": "proyek",
-    "modeConversations": "obrolan",
+    "modeConversations": "riwayat",
     "modeMore": "lainnya",
-    "conversationsPlaceholder": "cari di obrolan...",
+    "conversationsPlaceholder": "cari di riwayat...",
     "searching": "lagi nyari...",
     "sessionTitles": "session",
     "conversationContents": "isi obrolan",
@@ -126,7 +126,9 @@
     "matches_one": "{{count}} yang cocok",
     "matches_other": "{{count}} yang cocok",
     "projectsScanned_one": "{{count}} proyek discan",
-    "projectsScanned_other": "{{count}} proyek discan"
+    "projectsScanned_other": "{{count}} proyek discan",
+    "modeObrolan": "obrolan",
+    "obrolanPlaceholder": "cari obrolan..."
   },
   "recent": {
     "title": "obrolan terbaru",
@@ -151,5 +153,15 @@
     "deleteAllData": "hapus semua data permanen",
     "allConversationsDeleted": "proyek bakal dihapus dari sidebar. file, memori, dan data session tetep aman.",
     "cannotUndo": "proyek bisa ditambahin lagi nanti."
+  },
+  "obrolan": {
+    "new": "obrolan baru",
+    "emptyTitle": "belum ada obrolan",
+    "emptyDescription": "ngobrol bebas aja, ga perlu pilih proyek.",
+    "loadMore": "load obrolan lama"
+  },
+  "files": {
+    "open": "files",
+    "opening": "bentar, lagi buka files..."
   }
 }

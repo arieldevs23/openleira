@@ -9,7 +9,8 @@ import type { PendingPermissionRequest, PermissionMode,
   ProviderModelActions,
   ProviderModelOption,
   ProviderModelsDefinition } from '@/shared/types';
-import { DEFAULT_EFFORT_VALUE } from '@/shared/constants';
+import { DEFAULT_EFFORT_VALUE, OBROLAN_DEFAULT_CLAUDE_MODEL } from '@/shared/constants';
+import { isObrolanProject } from '@/shared/utils';
 import { readSelectedProvider, writeSelectedProvider } from '@/shared/selectedProvider';
 
 const FALLBACK_PROVIDER_EFFORT_VALUES: Partial<Record<LLMProvider, readonly string[]>> = {
@@ -39,6 +40,9 @@ const PROVIDERS: LLMProvider[] = ['claude', 'cursor', 'codex', 'opencode'];
 
 /** localStorage key holding the user's default model for one provider. */
 const providerModelStorageKey = (provider: LLMProvider): string => `${provider}-model`;
+
+/** localStorage key holding the Claude model new obrolan chats start with. */
+const OBROLAN_MODEL_STORAGE_KEY = 'claude-model-obrolan';
 
 /**
  * Fallback permission-mode matrix used only until the backend capability
@@ -124,7 +128,9 @@ const getSessionSelectionKey = (provider: LLMProvider, sessionId: string): strin
   `${provider}:${sessionId}`
 );
 
-export function useChatProviderState({ selectedSession, selectedProject: _selectedProject }: UseChatProviderStateArgs) {
+export function useChatProviderState({ selectedSession, selectedProject }: UseChatProviderStateArgs) {
+  // Obrolan chats keep their own Claude default (sonnet) instead of the global one.
+  const isObrolan = isObrolanProject(selectedProject);
   const [permissionMode, setPermissionMode] = useState<PermissionMode>('default');
   const [pendingPermissionRequests, setPendingPermissionRequests] = useState<PendingPermissionRequest[]>([]);
   // The provider the composer sends under. Held here rather than read from
@@ -141,6 +147,9 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
       return acc;
     }, {} as Record<LLMProvider, string>);
   });
+  const [obrolanClaudeModel, setObrolanClaudeModel] = useState<string>(
+    () => localStorage.getItem(OBROLAN_MODEL_STORAGE_KEY) || OBROLAN_DEFAULT_CLAUDE_MODEL,
+  );
   const [providerEfforts, setProviderEfforts] = useState<Partial<Record<LLMProvider, string>>>(() => {
     return PROVIDERS.reduce<Partial<Record<LLMProvider, string>>>((acc, targetProvider) => {
       acc[targetProvider] = localStorage.getItem(`${targetProvider}-effort`) || DEFAULT_EFFORT_VALUE;
@@ -431,6 +440,14 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
     writeSelectedProvider(selectedSession.__provider);
   }, [provider, selectedSession]);
 
+  // A fresh obrolan chat is a Claude chat. Only the in-memory pick changes, so
+  // the provider the user chose for project work is still there afterwards.
+  useEffect(() => {
+    if (isObrolan && !selectedSession && provider !== 'claude') {
+      setProvider('claude');
+    }
+  }, [isObrolan, provider, selectedSession]);
+
   // Permission prompts belong to a session, not to the transient provider
   // selection that is synchronized after navigation.
   useEffect(() => {
@@ -568,7 +585,12 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
     model: string,
     sessionId?: string | null,
   ) => {
-    setStoredProviderModel(targetProvider, model);
+    if (isObrolan && targetProvider === 'claude') {
+      setObrolanClaudeModel(model);
+      localStorage.setItem(OBROLAN_MODEL_STORAGE_KEY, model);
+    } else {
+      setStoredProviderModel(targetProvider, model);
+    }
 
     const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : '';
     if (!normalizedSessionId) {
@@ -608,7 +630,7 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
       }));
     }
     return { scope: 'session' as const, model: storedModel };
-  }, [setStoredProviderModel]);
+  }, [isObrolan, setStoredProviderModel]);
 
   /**
    * Applies an effort choice optimistically and persists it for the open
@@ -689,7 +711,8 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
 
   // The open session's model wins over the per-provider default, so switching
   // sessions shows (and sends) what each session actually runs with.
-  const currentProviderModel = sessionModel ?? providerModels[provider];
+  const currentProviderModel = sessionModel
+    ?? (isObrolan && provider === 'claude' ? obrolanClaudeModel : providerModels[provider]);
   const currentProviderEffortOptions = useMemo(() => {
     return getEffortOptionsForModel(provider, currentProviderModel);
   }, [currentProviderModel, getEffortOptionsForModel, provider]);

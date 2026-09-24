@@ -64,8 +64,11 @@ export default function SidebarHeader({
   onCollapseSidebar,
   t,
 }: SidebarHeaderProps) {
-  const showSearchTools = (projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0 || isArchivedSessionsLoading) && !isLoading;
-  const searchPlaceholder = searchMode === 'conversations'
+  // The obrolan tab works with zero projects, so the strip no longer waits for one.
+  const showSearchTools = !isLoading;
+  const searchPlaceholder = searchMode === 'obrolan'
+    ? t('search.obrolanPlaceholder')
+    : searchMode === 'conversations'
     ? t('search.conversationsPlaceholder')
     : searchMode === 'archived'
       ? t('search.archivedPlaceholder', 'Search archived sessions...')

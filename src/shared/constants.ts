@@ -17,6 +17,19 @@ import type { UserPreferenceKey } from '@/shared/userSettings';
 /** The four buckets the git changes view sorts working-tree files into. */
 type GitStatusFileGroup = 'modified' | 'added' | 'deleted' | 'untracked';
 
+//----------------- BUILT-IN WORKSPACES ------------
+
+/** Home directory the sidebar "files" browser is rooted at. Override with VITE_HOME_DIR. */
+export const HOME_BROWSER_PATH: string = import.meta.env?.VITE_HOME_DIR || '/home/hermes';
+
+/** Working directory every "obrolan" (general chat) session runs in. Override with VITE_OBROLAN_DIR. */
+export const OBROLAN_WORKSPACE_PATH: string = import.meta.env?.VITE_OBROLAN_DIR || `${HOME_BROWSER_PATH}/obrolan`;
+
+/** Claude model new obrolan chats start with; the composer can still switch it. */
+export const OBROLAN_DEFAULT_CLAUDE_MODEL = 'sonnet';
+
+// ---------------------------
+
 //----------------- BRANDING ------------
 
 /**

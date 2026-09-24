@@ -9,6 +9,7 @@ import SidebarFooter from '@/modules/sidebar/SidebarFooter';
 import SidebarHeader from '@/modules/sidebar/SidebarHeader';
 import SidebarProjectList from '@/modules/sidebar/SidebarProjectList';
 import SidebarRecentConversations from '@/modules/sidebar/SidebarRecentConversations';
+import SidebarObrolanList from '@/modules/sidebar/SidebarObrolanList';
 
 function HighlightedSnippet({ snippet, highlights }: { snippet: string; highlights: { start: number; end: number }[] }) {
   const parts: ReactNode[] = [];
@@ -126,6 +127,12 @@ type SidebarContentProps = {
   onShowVersionModal: () => void;
   onShowSettings: () => void;
   projectListProps: SidebarProjectListProps;
+  /** Hidden project behind the obrolan tab; null until the first obrolan creates it. */
+  obrolanProject: Project | null;
+  isCreatingObrolan: boolean;
+  onNewObrolan: () => void;
+  onOpenFiles: () => void;
+  isOpeningFiles: boolean;
   t: TFunction;
 };
 
@@ -173,6 +180,11 @@ export default function SidebarContent({
   onShowVersionModal,
   onShowSettings,
   projectListProps,
+  obrolanProject,
+  isCreatingObrolan,
+  onNewObrolan,
+  onOpenFiles,
+  isOpeningFiles,
   t,
 }: SidebarContentProps) {
   const showConversationSearch = searchMode === 'conversations' && searchFilter.trim().length >= 2;
@@ -186,7 +198,7 @@ export default function SidebarContent({
 
   return (
     <div
-      className="flex h-full flex-col bg-card md:w-full md:select-none"
+      className="flex h-full flex-col bg-transparent md:w-full md:select-none"
       style={{}}
     >
       <SidebarHeader
@@ -375,6 +387,15 @@ export default function SidebarContent({
               )}
             </div>
           ) : null
+        ) : searchMode === 'obrolan' ? (
+          <SidebarObrolanList
+            project={obrolanProject}
+            isCreating={isCreatingObrolan}
+            searchFilter={searchFilter}
+            onNewObrolan={onNewObrolan}
+            projectListProps={projectListProps}
+            t={t}
+          />
         ) : searchMode === 'conversations' ? (
           <SidebarRecentConversations
             conversations={recentConversations}
@@ -694,6 +715,8 @@ export default function SidebarContent({
           currentVersion={currentVersion}
           onShowVersionModal={onShowVersionModal}
           onShowSettings={onShowSettings}
+          onOpenFiles={onOpenFiles}
+          isOpeningFiles={isOpeningFiles}
           t={t}
         />
       )}

@@ -1,4 +1,4 @@
-import { Settings, ArrowUpCircle, AlertTriangle } from 'lucide-react';
+import { Settings, ArrowUpCircle, AlertTriangle, FolderOpen, Loader2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { IS_PLATFORM } from '@/shared/utils';
@@ -12,10 +12,13 @@ type SidebarFooterProps = {
   currentVersion: string;
   onShowVersionModal: () => void;
   onShowSettings: () => void;
+  /** Opens the home-directory file browser in the main panel. */
+  onOpenFiles: () => void;
+  isOpeningFiles: boolean;
   t: TFunction;
 };
 
-/** Rendered by SidebarContent at the bottom of the panel for settings, and update status. */
+/** Rendered by SidebarContent at the bottom of the panel for the home file browser, settings, and update status. */
 export default function SidebarFooter({
   updateAvailable,
   restartRequired,
@@ -24,6 +27,8 @@ export default function SidebarFooter({
   currentVersion,
   onShowVersionModal,
   onShowSettings,
+  onOpenFiles,
+  isOpeningFiles,
   t,
 }: SidebarFooterProps) {
   return (
@@ -95,8 +100,17 @@ export default function SidebarFooter({
       {/* Settings */}
       <div className="nav-divider" />
 
-      {/* Desktop settings */}
-      <div className="hidden px-2 py-1.5 md:block">
+      {/* Desktop files + settings */}
+      <div className="hidden space-y-0.5 px-2 py-1.5 md:block">
+        <button
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+          onClick={onOpenFiles}
+          disabled={isOpeningFiles}
+          title={isOpeningFiles ? t('files.opening') : undefined}
+        >
+          {isOpeningFiles ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
+          <span className="text-sm">{t('files.open')}</span>
+        </button>
         <button
           className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           onClick={onShowSettings}
@@ -115,8 +129,20 @@ export default function SidebarFooter({
         </div>
       )}
 
-      {/* Mobile settings */}
-      <div className="px-3 pb-3 pt-2 md:hidden">
+      {/* Mobile files + settings */}
+      <div className="space-y-1 px-3 pb-3 pt-2 md:hidden">
+        <button
+          className="flex h-10 w-full items-center gap-3 rounded-lg px-3.5 transition-colors active:bg-muted disabled:opacity-60"
+          onClick={onOpenFiles}
+          disabled={isOpeningFiles}
+        >
+          <div className="flex h-7 w-7 items-center justify-center">
+            {isOpeningFiles
+              ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              : <FolderOpen className="h-4 w-4 text-muted-foreground" />}
+          </div>
+          <span className="text-sm font-normal text-foreground">{t('files.open')}</span>
+        </button>
         <button
           className="flex h-10 w-full items-center gap-3 rounded-lg px-3.5 transition-colors active:bg-muted"
           onClick={onShowSettings}

@@ -16,13 +16,13 @@ function ProjectWorkspaceShell({
 }: ProjectWorkspaceShellProps) {
   return (
     <div
-      className="fixed inset-0 flex bg-background"
+      className="app-canvas fixed inset-0 flex"
       style={{ bottom: 'var(--keyboard-height, 0px)' }}
     >
       <ProjectEffects navigate={navigate} />
       <ProjectSidebarRegion isMobile={isMobile} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="glass-panel flex min-w-0 flex-1 flex-col">
         <ProjectMainRegion
           isMobile={isMobile}
           ws={ws}

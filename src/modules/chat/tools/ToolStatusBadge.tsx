@@ -2,22 +2,24 @@ import { cn } from '@/shared/utils';
 import type { ToolStatus } from '@/shared/types';
 
 
+// Plain muted text rather than filled pills: tool rows are meant to stay quiet,
+// so only the colour hints at the state.
 const STATUS_CONFIG: Record<ToolStatus, { label: string; className: string }> = {
   running: {
-    label: 'Running',
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    label: 'running',
+    className: 'text-blue-600/80 dark:text-blue-300/80',
   },
   completed: {
-    label: 'Completed',
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    label: 'done',
+    className: 'text-muted-foreground/70',
   },
   error: {
-    label: 'Error',
-    className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    label: 'error',
+    className: 'text-red-600/80 dark:text-red-400/80',
   },
   denied: {
-    label: 'Denied',
-    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+    label: 'denied',
+    className: 'text-orange-600/80 dark:text-orange-300/80',
   },
 };
 
@@ -35,7 +37,7 @@ export function ToolStatusBadge({ status, className }: ToolStatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded px-1.5 py-px text-[10px] font-medium',
+        'inline-flex items-center font-mono text-[10px] leading-none',
         config.className,
         className,
       )}

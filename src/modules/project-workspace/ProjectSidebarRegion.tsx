@@ -118,7 +118,7 @@ function ProjectSidebarRegion({
   if (!isMobile) {
     return (
       <div
-        className="relative h-full flex-shrink-0 border-r border-border bg-card"
+        className="glass-panel relative h-full flex-shrink-0 border-r"
         style={isSidebarResizable ? { width: sidebarWidth } : undefined}
       >
         <Sidebar {...sidebarSharedProps} />
@@ -157,7 +157,7 @@ function ProjectSidebarRegion({
         aria-label={t('versionUpdate.ariaLabels.closeSidebar')}
       />
       <div
-        className={`relative h-full w-[85vw] max-w-sm transform border-r border-border bg-card transition-transform duration-150 ease-out sm:w-80 ${
+        className={`glass-surface-strong relative h-full w-[85vw] max-w-sm transform border-r transition-transform duration-150 ease-out sm:w-80 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         onClick={(event) => event.stopPropagation()}

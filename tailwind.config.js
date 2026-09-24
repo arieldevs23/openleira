@@ -80,7 +80,7 @@ export default {
           to: { opacity: '1' },
         },
         'dialog-content-show': {
-          from: { opacity: '0', transform: 'translate(-50%, -48%) scale(0.96)' },
+          from: { opacity: '0', transform: 'translate(-50%, -50%) scale(0.98)' },
           to: { opacity: '1', transform: 'translate(-50%, -50%) scale(1)' },
         },
         'bottom-sheet-content-show': {
@@ -91,7 +91,7 @@ export default {
       animation: {
         shimmer: 'shimmer 2s linear infinite',
         'dialog-overlay-show': 'dialog-overlay-show 150ms ease-out',
-        'dialog-content-show': 'dialog-content-show 150ms ease-out',
+        'dialog-content-show': 'dialog-content-show 180ms ease-out',
         'bottom-sheet-content-show': 'bottom-sheet-content-show 220ms cubic-bezier(0.22, 1, 0.36, 1)',
       },
     },

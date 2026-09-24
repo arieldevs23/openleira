@@ -5,6 +5,7 @@ import { useDeviceSettings } from '@/shared/hooks/useDeviceSettings';
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck';
 import { useUiPreferences, useSetUiPreference } from '@/shared/context/UiPreferencesContext';
 import { useSidebarController } from '@/modules/sidebar/hooks/useSidebarController';
+import { useBuiltInWorkspaces } from '@/modules/sidebar/hooks/useBuiltInWorkspaces';
 import { useTaskMaster, useTasksSettings } from '@/modules/task-master';
 import { usePaletteOps } from '@/modules/command-palette';
 import { useBackgroundSessionIdSet, useBusySessionIdSet } from '@/shared/context/SessionProtectionContext';
@@ -21,6 +22,8 @@ type SidebarProps = {
   onProjectSelect: (project: Project) => void;
   onSessionSelect: (session: ProjectSession) => void;
   onNewSession: (project: Project) => void;
+  /** Selects a project and switches the main panel to its Files tab. */
+  onOpenFileBrowser?: (project: Project) => void;
   onSessionDelete?: (sessionId: string) => void;
   onLoadMoreSessions?: (projectId: string) => Promise<void> | void;
   // `projectId` is the DB identifier; the sidebar hands it back to the parent
@@ -50,6 +53,7 @@ function Sidebar({
   onProjectSelect,
   onSessionSelect,
   onNewSession,
+  onOpenFileBrowser,
   onSessionDelete,
   onLoadMoreSessions,
   onProjectDelete,
@@ -164,6 +168,18 @@ function Sidebar({
     document.documentElement.classList.toggle('pwa-mode', isPWA);
     document.body.classList.toggle('pwa-mode', isPWA);
   }, [isPWA]);
+
+  const { obrolanProject, pendingWorkspace, ensureWorkspace } = useBuiltInWorkspaces(projects, refreshProjects);
+
+  const handleNewObrolan = useCallback(async () => {
+    const project = await ensureWorkspace('obrolan');
+    if (project) onNewSession(project);
+  }, [ensureWorkspace, onNewSession]);
+
+  const handleOpenFiles = useCallback(async () => {
+    const project = await ensureWorkspace('home');
+    if (project) onOpenFileBrowser?.(project);
+  }, [ensureWorkspace, onOpenFileBrowser]);
 
   const handleProjectCreated = () => {
     void paletteOps.refreshProjects();
@@ -335,6 +351,11 @@ function Sidebar({
             onShowVersionModal={() => setShowVersionModal(true)}
             onShowSettings={onShowSettings}
             projectListProps={projectListProps}
+            obrolanProject={obrolanProject}
+            isCreatingObrolan={pendingWorkspace === 'obrolan'}
+            onNewObrolan={() => { void handleNewObrolan(); }}
+            onOpenFiles={() => { void handleOpenFiles(); }}
+            isOpeningFiles={pendingWorkspace === 'home'}
             t={t}
           />
         </>

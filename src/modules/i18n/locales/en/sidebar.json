@@ -127,7 +127,9 @@
     "matches_one": "{{count}} match",
     "matches_other": "{{count}} matches",
     "projectsScanned_one": "{{count}} project scanned",
-    "projectsScanned_other": "{{count}} projects scanned"
+    "projectsScanned_other": "{{count}} projects scanned",
+    "modeObrolan": "Chats",
+    "obrolanPlaceholder": "Search chats..."
   },
   "recent": {
     "title": "Recent conversations",
@@ -152,5 +154,15 @@
     "deleteAllData": "Delete all data permanently",
     "allConversationsDeleted": "The project will be removed from the sidebar. Your files, memories, and session data will be preserved.",
     "cannotUndo": "You can re-add the project later."
+  },
+  "obrolan": {
+    "new": "New chat",
+    "emptyTitle": "No chats yet",
+    "emptyDescription": "Start a general chat — no project needed.",
+    "loadMore": "Load older chats"
+  },
+  "files": {
+    "open": "Files",
+    "opening": "Opening files..."
   }
 }
