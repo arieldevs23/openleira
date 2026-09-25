@@ -85,7 +85,7 @@
     "zoomIn": "perbesar",
     "zoomOut": "perkecil",
     "fit": "pas ke layar",
-    "hint": "seret buat mindahin · tarik titik agent ke agent lain (flow) atau ke skill · klik kanan buat opsi lain · Ctrl+C / Ctrl+V buat salin skill",
+    "hint": "seret buat mindahin · shift+seret buat pilih area, shift+klik buat nambah/ngurangin node, terus seret barengan · tarik titik agent ke agent lain (flow) atau ke skill · klik kanan buat opsi lain · Ctrl+C / Ctrl+V buat salin skill",
     "dragToConnect": "tarik ke agent lain buat nambah panah flow",
     "connectHint": "klik agent yang jalan setelah {{name}}",
     "dragToSkill": "tarik ke skill biar agent ini punya skill itu",
@@ -343,7 +343,10 @@
     "unlinkSkill": "lepas skill dari agent",
     "addSkillHere": "tambah skill di sini",
     "pasteSkill": "tempel skill \"{{name}}\" (Ctrl+V)",
-    "quickTask": "Kasih task cepat"
+    "quickTask": "Kasih task cepat",
+    "resetMarked": "reset posisi {{count}} yang dipilih",
+    "clearMarked": "batal pilih",
+    "deleteMarkedSkills": "hapus {{count}} skill yang dipilih"
   },
   "flow": {
     "explain": "kerjaan {{to}} nunggu sampai kerjaan {{from}} di task yang sama selesai. tim di cabang yang beda jalan barengan."

@@ -18,6 +18,7 @@ import {
   Trash2,
   Unlink,
   Wrench,
+  X,
   Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -76,6 +77,14 @@ const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
 
 /** Selected nodes use `outline`, which glass surfaces' own box-shadow cannot hide (a `ring` would be). */
 const SELECTED_OUTLINE = 'outline outline-primary bg-primary/[0.06]';
+/**
+ * A node in the Shift multi-selection gets a dashed frame around it, so it reads
+ * differently from the one node open in the panel. A separate element, because
+ * the nodes' glass surface owns box-shadow (which Tailwind rings use).
+ */
+const MarkedFrame = () => (
+  <span aria-hidden data-marked-frame className="pointer-events-none absolute -inset-[5px] rounded-[15px] border-2 border-dashed border-primary" />
+);
 const FOCUS_OUTLINE = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /** Border colour per status, set inline because glass surfaces own their border colour. */
@@ -118,6 +127,8 @@ type Gesture =
   | { kind: 'node'; pointerId: number; divisionId: string; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
   | { kind: 'skill'; pointerId: number; nodeId: string; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
   | { kind: 'connect'; pointerId: number; from: ConnectEnd }
+  | { kind: 'marquee'; pointerId: number; start: CanvasPoint; base: ReadonlySet<string> }
+  | { kind: 'group'; pointerId: number; startX: number; startY: number; origins: ReadonlyMap<string, CanvasPoint>; moved: boolean; pressedKey: string }
   | { kind: 'pinch'; distance: number; zoom: number };
 
 /** The right-click menu and what it was opened on. */
@@ -127,7 +138,17 @@ type MenuState =
   | { position: CanvasPoint; target: { kind: 'spoke'; divisionId: string } }
   | { position: CanvasPoint; target: { kind: 'canvas'; at: CanvasPoint } }
   | { position: CanvasPoint; target: { kind: 'skill'; nodeId: string } }
-  | { position: CanvasPoint; target: { kind: 'skillLink'; nodeId: string; divisionId: string } };
+  | { position: CanvasPoint; target: { kind: 'skillLink'; nodeId: string; divisionId: string } }
+  | { position: CanvasPoint; target: { kind: 'marked' } };
+
+/** Key of a node in the multi-selection and in the pending positions: a division id, or `skill:<id>`. */
+const skillKey = (nodeId: string) => `skill:${nodeId}`;
+
+/** Is a node's box fully inside the rectangle between two canvas points? Like a diagram editor, touching is not enough. */
+const isInside = (point: CanvasPoint, width: number, height: number, a: CanvasPoint, b: CanvasPoint): boolean => (
+  point.x >= Math.min(a.x, b.x) && point.x + width <= Math.max(a.x, b.x)
+  && point.y >= Math.min(a.y, b.y) && point.y + height <= Math.max(a.y, b.y)
+);
 
 type OfficeCanvasProps = {
   officeId: string;
@@ -171,7 +192,9 @@ type OfficeCanvasProps = {
  * the coordinator, every division as a node that can be dragged anywhere, the
  * flow arrows between divisions (drag from a node's handle onto another node
  * to add one), the audit layer, and skill nodes (an agent linked to a skill
- * node has that skill; Ctrl+C / Ctrl+V copies a skill node). Right-click (or
+ * node has that skill; Ctrl+C / Ctrl+V copies a skill node). Shift+drag on
+ * empty canvas selects the nodes inside a rectangle and Shift+click adds or
+ * removes one; the selection moves together. Right-click (or
  * hold on touch) opens a menu for the node, line or empty canvas under the
  * pointer. An open question from the coordinator is shown next to it.
  */
@@ -358,6 +381,10 @@ export default function OfficeCanvas({
   const [isPanning, setIsPanning] = useState(false);
   // The node being dragged, for its lifted look.
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  // Nodes picked with Shift (a rectangle or Shift+click), moved and deleted together; keys as in pendingPositions.
+  const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set());
+  // The Shift+drag selection rectangle, in canvas pixels.
+  const [marquee, setMarquee] = useState<{ from: CanvasPoint; to: CanvasPoint } | null>(null);
   // The loose end of a line being drawn from a node's handle, in canvas pixels.
   const [connectingTo, setConnectingTo] = useState<{ from: ConnectEnd; point: CanvasPoint } | null>(null);
   // "Connect to…" picked from a menu: the next node clicked becomes the line's other end.
@@ -496,6 +523,60 @@ export default function OfficeCanvas({
       .catch(report);
   };
 
+  /** Every node fully inside the rectangle, as multi-selection keys. */
+  const keysInRectangle = (a: CanvasPoint, b: CanvasPoint): string[] => [
+    ...divisions.filter((division) => isInside(positionOf(division), NODE_WIDTH, NODE_HEIGHT, a, b)).map((division) => division.id),
+    ...skillNodes.filter((node) => isInside(skillPositionOf(node), SKILL_WIDTH, SKILL_HEIGHT, a, b)).map((node) => skillKey(node.id)),
+  ];
+
+  const toggleMarked = (key: string) => {
+    setMarked((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const clearMarked = () => setMarked((current) => (current.size === 0 ? current : new Set()));
+
+  /** Where a node is now, by multi-selection key. */
+  const positionOfKey = (key: string): CanvasPoint | null => {
+    if (key.startsWith('skill:')) {
+      const node = skillNodes.find((candidate) => skillKey(candidate.id) === key);
+      return node ? skillPositionOf(node) : null;
+    }
+    const division = divisions.find((candidate) => candidate.id === key);
+    return division ? positionOf(division) : null;
+  };
+
+  /** Saves a dropped node's position; on failure it snaps back and the error is shown. */
+  const savePosition = (key: string, dropped: CanvasPoint) => {
+    const position = { x: Math.round(dropped.x), y: Math.round(dropped.y) };
+    const save = key.startsWith('skill:')
+      ? actions.moveSkillNode(key.slice('skill:'.length), position)
+      : actions.updateDivision(key, { position });
+    save.catch((error: unknown) => {
+      setPendingPositions((current) => {
+        const next = new Map(current);
+        next.delete(key);
+        return next;
+      });
+      report(error);
+    });
+  };
+
+  /** Deletes the marked skill nodes; teams are deleted one by one from their own menu, with a confirmation. */
+  const deleteMarkedSkills = () => {
+    const nodeIds = [...marked].filter((key) => key.startsWith('skill:')).map((key) => key.slice('skill:'.length));
+    if (nodeIds.length === 0) {
+      return;
+    }
+    setCanvasError(null);
+    Promise.all(nodeIds.map((nodeId) => actions.deleteSkillNode(nodeId))).catch(report);
+    setMarked((current) => new Set([...current].filter((key) => !key.startsWith('skill:'))));
+  };
+
   const cancelLongPress = () => {
     if (longPressRef.current !== null) {
       window.clearTimeout(longPressRef.current);
@@ -536,6 +617,19 @@ export default function OfficeCanvas({
       gestureRef.current = { kind: 'connect', pointerId: event.pointerId, from };
       capture();
       setConnectingTo({ from, point: toCanvasPoint(event.clientX, event.clientY) });
+      return;
+    }
+
+    // Pressing a node that is part of a multi-selection drags the whole selection.
+    const pressedElement = target.closest<HTMLElement>('[data-division-id], [data-skill-node-id]');
+    const pressedKey = pressedElement?.dataset.divisionId ?? (pressedElement?.dataset.skillNodeId ? skillKey(pressedElement.dataset.skillNodeId) : null);
+    if (pressedKey && marked.has(pressedKey) && marked.size > 1 && !event.shiftKey) {
+      const origins = new Map<string, CanvasPoint>();
+      for (const key of marked) {
+        const point = positionOfKey(key);
+        if (point) origins.set(key, point);
+      }
+      gestureRef.current = { kind: 'group', pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, origins, moved: false, pressedKey };
       return;
     }
 
@@ -580,6 +674,17 @@ export default function OfficeCanvas({
     if (target.closest('[data-case-node], path[data-hit], [data-edge-chip]')) {
       return;
     }
+    // Shift+drag on empty canvas draws a selection rectangle instead of panning.
+    if (event.shiftKey) {
+      // Shift+press would otherwise extend the page's text selection across the panels.
+      event.preventDefault();
+      window.getSelection?.()?.removeAllRanges();
+      const start = toCanvasPoint(event.clientX, event.clientY);
+      gestureRef.current = { kind: 'marquee', pointerId: event.pointerId, start, base: marked };
+      capture();
+      setMarquee({ from: start, to: start });
+      return;
+    }
     gestureRef.current = {
       kind: 'pan', pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: view.x, originY: view.y,
     };
@@ -622,6 +727,12 @@ export default function OfficeCanvas({
       setConnectingTo({ from: gesture.from, point: toCanvasPoint(event.clientX, event.clientY) });
       return;
     }
+    if (gesture.kind === 'marquee') {
+      const to = toCanvasPoint(event.clientX, event.clientY);
+      setMarquee({ from: gesture.start, to });
+      setMarked(new Set([...gesture.base, ...keysInRectangle(gesture.start, to)]));
+      return;
+    }
     const dx = event.clientX - gesture.startX;
     const dy = event.clientY - gesture.startY;
     if (!Number.isFinite(dx) || !Number.isFinite(dy) || (!gesture.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX)) {
@@ -633,7 +744,17 @@ export default function OfficeCanvas({
       event.currentTarget.setPointerCapture?.(event.pointerId);
       // Moving a node is arranging the chart; stop refitting it under the user.
       userMovedRef.current = true;
-      setDraggingId(gesture.kind === 'node' ? gesture.divisionId : `skill:${gesture.nodeId}`);
+      setDraggingId(gesture.kind === 'node' ? gesture.divisionId : gesture.kind === 'group' ? gesture.pressedKey : `skill:${gesture.nodeId}`);
+    }
+    if (gesture.kind === 'group') {
+      setPendingPositions((current) => {
+        const next = new Map(current);
+        for (const [key, origin] of gesture.origins) {
+          next.set(key, { x: origin.x + dx / view.zoom, y: origin.y + dy / view.zoom });
+        }
+        return next;
+      });
+      return;
     }
     const next = { x: gesture.origin.x + dx / view.zoom, y: gesture.origin.y + dy / view.zoom };
     const key = gesture.kind === 'node' ? gesture.divisionId : `skill:${gesture.nodeId}`;
@@ -662,6 +783,31 @@ export default function OfficeCanvas({
       const to = endAt(event.clientX, event.clientY);
       if (to && event.type === 'pointerup') {
         connectEnds(gesture.from, to);
+      }
+      return;
+    }
+    if (gesture.kind === 'marquee') {
+      setMarquee(null);
+      return;
+    }
+    if (gesture.kind === 'pan') {
+      // A plain click on empty canvas (no drag) drops the multi-selection.
+      if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) < DRAG_THRESHOLD_PX) {
+        clearMarked();
+      }
+      return;
+    }
+    if (gesture.kind === 'group') {
+      if (!gesture.moved) {
+        return;
+      }
+      suppressClickRef.current = true;
+      const dx = (event.clientX - gesture.startX) / view.zoom;
+      const dy = (event.clientY - gesture.startY) / view.zoom;
+      const dropped = new Map([...gesture.origins].map(([key, origin]) => [key, { x: origin.x + dx, y: origin.y + dy }]));
+      setPendingPositions((current) => new Map([...current, ...dropped]));
+      for (const [key, point] of dropped) {
+        savePosition(key, point);
       }
       return;
     }
@@ -698,6 +844,7 @@ export default function OfficeCanvas({
   const handleCanvasKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
       setConnectSource(null);
+      clearMarked();
       return;
     }
     // Ctrl/Cmd+C copies the selected skill node, Ctrl/Cmd+V places a copy where the pointer is.
@@ -709,6 +856,17 @@ export default function OfficeCanvas({
         event.preventDefault();
         onCopySkill?.(node.skillName);
       }
+      return;
+    }
+    // Ctrl/Cmd+A picks every node, like a diagram editor.
+    if (isShortcut && !inField && event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      setMarked(new Set([...divisions.map((division) => division.id), ...skillNodes.map((node) => skillKey(node.id))]));
+      return;
+    }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && marked.size > 0) {
+      event.preventDefault();
+      deleteMarkedSkills();
       return;
     }
     if (isShortcut && !inField && event.key.toLowerCase() === 'v' && skillClipboard) {
@@ -746,11 +904,16 @@ export default function OfficeCanvas({
     setMenu({ position: { x: event.clientX, y: event.clientY }, target } as MenuState);
   };
 
-  const handleNodeClick = (division: OfficeDivision) => {
+  const handleNodeClick = (division: OfficeDivision, withShift = false) => {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
       return;
     }
+    if (withShift) {
+      toggleMarked(division.id);
+      return;
+    }
+    clearMarked();
     if (connectSource) {
       const from = connectSource;
       setConnectSource(null);
@@ -760,11 +923,16 @@ export default function OfficeCanvas({
     onSelect({ type: 'division', divisionId: division.id });
   };
 
-  const handleSkillClick = (node: OfficeSkillNode) => {
+  const handleSkillClick = (node: OfficeSkillNode, withShift = false) => {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
       return;
     }
+    if (withShift) {
+      toggleMarked(skillKey(node.id));
+      return;
+    }
+    clearMarked();
     if (connectSource) {
       const from = connectSource;
       setConnectSource(null);
@@ -875,6 +1043,24 @@ export default function OfficeCanvas({
         },
       ];
     }
+    if (target.kind === 'marked') {
+      const markedSkills = [...marked].filter((key) => key.startsWith('skill:')).length;
+      return [
+        {
+          key: 'reset', label: t('menu.resetMarked', { count: marked.size }), icon: RotateCcw,
+          onSelect: () => {
+            Promise.all([...marked].map((key) => (key.startsWith('skill:')
+              ? actions.moveSkillNode(key.slice('skill:'.length), null)
+              : actions.updateDivision(key, { position: null })))).catch(report);
+          },
+        },
+        { key: 'clear', label: t('menu.clearMarked'), icon: X, onSelect: clearMarked },
+        ...(markedSkills > 0 ? [{
+          key: 'delete', label: t('menu.deleteMarkedSkills', { count: markedSkills }), icon: Trash2, isDanger: true, showDividerBefore: true,
+          onSelect: deleteMarkedSkills,
+        }] : []),
+      ];
+    }
     if (target.kind === 'skillLink') {
       return [{
         key: 'unlink', label: t('menu.unlinkSkill'), icon: Unlink, isDanger: true,
@@ -934,9 +1120,10 @@ export default function OfficeCanvas({
         data-division-id={division.id}
         data-testid={`office-node-${division.slug}`}
         data-status={status}
+        data-marked={marked.has(division.id) ? 'true' : undefined}
         aria-pressed={selected}
         aria-label={`${division.name} · ${agent.name} · ${statusLabel}`}
-        onClick={() => handleNodeClick(division)}
+        onClick={(event) => handleNodeClick(division, event.shiftKey)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -947,7 +1134,7 @@ export default function OfficeCanvas({
             setMenu({ position: { x: rect.left + 12, y: rect.top + 12 }, target: { kind: 'division', divisionId: division.id } });
           }
         }}
-        onContextMenu={(event) => openMenu(event, { kind: 'division', divisionId: division.id })}
+        onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(division.id) ? { kind: 'marked' } : { kind: 'division', divisionId: division.id })}
         className={cn(
           'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col gap-1 rounded-[12px] border px-2.5 py-2 text-left transition-colors hover:bg-card/80',
           FOCUS_OUTLINE,
@@ -967,6 +1154,7 @@ export default function OfficeCanvas({
           ...(selected ? selectedOutlineStyle : {}),
         }}
       >
+        {marked.has(division.id) && <MarkedFrame />}
         <span className="flex min-w-0 items-center gap-1.5">
           <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: division.color }} />
           <span className="truncate text-[13px] font-semibold text-foreground">{division.name}</span>
@@ -1272,16 +1460,17 @@ export default function OfficeCanvas({
                 tabIndex={0}
                 data-skill-node-id={node.id}
                 data-testid={`office-skill-node-${node.skillName}`}
+                data-marked={marked.has(skillKey(node.id)) ? 'true' : undefined}
                 aria-pressed={selected}
                 aria-label={t('tree.skillNode', { name: node.skillName, count: node.divisionIds.length })}
-                onClick={() => handleSkillClick(node)}
+                onClick={(event) => handleSkillClick(node, event.shiftKey)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     handleSkillClick(node);
                   }
                 }}
-                onContextMenu={(event) => openMenu(event, { kind: 'skill', nodeId: node.id })}
+                onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(skillKey(node.id)) ? { kind: 'marked' } : { kind: 'skill', nodeId: node.id })}
                 title={installed?.description || undefined}
                 className={cn(
                   'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col justify-center gap-0.5 rounded-[12px] border border-violet-400/50 px-2.5 text-left hover:bg-card/80',
@@ -1292,6 +1481,7 @@ export default function OfficeCanvas({
                 )}
                 style={{ left: point.x, top: point.y, width: SKILL_WIDTH, height: SKILL_HEIGHT, ...(selected ? selectedOutlineStyle : {}) }}
               >
+                {marked.has(skillKey(node.id)) && <MarkedFrame />}
                 <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-semibold text-foreground">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
                   <span className="truncate">{node.skillName}</span>
@@ -1314,6 +1504,21 @@ export default function OfficeCanvas({
               </div>
             );
           })}
+
+          {marquee && (
+            <div
+              aria-hidden
+              data-testid="office-marquee"
+              className="pointer-events-none absolute z-30 rounded-[4px] border border-primary bg-primary/10"
+              style={{
+                left: Math.min(marquee.from.x, marquee.to.x),
+                top: Math.min(marquee.from.y, marquee.to.y),
+                width: Math.abs(marquee.to.x - marquee.from.x),
+                height: Math.abs(marquee.to.y - marquee.from.y),
+                borderWidth: 1 / view.zoom,
+              }}
+            />
+          )}
         </div>
       </div>
 

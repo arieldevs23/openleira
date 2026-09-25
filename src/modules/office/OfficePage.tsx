@@ -162,12 +162,19 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
 
   const selectWorkspace = (projectId: string) => {
     setSelectedProjectId(projectId);
+  };
+
+  // Remembers the workspace on screen however it was picked (sidebar, or a project opened elsewhere), so a reload comes back to it.
+  useEffect(() => {
+    if (!selectedProjectId) {
+      return;
+    }
     try {
-      window.localStorage.setItem(SELECTED_WORKSPACE_KEY, projectId);
+      window.localStorage.setItem(SELECTED_WORKSPACE_KEY, selectedProjectId);
     } catch {
       // Not remembered in private windows.
     }
-  };
+  }, [selectedProjectId]);
 
   const { snapshot, loadState, loadError, reload, actions } = useOffice(selectedProjectId);
   const modelCatalog = useProviderModelCatalog();

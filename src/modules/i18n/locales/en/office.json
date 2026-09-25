@@ -87,7 +87,7 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fit": "Fit to screen",
-    "hint": "Drag to move · drag the dot of an agent onto another agent (flow) or onto a skill · right-click for more · Ctrl+C / Ctrl+V copies a skill",
+    "hint": "Drag to move · Shift+drag selects an area, Shift+click adds or removes a node, then drag them together · drag the dot of an agent onto another agent (flow) or onto a skill · right-click for more · Ctrl+C / Ctrl+V copies a skill",
     "dragToConnect": "Drag onto another agent to add a flow arrow",
     "connectHint": "Click the agent that comes after {{name}}",
     "dragToSkill": "Drag onto a skill to give this agent that skill",
@@ -353,7 +353,10 @@
     "unlinkSkill": "Remove skill from agent",
     "addSkillHere": "Add skill here",
     "pasteSkill": "Paste skill \"{{name}}\" (Ctrl+V)",
-    "quickTask": "Quick task"
+    "quickTask": "Quick task",
+    "resetMarked": "Reset position of {{count}} selected",
+    "clearMarked": "Clear selection",
+    "deleteMarkedSkills": "Delete {{count}} selected skill(s)"
   },
   "flow": {
     "explain": "Work of {{to}} waits until the work of {{from}} in the same task is done. Teams on separate branches run in parallel."

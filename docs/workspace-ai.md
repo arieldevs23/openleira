@@ -126,6 +126,15 @@ Task tidak bisa dijalankan selama ada agent aktif tanpa model atau yang provider
 
 ![Menu klik kanan](images/kantor-ai/workspace-context-menu.png)
 
+### Pilih banyak node sekaligus
+
+- **Shift + seret** di area kosong: gambar kotak, node yang masuk penuh ke kotak kepilih (ada bingkai putus-putus). Kotak kedua pas masih tahan Shift nambahin ke pilihan yang udah ada.
+- **Shift + klik** node: nambah atau ngeluarin satu node dari pilihan, tanpa buka panel kanan.
+- **Seret salah satu node yang kepilih**: semua ikut geser, dan posisinya disimpen semua.
+- **Ctrl/Cmd + A** pilih semua, **Esc** atau klik area kosong buat batal.
+- **Delete** / klik kanan → hapus skill yang dipilih. Tim ga ikut kehapus massal; hapus tim tetap satu-satu lewat menunya, pakai konfirmasi.
+- Klik kanan node yang kepilih: reset posisi semua yang dipilih, atau batal pilih.
+
 ### Skill di bagan
 
 Skill tidak lagi diatur di sidebar atau panel agent, tapi di bagan:

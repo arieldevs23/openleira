@@ -496,3 +496,75 @@ test('no question, no bubble', () => {
   renderTree();
   assert.equal(screen.queryByTestId('office-question-bubble'), null);
 });
+
+/** The canvas pixels of a node as rendered (the chart is not fitted in jsdom, so they are client pixels too). */
+const boxOf = (element: HTMLElement) => ({ x: Number.parseFloat(element.style.left), y: Number.parseFloat(element.style.top) });
+
+test('Shift+drag on empty canvas selects the nodes fully inside the rectangle', () => {
+  renderTree();
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+  const backend = boxOf(screen.getByTestId('office-node-backend'));
+
+  fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, pointerType: 'mouse', shiftKey: true, clientX: backend.x - 4, clientY: backend.y - 4 });
+  // Only touching a node is not enough.
+  fireEvent.pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', shiftKey: true, clientX: backend.x + 20, clientY: backend.y + 20 });
+  assert.ok(screen.getByTestId('office-marquee'));
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, undefined);
+  fireEvent.pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', shiftKey: true, clientX: backend.x + 180, clientY: backend.y + 100 });
+  fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: 'mouse', clientX: backend.x + 180, clientY: backend.y + 100 });
+
+  assert.equal(screen.queryByTestId('office-marquee'), null);
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, 'true');
+  assert.equal(screen.getByTestId('office-node-docs').dataset.marked, undefined);
+
+  // A plain click on empty canvas drops the selection.
+  fireEvent.pointerDown(canvas, { pointerId: 2, button: 0, pointerType: 'mouse', clientX: 5, clientY: 5 });
+  fireEvent.pointerUp(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 5, clientY: 5 });
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, undefined);
+});
+
+test('Shift+click picks nodes, and dragging one moves and saves all of them', () => {
+  const calls: Recorded[] = [];
+  const selections: OfficeSelection[] = [];
+  renderTree({ calls, onSelect: (selection) => selections.push(selection) });
+  const backend = screen.getByTestId('office-node-backend');
+  const skill = screen.getByTestId('office-skill-node-review');
+  const skillStart = boxOf(skill);
+
+  fireEvent.click(backend, { shiftKey: true });
+  fireEvent.click(skill, { shiftKey: true });
+  assert.equal(backend.dataset.marked, 'true');
+  assert.equal(skill.dataset.marked, 'true');
+  assert.deepEqual(selections, [], 'Shift+click marks without opening the panel');
+
+  fireEvent.pointerDown(backend, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(backend, { pointerId: 1, pointerType: 'mouse', clientX: 150, clientY: 120 });
+  fireEvent.pointerUp(backend, { pointerId: 1, pointerType: 'mouse', clientX: 150, clientY: 120 });
+  // The click the browser fires after a drag neither opens the panel nor drops the selection.
+  fireEvent.click(backend);
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, 'true');
+  assert.deepEqual(selections, []);
+
+  assert.deepEqual(calls.map((call) => [call.method, call.args[0]]).sort(), [['moveSkillNode', 'n-review'], ['updateDivision', 'div-backend']]);
+  assert.ok(Math.abs(boxOf(screen.getByTestId('office-skill-node-review')).x - (skillStart.x + 50)) < 1, 'the other node follows');
+
+  // Shift+click again takes a node out; Escape clears the rest.
+  fireEvent.click(skill, { shiftKey: true });
+  assert.equal(screen.getByTestId('office-skill-node-review').dataset.marked, undefined);
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'Escape' });
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, undefined);
+});
+
+test('Ctrl+A selects every node and Delete removes the selected skill nodes only', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+
+  fireEvent.keyDown(canvas, { key: 'a', ctrlKey: true });
+  assert.equal(screen.getByTestId('office-node-coordinator').dataset.marked, 'true');
+  assert.equal(screen.getByTestId('office-skill-node-review').dataset.marked, 'true');
+
+  fireEvent.keyDown(canvas, { key: 'Delete' });
+  assert.deepEqual(calls, [{ method: 'deleteSkillNode', args: ['n-review'] }]);
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, 'true', 'teams stay: they are deleted one by one');
+});
