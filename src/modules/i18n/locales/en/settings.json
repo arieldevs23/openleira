@@ -15,7 +15,26 @@
     "username": "Username",
     "email": "Email",
     "profile": "Profile",
-    "changePassword": "Change Password"
+    "changePassword": "Change Password",
+    "description": "Signed in as {{username}}.",
+    "password": {
+      "title": "Change password",
+      "description": "Other signed-in devices stay signed in.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Repeat new password",
+      "save": "Save password",
+      "saving": "Saving...",
+      "success": "Password changed.",
+      "errors": {
+        "requiredFields": "Fill in all three fields.",
+        "tooShort": "New password must be at least 8 characters.",
+        "mismatch": "New passwords do not match.",
+        "currentInvalid": "Current password is wrong.",
+        "rateLimited": "Too many attempts. Wait a few minutes and try again.",
+        "failed": "Could not change the password. Try again."
+      }
+    }
   },
   "mcp": {
     "title": "MCP Servers",
@@ -117,7 +136,8 @@
     "browser": "Browser",
     "notifications": "Notifications",
     "plugins": "Plugins",
-    "about": "About"
+    "about": "About",
+    "account": "Account"
   },
   "notifications": {
     "title": "Notifications",

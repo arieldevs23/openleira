@@ -58,11 +58,7 @@ export default function LoginForm() {
   );
 
   return (
-    <AuthScreenLayout
-      title={t('login.title')}
-      description={t('login.description')}
-      footerText={t('login.footerText')}
-    >
+    <AuthScreenLayout intro={t('login.intro')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <AuthInputField
           id="username"

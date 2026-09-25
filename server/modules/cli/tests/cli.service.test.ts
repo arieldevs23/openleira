@@ -15,6 +15,7 @@ function createHarness() {
   };
   let serverStarts = 0;
   let sandboxArguments: string[] = [];
+  const resetPasswordCalls: Array<{ username: string; newPassword?: string }> = [];
   const service = createCliService({
     applicationRoot: '/application',
     defaultDatabasePath: '/home/user/.cloudcli/auth.db',
@@ -42,6 +43,10 @@ function createHarness() {
       serverStarts += 1;
     },
     startBrowserUseMcp: async () => undefined,
+    resetPassword: async (username, newPassword) => {
+      resetPasswordCalls.push({ username, newPassword });
+      return { username, password: newPassword ?? 'GeneratedPass123', isGenerated: newPassword === undefined };
+    },
   });
 
   return {
@@ -51,6 +56,7 @@ function createHarness() {
     errorMessages,
     getServerStarts: () => serverStarts,
     getSandboxArguments: () => sandboxArguments,
+    resetPasswordCalls,
   };
 }
 
@@ -85,4 +91,27 @@ test('returns a failure code for an unknown command without exiting the process'
 
   assert.equal(exitCode, 1);
   assert.match(harness.errorMessages[0], /Unknown command: unknown/);
+});
+
+test('reset-password refuses to create a database that does not exist', async () => {
+  const harness = createHarness();
+
+  assert.equal(await harness.service.run(['reset-password', 'alice']), 1);
+  assert.match(harness.errorMessages.join('\n'), /Database not found/);
+  assert.deepEqual(harness.resetPasswordCalls, []);
+});
+
+test('reset-password without a username prints usage', async () => {
+  const harness = createHarness();
+
+  assert.equal(await harness.service.run(['reset-password']), 1);
+  assert.match(harness.errorMessages.join('\n'), /Usage: openleira reset-password/);
+});
+
+test('reset-password still honours global options placed after the command', async () => {
+  const harness = createHarness();
+
+  await harness.service.run(['reset-password', 'alice', '--database-path', '/tmp/other.db', '--password', 'secret-value']);
+
+  assert.equal(harness.environment.DATABASE_PATH, '/tmp/other.db');
 });

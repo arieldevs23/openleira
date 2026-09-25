@@ -245,3 +245,23 @@ export const isHomeBrowserProject = (project: Pick<Project, 'fullPath' | 'path'>
 export const isBuiltInWorkspaceProject = (project: Pick<Project, 'fullPath' | 'path'> | null | undefined): boolean => (
   isObrolanProject(project) || isHomeBrowserProject(project)
 );
+
+// ---------------------------
+//----------------- API ERROR PAYLOADS ------------
+/**
+ * Reads the machine-readable `code` from a server error body shaped
+ * `{ error: { code, message } }` (the backend AppError format). Used by the
+ * auth context and the settings account tab to pick a translated message
+ * instead of showing the English server text. Returns undefined for any
+ * other shape.
+ */
+export function getApiErrorCode(payload: unknown): string | undefined {
+  if (typeof payload !== 'object' || payload === null || !('error' in payload)) {
+    return undefined;
+  }
+  const { error } = payload;
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return undefined;
+  }
+  return typeof error.code === 'string' ? error.code : undefined;
+}

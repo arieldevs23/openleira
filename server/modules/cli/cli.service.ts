@@ -23,6 +23,7 @@ type CliServiceDependencies = {
   updateGlobalPackage(): void;
   startServer(): Promise<void>;
   startBrowserUseMcp(): Promise<void>;
+  resetPassword(username: string, newPassword?: string): Promise<{ username: string; password: string; isGenerated: boolean }>;
 };
 
 type ParsedCliArguments = {
@@ -51,6 +52,10 @@ function parseCliArguments(argumentsList: string[]): ParsedCliArguments {
       parsedArguments.options.databasePath = argumentsList[++argumentIndex];
     } else if (argument.startsWith('--database-path=')) {
       parsedArguments.options.databasePath = argument.slice('--database-path='.length);
+    } else if (parsedArguments.command === 'reset-password') {
+      // Everything after the command that is not a global option (above)
+      // belongs to it, including the value of --password.
+      parsedArguments.remainingArguments.push(argument);
     } else if (argument === '--help' || argument === '-h') {
       parsedArguments.command = 'help';
     } else if (argument === '--version' || argument === '-v') {
@@ -131,7 +136,7 @@ function showHelp(dependencies: CliServiceDependencies): void {
 ╚═══════════════════════════════════════════════════════════════╝
 
 Usage:
-  claude-code-ui [command] [options]
+  openleira [command] [options]
   cloudcli [command] [options]
 
 Commands:
@@ -139,6 +144,7 @@ Commands:
   sandbox          Manage Docker sandbox environments
   browser-use-mcp  Run Browser MCP stdio server
   status           Show configuration and data locations
+  reset-password   Reset a user's password: reset-password <username> [--password <new>]
   update           Update to the latest version
   help             Show this help information
   version          Show version information
@@ -154,6 +160,7 @@ Examples:
   $ cloudcli --port 8080            # Start on port 8080
   $ cloudcli sandbox ~/my-project   # Run in a Docker sandbox
   $ cloudcli status                 # Show configuration
+  $ openleira reset-password admin  # Print a new random password for admin
 
 Environment Variables:
   SERVER_PORT         Set server port (default: 3001)
@@ -168,6 +175,53 @@ Documentation:
 Report Issues:
   ${dependencies.packageMetadata.bugsUrl || 'https://github.com/siteboon/claudecodeui/issues'}
 `);
+}
+
+// `reset-password <username> [--password <new>]`; the password is optional.
+function parseResetPasswordArguments(argumentsList: string[]): { username?: string; password?: string } {
+  const parsed: { username?: string; password?: string } = {};
+  for (let argumentIndex = 0; argumentIndex < argumentsList.length; argumentIndex += 1) {
+    const argument = argumentsList[argumentIndex];
+    if (argument === '--password') {
+      parsed.password = argumentsList[++argumentIndex] ?? '';
+    } else if (argument.startsWith('--password=')) {
+      parsed.password = argument.slice('--password='.length);
+    } else if (!argument.startsWith('-') && parsed.username === undefined) {
+      parsed.username = argument;
+    }
+  }
+  return parsed;
+}
+
+async function resetPassword(dependencies: CliServiceDependencies, argumentsList: string[]): Promise<number> {
+  const { output } = dependencies;
+  const { username, password } = parseResetPasswordArguments(argumentsList);
+  if (!username) {
+    output.error(`${terminalTextStyles.error('[ERROR]')} Usage: openleira reset-password <username> [--password <new>]`);
+    return 1;
+  }
+
+  const databasePath = dependencies.environment.DATABASE_PATH || dependencies.defaultDatabasePath;
+  if (!dependencies.fileSystem.pathExists(databasePath)) {
+    output.error(`${terminalTextStyles.error('[ERROR]')} Database not found: ${databasePath}`);
+    output.log(`${terminalTextStyles.tip('[TIP]')} Pass --database-path if the server uses a custom location.`);
+    return 1;
+  }
+
+  try {
+    const result = await dependencies.resetPassword(username, password);
+    output.log(`${terminalTextStyles.ok('[OK]')} Password for ${terminalTextStyles.bright(result.username)} has been reset.`);
+    if (result.isGenerated) {
+      output.log(`\n    New password: ${terminalTextStyles.bright(result.password)}\n`);
+      output.log(`${terminalTextStyles.warn('[NOTE]')} Shown only once. Sign in and change it under Settings > Account.`);
+    }
+    output.log(`${terminalTextStyles.tip('[TIP]')} Existing sessions stay signed in; no server restart needed.`);
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    output.error(`${terminalTextStyles.error('[ERROR]')} ${message}`);
+    return 1;
+  }
 }
 
 /**
@@ -235,6 +289,8 @@ export function createCliService(dependencies: CliServiceDependencies): CliAppli
           return 0;
         case 'sandbox':
           return dependencies.sandboxService.execute(parsedArguments.remainingArguments);
+        case 'reset-password':
+          return resetPassword(dependencies, parsedArguments.remainingArguments);
         case 'browser-use-mcp':
           await dependencies.startBrowserUseMcp();
           return 0;

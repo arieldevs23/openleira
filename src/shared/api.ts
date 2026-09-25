@@ -172,6 +172,8 @@ export const api = {
     }),
     refresh: () => post('/api/auth/refresh'),
     user: () => get('/api/auth/user'),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      post('/api/auth/change-password', { currentPassword, newPassword }),
   },
 
   // Protected endpoints

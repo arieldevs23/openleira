@@ -1,7 +1,7 @@
-import { Bell, Bot, ChevronRight, GitBranch, Info, Key, ListChecks, Mic, MonitorPlay, Palette, Puzzle } from 'lucide-react';
+import { Bell, Bot, ChevronRight, GitBranch, Info, Key, ListChecks, Mic, MonitorPlay, Palette, Puzzle, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { cn } from '@/shared/utils';
+import { IS_PLATFORM, cn } from '@/shared/utils';
 import type { SettingsMainTab } from '@/shared/types';
 
 type SettingsSidebarProps = {
@@ -21,6 +21,8 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'agents', labelKey: 'mainTabs.agents', icon: Bot, group: 'agents' },
+  // Platform mode has no local password to change.
+  ...(IS_PLATFORM ? [] : [{ id: 'account', labelKey: 'mainTabs.account', icon: UserRound, group: 'general' } as NavItem]),
   { id: 'appearance', labelKey: 'mainTabs.appearance', icon: Palette, group: 'general' },
   { id: 'git', labelKey: 'mainTabs.git', icon: GitBranch, group: 'agents' },
   { id: 'api', labelKey: 'mainTabs.apiTokens', icon: Key, group: 'agents' },

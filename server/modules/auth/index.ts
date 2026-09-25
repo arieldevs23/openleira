@@ -7,3 +7,5 @@ export { authenticateToken } from './auth.middleware.js';
 export { authenticateWebSocket } from './auth.middleware.js';
 // validateApiKey: used by the server entrypoint for optional API-wide key validation.
 export { validateApiKey } from './auth.middleware.js';
+// resetUserPassword: used by the CLI module's reset-password command for forgotten passwords.
+export { resetUserPassword } from './auth.module.js';

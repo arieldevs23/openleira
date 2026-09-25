@@ -87,6 +87,12 @@ export function createCliApplication(): CliApplication {
       // eslint-disable-next-line boundaries/no-unknown
       await import('../../index.js');
     },
+    resetPassword: async (username, newPassword) => {
+      // Loaded lazily so DATABASE_PATH from --database-path is applied before
+      // the auth module opens its connection.
+      const { resetUserPassword } = await import('../auth/index.js');
+      return resetUserPassword(username, newPassword);
+    },
     startBrowserUseMcp: async () => {
       const { startBrowserUseMcp } = await import('../browser-use/index.js');
       await startBrowserUseMcp();
