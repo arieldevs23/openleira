@@ -13,17 +13,22 @@ import type {
 } from '@/shared/types';
 import { cn, officeCaseTone } from '@/shared/utils';
 
-const NODE_WIDTH = 164;
+const NODE_WIDTH = 152;
 const NODE_HEIGHT = 88;
 const CASE_WIDTH = 248;
 const CASE_HEIGHT = 58;
-const GAP_X = 18;
+const GAP_X = 16;
 const ROW_GAP = 66;
-const PADDING = 24;
+const PADDING = 20;
 const LAYER_DROP = 30;
 const MIN_CANVAS_WIDTH = 560;
 /** How long an edge keeps flowing after a message crossed it. */
 const MESSAGE_FLOW_MS = 2600;
+/**
+ * The chart shrinks to fit its column down to this scale; below it (phones,
+ * narrow windows) it keeps this size and scrolls sideways instead.
+ */
+const MIN_FIT_SCALE = 0.7;
 
 /** Border colour per status, set inline because glass surfaces own their border colour. */
 const STATUS_BORDER: Record<OfficeNodeStatus, string> = {
@@ -108,8 +113,9 @@ export default function OfficeTree({
     const latestId = messages.reduce((max, message) => Math.max(max, message.id), 0);
     const previousId = lastSeenMessageIdRef.current;
     lastSeenMessageIdRef.current = latestId;
-    // The first batch is history, not traffic: only later messages make an edge flow.
-    if (previousId === null) {
+    // The case's history arrives as the first non-empty batch (the detail is
+    // fetched after mount); it is not traffic, so only later messages flow.
+    if (previousId === null || previousId === 0) {
       return;
     }
     const touched = new Set<string>();
@@ -136,6 +142,21 @@ export default function OfficeTree({
     schedule(0, (current) => new Set([...current, ...touched]));
     schedule(MESSAGE_FLOW_MS, (current) => new Set([...current].filter((id) => !touched.has(id))));
   }, [coordinator?.id, messages]);
+
+  // Width of the scroll container, measured so the chart can scale to fit it.
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const hasCenteredRef = useRef(false);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+    const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const replacedTaskIds = useMemo(
     () => new Set(tasks.map((task) => task.parentTaskId).filter((id): id is string => Boolean(id))),
@@ -203,6 +224,17 @@ export default function OfficeTree({
   const barLeft = Math.min(...workerBoxes.map((box) => box.x + NODE_WIDTH / 2), skillsBox.x + NODE_WIDTH / 2);
   const barRight = Math.max(...workerBoxes.map((box) => box.x + NODE_WIDTH / 2), auditBox.x + NODE_WIDTH / 2);
   const anyInReview = tasks.some((task) => task.status === 'review');
+  const scale = containerWidth && containerWidth < width ? Math.max(MIN_FIT_SCALE, containerWidth / width) : 1;
+
+  // When the chart still overflows, start scrolled to its centre (the coordinator).
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element || containerWidth === null || hasCenteredRef.current) {
+      return;
+    }
+    hasCenteredRef.current = true;
+    element.scrollLeft = Math.max(0, (element.scrollWidth - element.clientWidth) / 2);
+  }, [containerWidth, scale]);
 
   const isSelectedDivision = (divisionId: string) =>
     (selection.type === 'division' || selection.type === 'messages') && selection.divisionId === divisionId;
@@ -261,8 +293,15 @@ export default function OfficeTree({
   };
 
   return (
-    <div className="h-full w-full overflow-auto" role="region" aria-label={t('tree.label')}>
-      <div className="relative mx-auto" style={{ width, height }} data-testid="office-tree">
+    <div ref={scrollRef} className="h-full w-full overflow-auto" role="region" aria-label={t('tree.label')}>
+      {/* The sizer takes the scaled footprint so scrolling matches what is drawn. */}
+      <div className="relative mx-auto" style={{ width: width * scale, height: height * scale }}>
+      <div
+        className="absolute left-0 top-0"
+        style={{ width, height, transform: scale === 1 ? undefined : `scale(${scale})`, transformOrigin: 'top left' }}
+        data-testid="office-tree"
+        data-scale={scale.toFixed(2)}
+      >
         <svg
           className="pointer-events-none absolute inset-0"
           width={width}
@@ -338,9 +377,11 @@ export default function OfficeTree({
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
               />
+              {/* Labelled next to the layer nodes, which always sit mid-chart and in view. */}
               <text
-                x={barLeft}
-                y={layerLineY - 6}
+                x={skillsBox.x - 10}
+                y={layerLineY + 18}
+                textAnchor="end"
                 className="fill-muted-foreground"
                 style={{ fontSize: 10 }}
               >
@@ -448,6 +489,7 @@ export default function OfficeTree({
         </button>
 
         {audit && renderDivisionNode(audit, auditBox, null, auditStatus)}
+      </div>
       </div>
     </div>
   );

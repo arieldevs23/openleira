@@ -183,7 +183,7 @@ export default function CasePanel({
       {caseItem.finalSummary && (
         <section className="space-y-1.5">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('case.finalSummary')}</h3>
-          <div className="prose prose-sm max-w-none rounded-[10px] border border-border bg-card/60 p-3 text-[13px] dark:prose-invert">
+          <div className="prose prose-sm max-w-none rounded-[10px] border border-border bg-card/60 p-3 text-[13px] dark:prose-invert prose-headings:mb-1.5 prose-headings:mt-3 prose-h1:text-base prose-h2:text-sm prose-h3:text-[13px] prose-pre:text-[11px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{caseItem.finalSummary}</ReactMarkdown>
           </div>
         </section>

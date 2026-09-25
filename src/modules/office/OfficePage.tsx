@@ -268,7 +268,7 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
         <div className="border-b border-red-500/30 bg-red-500/5 px-3 py-1.5 text-xs text-red-700 dark:text-red-300">{pageError}</div>
       )}
 
-      <div className="relative flex min-h-0 flex-1 flex-col min-[900px]:grid min-[900px]:grid-cols-[232px_minmax(0,1fr)_minmax(320px,380px)]">
+      <div className="relative flex min-h-0 flex-1 flex-col min-[900px]:grid min-[900px]:grid-cols-[216px_minmax(0,1fr)_minmax(300px,360px)]">
         <aside className="max-h-48 shrink-0 border-b border-border/60 min-[900px]:max-h-none min-[900px]:border-b-0 min-[900px]:border-r">
           <CaseList
             cases={cases}
