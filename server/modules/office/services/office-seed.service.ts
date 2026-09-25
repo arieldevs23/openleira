@@ -1,4 +1,4 @@
-import type { OfficeDivisionInput } from '@/shared/types.js';
+import type { OfficeDivisionInput, OfficeDivisionProposal } from '@/shared/types.js';
 
 /** Languages the default office can be seeded in; anything else falls back to Indonesian. */
 type SeedLocale = 'id' | 'en';
@@ -238,4 +238,36 @@ export function buildDefaultDivisions(locale: SeedLocale): OfficeDivisionInput[]
       skills: [],
     },
   }));
+}
+
+/**
+ * Builds the divisions of a workspace created from an analysed app: the
+ * default coordinator and audit layer around the divisions the analysis
+ * proposed (after the user reviewed them). The app summary is added to the
+ * coordinator's role so every plan starts from what the app already is.
+ */
+export function buildDivisionsFromProposals(
+  locale: SeedLocale,
+  proposals: OfficeDivisionProposal[],
+  appSummary: string | null,
+): OfficeDivisionInput[] {
+  const defaults = buildDefaultDivisions(locale);
+  const coordinator = defaults.find((division) => division.isCoordinator) as OfficeDivisionInput;
+  const audit = defaults.find((division) => division.isAudit) as OfficeDivisionInput;
+  const contextHeading = locale === 'en' ? '## About this app' : '## Tentang aplikasi ini';
+  const withContext: OfficeDivisionInput = appSummary?.trim()
+    ? { ...coordinator, agent: { ...coordinator.agent, rolePrompt: `${coordinator.agent.rolePrompt}\n\n${contextHeading}\n${appSummary.trim()}` } }
+    : coordinator;
+
+  return [
+    withContext,
+    ...proposals.map((proposal) => ({
+      name: proposal.name,
+      slug: proposal.slug,
+      description: proposal.description,
+      color: proposal.color,
+      agent: { name: proposal.agentName, rolePrompt: proposal.rolePrompt, allowedTools: [], skills: [] },
+    })),
+    audit,
+  ];
 }

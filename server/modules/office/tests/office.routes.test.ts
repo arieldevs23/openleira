@@ -21,7 +21,8 @@ function createRecordingDependencies(calls: Call[]) {
   };
   const office = new Proxy({}, { get: (_target, method: string) => record(`office.${method}`) });
   const orchestrator = new Proxy({}, { get: (_target, method: string) => record(`orchestrator.${method}`) });
-  return { office, orchestrator } as never;
+  const analyzer = new Proxy({}, { get: (_target, method: string) => record(`analyzer.${method}`) });
+  return { office, orchestrator, analyzer } as never;
 }
 
 async function withServer(
@@ -66,7 +67,7 @@ test('office lookup needs a projectId and office creation passes the locale thro
   });
   assert.deepEqual(calls, [
     { method: 'office.getSnapshotForProject', args: ['p1'] },
-    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en' }] },
+    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null }] },
   ]);
 });
 
@@ -127,4 +128,49 @@ test('case routes record the author and route controls to the orchestrator', asy
   ]);
   assert.deepEqual(calls[0].args, ['o1', { title: 'Login', description: 'd', createdBy: '42' }]);
   assert.deepEqual(calls[7].args, ['o1', 'c1', 'hi']);
+});
+
+test('workspace, flow, position and analysis routes parse their input', async () => {
+  const calls: Call[] = [];
+  await withServer(calls, async (request) => {
+    assert.equal((await request('GET', '/api/office/workspaces')).status, 200);
+    assert.equal((await request('POST', '/api/office/o1/flow', { fromDivisionId: 'd1', toDivisionId: 'd2' })).status, 201);
+    assert.equal((await request('POST', '/api/office/o1/flow', { fromDivisionId: 'd1' })).status, 400);
+    assert.equal((await request('DELETE', '/api/office/o1/flow', { fromDivisionId: 'd1', toDivisionId: 'd2' })).status, 200);
+    assert.equal((await request('PATCH', '/api/office/o1/divisions/d1', { position: { x: 4, y: 5 } })).status, 200);
+    assert.equal((await request('PATCH', '/api/office/o1/divisions/d1', { position: null })).status, 200);
+    assert.equal((await request('PATCH', '/api/office/o1/divisions/d1', { position: { x: '4' } })).status, 400);
+    assert.equal((await request('POST', '/api/office/analyses', { projectId: 'p1', provider: 'claude', model: 'sonnet' })).status, 202);
+    assert.equal((await request('POST', '/api/office/analyses', { projectId: 'p1' })).status, 400);
+    assert.equal((await request('GET', '/api/office/analyses/a1')).status, 200);
+    assert.equal((await request('POST', '/api/office', {
+      projectId: 'p1',
+      divisions: [{ name: 'API', rolePrompt: 'owns /api' }],
+      appSummary: 'a shop',
+    })).status, 201);
+    assert.equal((await request('POST', '/api/office', { projectId: 'p1', divisions: [{ rolePrompt: 'no name' }] })).status, 400);
+    assert.equal((await request('GET', '/api/office/o1/cases/c1/usage')).status, 200);
+    assert.equal((await request('DELETE', '/api/office/o1')).status, 200);
+  });
+  assert.deepEqual(calls.map((call) => call.method), [
+    'office.listWorkspaces',
+    'office.addFlowEdge',
+    'office.deleteFlowEdge',
+    'office.updateDivision',
+    'office.updateDivision',
+    'office.requireReadyModel',
+    'analyzer.start',
+    'analyzer.get',
+    'office.createOffice',
+    'office.getCaseUsage',
+    'office.deleteOffice',
+  ]);
+  assert.deepEqual((calls[3].args[2] as { position: unknown }).position, { x: 4, y: 5 });
+  assert.equal((calls[4].args[2] as { position: unknown }).position, null);
+  assert.deepEqual(calls[8].args[0], {
+    projectId: 'p1',
+    locale: null,
+    divisions: [{ name: 'API', slug: '', description: '', color: '', agentName: '', rolePrompt: 'owns /api' }],
+    appSummary: 'a shop',
+  });
 });

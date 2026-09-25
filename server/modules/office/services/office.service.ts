@@ -1,14 +1,19 @@
 import { officeCasesDb, officesDb, projectsDb } from '@/modules/database/index.js';
-import { providerAuthService, providerModelsService } from '@/modules/providers/index.js';
+import { providerAuthService, providerModelsService, providerTokenUsageService } from '@/modules/providers/index.js';
 import { broadcastOfficeUpdate } from '@/modules/office/services/office-events.service.js';
-import { buildDefaultDivisions, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
+import { buildDefaultDivisions, buildDivisionsFromProposals, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
 import type {
   LLMProvider,
   Office,
   OfficeCase,
   OfficeCaseDetail,
+  OfficeCaseUsage,
   OfficeDivision,
+  OfficeDivisionProposal,
+  OfficeFlowEdge,
   OfficePermissionMode,
+  OfficeWorkspaceSummary,
+  OfficeSessionUsage,
   OfficeSnapshot,
   ProviderAuthStatus,
 } from '@/shared/types.js';
@@ -130,6 +135,57 @@ async function validateModelChoice(provider: string, model: string): Promise<LLM
   return provider as LLMProvider;
 }
 
+const MAX_CANVAS_COORDINATE = 100_000;
+
+function readPosition(position: { x: number; y: number } | null): { x: number; y: number } | null {
+  if (position === null) {
+    return null;
+  }
+  const valid = (value: number) => Number.isFinite(value) && Math.abs(value) <= MAX_CANVAS_COORDINATE;
+  if (!valid(position.x) || !valid(position.y)) {
+    throw badRequest('position must hold finite x and y canvas coordinates.');
+  }
+  return { x: Math.round(position.x), y: Math.round(position.y) };
+}
+
+/** Does adding `from -> to` close a loop, i.e. can `to` already reach `from`? */
+export function wouldCreateFlowCycle(edges: Array<Pick<OfficeFlowEdge, 'fromDivisionId' | 'toDivisionId'>>, from: string, to: string): boolean {
+  const next = new Map<string, string[]>();
+  for (const edge of edges) {
+    next.set(edge.fromDivisionId, [...(next.get(edge.fromDivisionId) ?? []), edge.toDivisionId]);
+  }
+  const seen = new Set<string>();
+  const stack = [to];
+  while (stack.length > 0) {
+    const current = stack.pop() as string;
+    if (current === from) {
+      return true;
+    }
+    if (seen.has(current)) {
+      continue;
+    }
+    seen.add(current);
+    stack.push(...(next.get(current) ?? []));
+  }
+  return false;
+}
+
+/** Cleans a division proposal from the analysis step (or edited by the user) before it is seeded. */
+function readProposal(proposal: OfficeDivisionProposal, taken: Set<string>): OfficeDivisionProposal {
+  const name = readBoundedText(String(proposal.name ?? ''), 'name', LIMITS.name, true);
+  const color = String(proposal.color ?? '').trim();
+  const slug = uniqueSlug(slugify(String(proposal.slug || name)), taken);
+  taken.add(slug);
+  return {
+    name,
+    slug,
+    description: readBoundedText(String(proposal.description ?? ''), 'description', LIMITS.description, false),
+    color: HEX_COLOR_PATTERN.test(color) ? color : DEFAULT_DIVISION_COLOR,
+    agentName: readBoundedText(String(proposal.agentName || name), 'agentName', LIMITS.name, true),
+    rolePrompt: readBoundedText(String(proposal.rolePrompt ?? ''), 'rolePrompt', LIMITS.rolePrompt, false),
+  };
+}
+
 /** Agent fields the UI may change; each is optional. */
 type AgentUpdateInput = {
   name?: string;
@@ -155,8 +211,23 @@ export const officeService = {
     return {
       office,
       divisions: officesDb.listDivisions(office.id),
+      flow: officesDb.listFlowEdges(office.id),
       cases: officeCasesDb.listCases(office.id),
     };
+  },
+
+  /** Every workspace for the workspace switcher. */
+  listWorkspaces(): OfficeWorkspaceSummary[] {
+    return officesDb.listWorkspaces();
+  },
+
+  /** Deletes a workspace and all its cases; the project folder itself is left alone. */
+  deleteOffice(officeId: string): void {
+    requireOffice(officeId);
+    if (officeCasesDb.listCasesByStatus(['running']).some((caseItem) => caseItem.officeId === officeId)) {
+      throw conflict('Stop the running case before deleting this workspace.', 'OFFICE_CASE_RUNNING');
+    }
+    officesDb.deleteOffice(officeId);
   },
 
   /** The office of a project, or null when it has none yet. */
@@ -170,7 +241,13 @@ export const officeService = {
   },
 
   /** Creates the project's office with the default divisions ("bikin kantor"). */
-  createOffice(input: { projectId: string; locale: string | null }): OfficeSnapshot {
+  createOffice(input: {
+    projectId: string;
+    locale: string | null;
+    /** Divisions from the "analyse an existing app" step; omitted means the default divisions. */
+    divisions?: OfficeDivisionProposal[];
+    appSummary?: string | null;
+  }): OfficeSnapshot {
     const project = projectsDb.getProjectById(input.projectId);
     if (!project) {
       throw notFound('Project not found.', 'PROJECT_NOT_FOUND');
@@ -180,12 +257,19 @@ export const officeService = {
     }
 
     const locale = resolveSeedLocale(input.locale);
+    if (input.divisions && (input.divisions.length === 0 || input.divisions.length > 20)) {
+      throw badRequest('A workspace needs between 1 and 20 proposed divisions.');
+    }
+    const taken = new Set(['coordinator', 'audit']);
+    const proposals = input.divisions?.map((proposal) => readProposal(proposal, taken));
     const displayName = project.custom_project_name?.trim() || project.project_path.split(/[\\/]/).filter(Boolean).pop() || 'project';
     const office = officesDb.createOffice({
       projectPath: project.project_path,
       name: locale === 'en' ? `${displayName} office` : `kantor ${displayName}`,
       locale,
-      divisions: buildDefaultDivisions(locale),
+      divisions: proposals
+        ? buildDivisionsFromProposals(locale, proposals, input.appSummary ?? null)
+        : buildDefaultDivisions(locale),
     });
     broadcastOfficeUpdate(office.id, { entity: 'office', office });
     return this.getSnapshot(office.id);
@@ -217,7 +301,17 @@ export const officeService = {
     return office;
   },
 
-  createDivision(officeId: string, input: { name: string; description?: string; color?: string }): OfficeDivision {
+  createDivision(
+    officeId: string,
+    input: {
+      name: string;
+      description?: string;
+      color?: string;
+      agentName?: string;
+      rolePrompt?: string;
+      position?: { x: number; y: number } | null;
+    },
+  ): OfficeDivision {
     requireOffice(officeId);
     const name = readBoundedText(input.name, 'name', LIMITS.name, true);
     const description = readBoundedText(input.description ?? '', 'description', LIMITS.description, false);
@@ -226,14 +320,19 @@ export const officeService = {
       throw badRequest('color must be a #RRGGBB hex value.');
     }
 
+    const agentName = input.agentName === undefined ? name : readBoundedText(input.agentName, 'agentName', LIMITS.name, true);
+    const rolePrompt = readBoundedText(input.rolePrompt ?? '', 'rolePrompt', LIMITS.rolePrompt, false);
+    const position = readPosition(input.position ?? null);
+
     const taken = new Set(officesDb.listDivisions(officeId).map((division) => division.slug));
-    const division = officesDb.createDivision(officeId, {
+    const created = officesDb.createDivision(officeId, {
       name,
       slug: uniqueSlug(slugify(name), taken),
       description,
       color,
-      agent: { name, rolePrompt: '', allowedTools: [], skills: [] },
+      agent: { name: agentName, rolePrompt, allowedTools: [], skills: [] },
     });
+    const division = position ? officesDb.updateDivision(created.id, { position }) ?? created : created;
     broadcastOfficeUpdate(officeId, { entity: 'division', id: division.id, division });
     return division;
   },
@@ -241,7 +340,13 @@ export const officeService = {
   updateDivision(
     officeId: string,
     divisionId: string,
-    patch: { name?: string; description?: string; color?: string; sortOrder?: number },
+    patch: {
+      name?: string;
+      description?: string;
+      color?: string;
+      sortOrder?: number;
+      position?: { x: number; y: number } | null;
+    },
   ): OfficeDivision {
     requireDivision(officeId, divisionId);
     if (patch.color !== undefined && !HEX_COLOR_PATTERN.test(patch.color.trim())) {
@@ -258,6 +363,7 @@ export const officeService = {
         : readBoundedText(patch.description, 'description', LIMITS.description, false),
       color: patch.color?.trim(),
       sortOrder: patch.sortOrder,
+      position: patch.position === undefined ? undefined : readPosition(patch.position),
     });
     if (!division) {
       throw notFound('Division not found.', 'OFFICE_DIVISION_NOT_FOUND');
@@ -275,8 +381,45 @@ export const officeService = {
     if (officeCasesDb.hasActiveTasksForDivision(divisionId)) {
       throw conflict('This division still has work in a running case.', 'OFFICE_DIVISION_IN_USE');
     }
+    const hadFlow = officesDb.listFlowEdges(officeId)
+      .some((edge) => edge.fromDivisionId === divisionId || edge.toDivisionId === divisionId);
     officesDb.deleteDivision(divisionId);
     broadcastOfficeUpdate(officeId, { entity: 'division', id: divisionId, division: null });
+    if (hadFlow) {
+      broadcastOfficeUpdate(officeId, { entity: 'flow', flow: officesDb.listFlowEdges(officeId) });
+    }
+  },
+
+  /**
+   * Adds a flow arrow between two worker divisions. The coordinator and the
+   * audit layer sit outside the flow, and an arrow may not close a loop,
+   * because a loop would leave its tasks waiting on each other forever.
+   */
+  addFlowEdge(officeId: string, fromDivisionId: string, toDivisionId: string): OfficeFlowEdge[] {
+    const from = requireDivision(officeId, fromDivisionId);
+    const to = requireDivision(officeId, toDivisionId);
+    if (from.isCoordinator || from.isAudit || to.isCoordinator || to.isAudit) {
+      throw badRequest('The coordinator and the audit layer are not part of the flow.', 'OFFICE_FLOW_PROTECTED');
+    }
+    if (from.id === to.id) {
+      throw badRequest('A division cannot follow itself.', 'OFFICE_FLOW_SELF');
+    }
+    const edges = officesDb.listFlowEdges(officeId);
+    if (wouldCreateFlowCycle(edges, from.id, to.id)) {
+      throw conflict(`${to.name} already leads to ${from.name}; this arrow would make a loop.`, 'OFFICE_FLOW_CYCLE');
+    }
+    officesDb.addFlowEdge(officeId, from.id, to.id);
+    const flow = officesDb.listFlowEdges(officeId);
+    broadcastOfficeUpdate(officeId, { entity: 'flow', flow });
+    return flow;
+  },
+
+  deleteFlowEdge(officeId: string, fromDivisionId: string, toDivisionId: string): OfficeFlowEdge[] {
+    requireOffice(officeId);
+    officesDb.deleteFlowEdge(officeId, fromDivisionId, toDivisionId);
+    const flow = officesDb.listFlowEdges(officeId);
+    broadcastOfficeUpdate(officeId, { entity: 'flow', flow });
+    return flow;
   },
 
   async updateAgent(officeId: string, agentId: string, input: AgentUpdateInput): Promise<OfficeDivision> {
@@ -351,6 +494,30 @@ export const officeService = {
   },
 
   /**
+   * Checks a provider/model pair picked outside an agent (the "analyse an
+   * existing app" step): the model must be in the catalog and the provider
+   * logged in.
+   */
+  async requireReadyModel(
+    provider: string,
+    model: string,
+    getStatus: (provider: LLMProvider) => Promise<ProviderAuthStatus> = (name) => providerAuthService.getProviderAuthStatus(name),
+  ): Promise<LLMProvider> {
+    const checked = await validateModelChoice(provider, model);
+    let connected = false;
+    try {
+      const status = await getStatus(checked);
+      connected = status.installed && status.authenticated;
+    } catch {
+      connected = false;
+    }
+    if (!connected) {
+      throw conflict(`Connect ${checked} before using it.`, 'OFFICE_PROVIDERS_NOT_CONNECTED', { providers: [checked] });
+    }
+    return checked;
+  },
+
+  /**
    * Refuses to go on while an enabled agent runs on a provider that is not
    * installed or not logged in, so a case fails up front with a clear message
    * instead of every agent turn failing one by one.
@@ -380,6 +547,59 @@ export const officeService = {
         { providers: disconnected },
       );
     }
+  },
+
+  /**
+   * Tokens every session of a case spent (coordinator, tasks, audits), as the
+   * providers' own transcripts report them. A session whose usage cannot be
+   * read (its transcript is gone, or the provider reports none) counts as zero.
+   */
+  async getCaseUsage(
+    officeId: string,
+    caseId: string,
+    readUsage: (sessionId: string) => Promise<{ inputTokens: number; outputTokens: number; cacheTokens?: number; cacheReadTokens?: number; cacheCreationTokens?: number }> =
+      (sessionId) => providerTokenUsageService.getSessionTotalUsage(sessionId),
+  ): Promise<OfficeCaseUsage> {
+    const caseItem = requireCase(officeId, caseId);
+    const coordinatorId = officesDb.listDivisions(officeId).find((division) => division.isCoordinator)?.id ?? null;
+    const sources: Array<Omit<OfficeSessionUsage, 'inputTokens' | 'outputTokens' | 'cacheTokens' | 'total'>> = [];
+    if (caseItem.coordinatorSessionId) {
+      sources.push({ sessionId: caseItem.coordinatorSessionId, role: 'coordinator', taskId: null, divisionId: coordinatorId });
+    }
+    for (const task of officeCasesDb.listTasks(caseId)) {
+      if (task.sessionId) {
+        sources.push({ sessionId: task.sessionId, role: 'task', taskId: task.id, divisionId: task.divisionId });
+      }
+      if (task.auditSessionId) {
+        const auditId = officesDb.listDivisions(officeId).find((division) => division.isAudit)?.id ?? null;
+        sources.push({ sessionId: task.auditSessionId, role: 'audit', taskId: task.id, divisionId: auditId });
+      }
+    }
+
+    const sessions = await Promise.all(sources.map(async (source): Promise<OfficeSessionUsage> => {
+      try {
+        const usage = await readUsage(source.sessionId);
+        const cacheTokens = usage.cacheTokens ?? (usage.cacheReadTokens ?? 0) + (usage.cacheCreationTokens ?? 0);
+        return {
+          ...source,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          cacheTokens,
+          total: usage.inputTokens + usage.outputTokens + cacheTokens,
+        };
+      } catch {
+        return { ...source, inputTokens: 0, outputTokens: 0, cacheTokens: 0, total: 0 };
+      }
+    }));
+    const sum = (field: 'inputTokens' | 'outputTokens' | 'cacheTokens' | 'total') => sessions.reduce((total, session) => total + session[field], 0);
+    return {
+      caseId,
+      sessions,
+      inputTokens: sum('inputTokens'),
+      outputTokens: sum('outputTokens'),
+      cacheTokens: sum('cacheTokens'),
+      total: sum('total'),
+    };
   },
 
   createCase(officeId: string, input: { title: string; description?: string; createdBy: string | null }): OfficeCase {

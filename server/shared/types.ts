@@ -1625,7 +1625,86 @@ export type OfficeDivision = {
   isCoordinator: boolean;
   isAudit: boolean;
   createdAt: string;
+  /** Where the user dragged the node on the workspace canvas; null means automatic layout. */
+  position: OfficeNodePosition | null;
   agent: OfficeAgent;
+};
+
+/** A node position on the workspace canvas, in canvas pixels. */
+export type OfficeNodePosition = { x: number; y: number };
+
+/**
+ * One arrow of a workspace's flow: work in `toDivisionId` may only start after
+ * the work of `fromDivisionId` in the same case is done. Divisions on sibling
+ * branches run in parallel. An empty flow leaves the order to the coordinator.
+ */
+export type OfficeFlowEdge = {
+  fromDivisionId: string;
+  toDivisionId: string;
+  createdAt: string;
+};
+
+/**
+ * One workspace in the workspace switcher: the office plus the project folder
+ * it works in and how many of its cases are live.
+ */
+export type OfficeWorkspaceSummary = {
+  office: Office;
+  projectId: string;
+  projectName: string;
+  activeCases: number;
+  totalCases: number;
+};
+
+/** A division the "analyse an existing app" step suggests; the user reviews it before it is saved. */
+export type OfficeDivisionProposal = {
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  agentName: string;
+  rolePrompt: string;
+};
+
+/** Where an "analyse an existing app" run stands; broadcast as `office:analysis`. */
+export type OfficeAnalysis = {
+  id: string;
+  projectId: string;
+  status: 'running' | 'done' | 'failed';
+  /** One-paragraph summary of the app (stack, structure, how it runs). */
+  summary: string | null;
+  divisions: OfficeDivisionProposal[];
+  sessionId: string | null;
+  error: string | null;
+  createdAt: string;
+};
+
+/** Realtime frame for an analysis run; sent when it starts, finishes or fails. */
+export type OfficeAnalysisEvent = {
+  kind: 'office:analysis';
+  analysis: OfficeAnalysis;
+};
+
+/** Token use of one office session, as the provider's own transcript reports it. */
+export type OfficeSessionUsage = {
+  sessionId: string;
+  role: 'coordinator' | 'task' | 'audit';
+  taskId: string | null;
+  divisionId: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cacheTokens: number;
+  total: number;
+};
+
+/** Token use of a whole case, per session and summed. */
+export type OfficeCaseUsage = {
+  caseId: string;
+  sessions: OfficeSessionUsage[];
+  inputTokens: number;
+  outputTokens: number;
+  cacheTokens: number;
+  total: number;
 };
 
 /**
@@ -1684,6 +1763,8 @@ export type OfficeTask = {
   sessionId: string | null;
   auditSessionId: string | null;
   error: string | null;
+  /** Files the agent wrote or edited for this task, relative to the project folder when inside it. */
+  changedFiles: string[];
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -1723,6 +1804,7 @@ export type OfficeMessage = {
 export type OfficeSnapshot = {
   office: Office;
   divisions: OfficeDivision[];
+  flow: OfficeFlowEdge[];
   cases: OfficeCase[];
 };
 
@@ -1740,6 +1822,7 @@ export type OfficeCaseDetail = {
 export type OfficeUpdateChange =
   | { entity: 'office'; office: Office }
   | { entity: 'division'; id: string; division: OfficeDivision | null }
+  | { entity: 'flow'; flow: OfficeFlowEdge[] }
   | { entity: 'case'; id: string; case: OfficeCase | null }
   | { entity: 'task'; task: OfficeTask }
   | { entity: 'message'; message: OfficeMessage };

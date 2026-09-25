@@ -260,6 +260,44 @@ export function summarizeClaudeTokenUsage(
   };
 }
 
+/**
+ * Sums every API response in a Claude transcript. Claude writes one row per
+ * content block with the same message id and usage, so each id counts once.
+ */
+export function sumClaudeTokenUsage(entries: AnyRecord[]): TokenUsageResult {
+  const seen = new Set<string>();
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let cacheReadTokens = 0;
+  let cacheCreationTokens = 0;
+  for (const entry of entries) {
+    const usage = entry?.type === 'assistant' ? entry.message?.usage : null;
+    if (!usage) {
+      continue;
+    }
+    const key = String(entry.message?.id ?? entry.uuid ?? '');
+    if (key) {
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+    }
+    inputTokens += readUsageNumber(usage.input_tokens ?? usage.inputTokens);
+    outputTokens += readUsageNumber(usage.output_tokens ?? usage.outputTokens);
+    cacheReadTokens += readUsageNumber(usage.cache_read_input_tokens ?? usage.cacheReadInputTokens);
+    cacheCreationTokens += readUsageNumber(usage.cache_creation_input_tokens ?? usage.cacheCreationInputTokens);
+  }
+  return {
+    used: inputTokens + outputTokens + cacheReadTokens + cacheCreationTokens,
+    inputTokens,
+    outputTokens,
+    cacheReadTokens,
+    cacheCreationTokens,
+    cacheTokens: cacheReadTokens + cacheCreationTokens,
+    breakdown: { input: inputTokens + cacheReadTokens + cacheCreationTokens, output: outputTokens },
+  };
+}
+
 function parseClaudeUsageEntries(fileContent: string): AnyRecord[] {
   const entries: AnyRecord[] = [];
   for (const line of fileContent.trim().split('\n')) {
@@ -346,6 +384,45 @@ export function createProviderTokenUsageService(
   dependencyOverrides: Partial<ProviderTokenUsageServiceDependencies> = {},
 ) {
   const dependencies = { ...defaultDependencies, ...dependencyOverrides };
+
+  /** The Claude transcript of an app session; throws when it cannot be found. */
+  const resolveClaudeSessionFile = (session: SessionRow, sessionId: string, providerSessionId: string): string => {
+    let sessionFilePath = session.jsonl_path;
+    if (!sessionFilePath) {
+      if (!session.project_path) {
+        throw new AppError(`Session file for "${sessionId}" was not found.`, {
+          code: 'SESSION_FILE_NOT_FOUND',
+          statusCode: 404,
+        });
+      }
+
+      const encodedProjectPath = session.project_path.replace(/[^a-zA-Z0-9-]/g, '-');
+      const projectDirectory = path.join(
+        dependencies.getHomeDirectory(),
+        '.claude',
+        'projects',
+        encodedProjectPath,
+      );
+      sessionFilePath = path.join(projectDirectory, `${providerSessionId}.jsonl`);
+
+      const relativePath = path.relative(path.resolve(projectDirectory), path.resolve(sessionFilePath));
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        throw new AppError('Resolved session path is invalid.', {
+          code: 'INVALID_SESSION_PATH',
+          statusCode: 400,
+        });
+      }
+    }
+
+    if (!dependencies.fileExists(sessionFilePath)) {
+      throw new AppError(`Session file for "${sessionId}" was not found.`, {
+        code: 'SESSION_FILE_NOT_FOUND',
+        statusCode: 404,
+      });
+    }
+
+    return sessionFilePath;
+  };
 
   return {
     /**
@@ -434,39 +511,7 @@ export function createProviderTokenUsageService(
           ?? emptyCodexTokenUsage();
       }
 
-      let sessionFilePath = session.jsonl_path;
-      if (!sessionFilePath) {
-        if (!session.project_path) {
-          throw new AppError(`Session file for "${sessionId}" was not found.`, {
-            code: 'SESSION_FILE_NOT_FOUND',
-            statusCode: 404,
-          });
-        }
-
-        const encodedProjectPath = session.project_path.replace(/[^a-zA-Z0-9-]/g, '-');
-        const projectDirectory = path.join(
-          dependencies.getHomeDirectory(),
-          '.claude',
-          'projects',
-          encodedProjectPath,
-        );
-        sessionFilePath = path.join(projectDirectory, `${providerSessionId}.jsonl`);
-
-        const relativePath = path.relative(path.resolve(projectDirectory), path.resolve(sessionFilePath));
-        if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-          throw new AppError('Resolved session path is invalid.', {
-            code: 'INVALID_SESSION_PATH',
-            statusCode: 400,
-          });
-        }
-      }
-
-      if (!dependencies.fileExists(sessionFilePath)) {
-        throw new AppError(`Session file for "${sessionId}" was not found.`, {
-          code: 'SESSION_FILE_NOT_FOUND',
-          statusCode: 404,
-        });
-      }
+      const sessionFilePath = resolveClaudeSessionFile(session, sessionId, providerSessionId);
 
       const tail = await dependencies.readTextFileTail(sessionFilePath, TOKEN_USAGE_TAIL_BYTES);
       let entries = parseClaudeUsageEntries(tail.content);
@@ -474,6 +519,21 @@ export function createProviderTokenUsageService(
         entries = parseClaudeUsageEntries(await dependencies.readTextFile(sessionFilePath));
       }
       return summarizeClaudeTokenUsage(entries, dependencies.getClaudeContextWindow());
+    },
+
+    /**
+     * Tokens a session has spent over its whole life, where the provider's
+     * transcript allows it: Claude turns are summed from the transcript (each
+     * API message once), Codex and OpenCode already report running totals.
+     * Used by the Office module to show what a case cost.
+     */
+    async getSessionTotalUsage(sessionId: string): Promise<TokenUsageResult> {
+      const session = dependencies.getSessionById(sessionId);
+      if (!session || session.provider !== 'claude') {
+        return this.getSessionTokenUsage(sessionId);
+      }
+      const sessionFilePath = resolveClaudeSessionFile(session, sessionId, session.provider_session_id || sessionId);
+      return sumClaudeTokenUsage(parseClaudeUsageEntries(await dependencies.readTextFile(sessionFilePath)));
     },
   };
 }

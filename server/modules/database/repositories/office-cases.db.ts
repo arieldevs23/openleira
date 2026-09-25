@@ -49,6 +49,7 @@ type TaskRow = {
   session_id: string | null;
   audit_session_id: string | null;
   error: string | null;
+  changed_files: string;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -103,6 +104,7 @@ const toTask = (row: TaskRow): OfficeTask => ({
   sessionId: row.session_id,
   auditSessionId: row.audit_session_id,
   error: row.error,
+  changedFiles: readJsonStringArray(row.changed_files),
   sortOrder: row.sort_order,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -148,6 +150,7 @@ type TaskPatch = {
   sessionId?: string | null;
   auditSessionId?: string | null;
   error?: string | null;
+  changedFiles?: string[];
   startedAt?: string | null;
   finishedAt?: string | null;
 };
@@ -156,7 +159,7 @@ const CASE_COLUMNS = `id, office_id, title, description, status, waiting_reason,
   coordinator_session_id, final_summary, error, created_by, created_at, updated_at, started_at, finished_at`;
 
 const TASK_COLUMNS = `id, case_id, division_id, parent_task_id, ref, title, instruction, depends_on, status,
-  attempts, result_summary, audit_notes, session_id, audit_session_id, error, sort_order, created_at,
+  attempts, result_summary, audit_notes, session_id, audit_session_id, error, changed_files, sort_order, created_at,
   updated_at, started_at, finished_at`;
 
 /**
@@ -300,6 +303,8 @@ export const officeCasesDb = {
       ['session_id', patch.sessionId],
       ['audit_session_id', patch.auditSessionId],
       ['error', patch.error],
+      ['changed_files', patch.changedFiles === undefined ? undefined : JSON.stringify(patch.changedFiles)],
+      ['changed_files', patch.changedFiles === undefined ? undefined : JSON.stringify(patch.changedFiles)],
       ['started_at', patch.startedAt],
       ['finished_at', patch.finishedAt],
     ]);

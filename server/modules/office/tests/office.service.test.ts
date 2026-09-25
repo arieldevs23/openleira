@@ -176,6 +176,100 @@ test('a case cannot run while an agent sits on a provider that is not logged in'
   });
 });
 
+test('flow arrows join worker divisions only and never loop; node positions are stored', async () => {
+  await withProject(async (projectId) => {
+    const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });
+    const bySlug = (slug: string) => divisions.find((division) => division.slug === slug)?.id as string;
+
+    officeService.addFlowEdge(office.id, bySlug('planner'), bySlug('backend'));
+    const flow = officeService.addFlowEdge(office.id, bySlug('backend'), bySlug('docs'));
+    assert.deepEqual(flow.map((edge) => [edge.fromDivisionId, edge.toDivisionId]), [
+      [bySlug('planner'), bySlug('backend')],
+      [bySlug('backend'), bySlug('docs')],
+    ]);
+    assert.equal(officeService.getSnapshot(office.id).flow.length, 2);
+
+    assert.throws(() => officeService.addFlowEdge(office.id, bySlug('docs'), bySlug('planner')), rejectsWith('OFFICE_FLOW_CYCLE'));
+    assert.throws(() => officeService.addFlowEdge(office.id, bySlug('coordinator'), bySlug('planner')), rejectsWith('OFFICE_FLOW_PROTECTED'));
+    assert.throws(() => officeService.addFlowEdge(office.id, bySlug('docs'), bySlug('docs')), rejectsWith('OFFICE_FLOW_SELF'));
+
+    // Deleting a division takes its arrows with it.
+    officeService.deleteDivision(office.id, bySlug('backend'));
+    assert.deepEqual(officeService.getSnapshot(office.id).flow, []);
+
+    const moved = officeService.updateDivision(office.id, bySlug('docs'), { position: { x: 120.4, y: -40 } });
+    assert.deepEqual(moved.position, { x: 120, y: -40 });
+    assert.equal(officeService.updateDivision(office.id, bySlug('docs'), { position: null }).position, null);
+    assert.throws(
+      () => officeService.updateDivision(office.id, bySlug('docs'), { position: { x: Number.NaN, y: 0 } }),
+      rejectsWith('INVALID_OFFICE_INPUT'),
+    );
+
+    const custom = officeService.createDivision(office.id, {
+      name: 'Data',
+      agentName: 'Dewi',
+      rolePrompt: 'You own the analytics pipeline.',
+      position: { x: 10, y: 20 },
+    });
+    assert.equal(custom.agent.name, 'Dewi');
+    assert.equal(custom.agent.rolePrompt, 'You own the analytics pipeline.');
+    assert.deepEqual(custom.position, { x: 10, y: 20 });
+  });
+});
+
+test('a workspace can be built from reviewed proposals and listed with its project', async () => {
+  await withProject(async (projectId) => {
+    const snapshot = officeService.createOffice({
+      projectId,
+      locale: 'id',
+      appSummary: 'Toko online Next.js dengan Prisma.',
+      divisions: [
+        { name: 'Storefront', slug: 'storefront', description: 'halaman toko', color: '#123456', agentName: 'Rina', rolePrompt: 'urus UI toko' },
+        { name: 'Audit', slug: 'audit', description: 'nama bentrok', color: 'not-a-color', agentName: '', rolePrompt: '' },
+      ],
+    });
+    assert.deepEqual(snapshot.divisions.map((division) => division.slug), ['coordinator', 'storefront', 'audit-2', 'audit']);
+    const coordinator = snapshot.divisions[0];
+    assert.ok(coordinator.agent.rolePrompt.includes('## Tentang aplikasi ini\nToko online Next.js dengan Prisma.'));
+    assert.equal(snapshot.divisions[2].color, '#2551BD', 'a bad color falls back to the default');
+    assert.equal(snapshot.divisions[2].agent.name, 'Audit', 'an empty agent name takes the division name');
+
+    const [summary] = officeService.listWorkspaces();
+    assert.equal(summary.office.id, snapshot.office.id);
+    assert.equal(summary.projectId, projectId);
+    assert.equal(summary.projectName, 'shop');
+    assert.equal(summary.totalCases, 0);
+
+    officeService.deleteOffice(snapshot.office.id);
+    assert.deepEqual(officeService.listWorkspaces(), []);
+  });
+});
+
+test('case usage sums the coordinator, task and audit sessions; unreadable ones count as zero', async () => {
+  await withProject(async (projectId) => {
+    const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });
+    const caseItem = officeService.createCase(office.id, { title: 'Login', createdBy: null });
+    officeCasesDb.updateCase(caseItem.id, { coordinatorSessionId: 'coord' });
+    const [created] = officeCasesDb.createTasks(caseItem.id, [{
+      id: 't1', divisionId: divisions[1].id, parentTaskId: null, ref: 'T1', title: 'x', instruction: '', dependsOn: [], status: 'done',
+    }]);
+    officeCasesDb.updateTask(created.id, { sessionId: 'work', auditSessionId: 'gone' });
+
+    const usage = await officeService.getCaseUsage(office.id, caseItem.id, async (sessionId) => {
+      if (sessionId === 'gone') {
+        throw new Error('transcript deleted');
+      }
+      return sessionId === 'coord'
+        ? { inputTokens: 100, outputTokens: 20, cacheTokens: 1000 }
+        : { inputTokens: 50, outputTokens: 10, cacheReadTokens: 5, cacheCreationTokens: 5 };
+    });
+    assert.deepEqual(usage.sessions.map((session) => [session.role, session.total]), [['coordinator', 1120], ['task', 70], ['audit', 0]]);
+    assert.equal(usage.total, 1190);
+    assert.equal(usage.cacheTokens, 1010);
+    assert.equal(usage.sessions[1].divisionId, divisions[1].id);
+  });
+});
+
 test('only draft cases can be edited, and running cases cannot be deleted', async () => {
   await withProject(async (projectId) => {
     const { office } = officeService.createOffice({ projectId, locale: 'en' });

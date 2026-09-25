@@ -8,6 +8,7 @@ import {
   OFFICE_CASES_TABLE_SCHEMA_SQL,
   OFFICE_DIVISIONS_TABLE_SCHEMA_SQL,
   OFFICE_MESSAGES_TABLE_SCHEMA_SQL,
+  OFFICE_FLOW_EDGES_TABLE_SCHEMA_SQL,
   OFFICE_TASKS_TABLE_SCHEMA_SQL,
   OFFICES_TABLE_SCHEMA_SQL,
   PROJECTS_TABLE_SCHEMA_SQL,
@@ -496,6 +497,14 @@ const createOfficeTables = (db: Database): void => {
   db.exec(OFFICE_CASES_TABLE_SCHEMA_SQL);
   db.exec(OFFICE_TASKS_TABLE_SCHEMA_SQL);
   db.exec(OFFICE_MESSAGES_TABLE_SCHEMA_SQL);
+  db.exec(OFFICE_FLOW_EDGES_TABLE_SCHEMA_SQL);
+  // Columns added after the first office release; older databases get them here.
+  const divisionColumns = (db.prepare('PRAGMA table_info(office_divisions)').all() as { name: string }[]).map((column) => column.name);
+  addColumnToTableIfNotExists(db, 'office_divisions', divisionColumns, 'pos_x', 'REAL');
+  addColumnToTableIfNotExists(db, 'office_divisions', divisionColumns, 'pos_y', 'REAL');
+  const taskColumns = (db.prepare('PRAGMA table_info(office_tasks)').all() as { name: string }[]).map((column) => column.name);
+  addColumnToTableIfNotExists(db, 'office_tasks', taskColumns, 'changed_files', "TEXT NOT NULL DEFAULT '[]'");
+  db.exec('CREATE INDEX IF NOT EXISTS idx_office_flow_edges_office ON office_flow_edges(office_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_office_divisions_office ON office_divisions(office_id, sort_order)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_office_cases_office ON office_cases(office_id, created_at)');
   // Startup recovery looks cases up by status across every office.

@@ -295,6 +295,9 @@ CREATE TABLE IF NOT EXISTS office_divisions (
     is_coordinator BOOLEAN NOT NULL DEFAULT 0,
     is_audit BOOLEAN NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
+    -- Canvas position the user dragged the node to; NULL means automatic layout.
+    pos_x REAL,
+    pos_y REAL,
     UNIQUE(office_id, slug),
     FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE
 );
@@ -369,6 +372,8 @@ CREATE TABLE IF NOT EXISTS office_tasks (
     session_id TEXT,
     audit_session_id TEXT,
     error TEXT,
+    -- JSON array of files the agent wrote or edited for this task.
+    changed_files TEXT NOT NULL DEFAULT '[]',
     sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -378,6 +383,20 @@ CREATE TABLE IF NOT EXISTS office_tasks (
     FOREIGN KEY (case_id) REFERENCES office_cases(id) ON DELETE CASCADE,
     FOREIGN KEY (division_id) REFERENCES office_divisions(id) ON DELETE SET NULL,
     FOREIGN KEY (parent_task_id) REFERENCES office_tasks(id) ON DELETE SET NULL
+);
+`;
+
+export const OFFICE_FLOW_EDGES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_flow_edges (
+    office_id TEXT NOT NULL,
+    -- Work of the target division waits for the work of the source division.
+    from_division_id TEXT NOT NULL,
+    to_division_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (from_division_id, to_division_id),
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_division_id) REFERENCES office_divisions(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_division_id) REFERENCES office_divisions(id) ON DELETE CASCADE
 );
 `;
 

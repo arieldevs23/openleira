@@ -34,6 +34,15 @@ const describeWorkers = (workers: OfficeDivision[]): string => workers
   .map((division) => `- ${division.slug}: ${division.name} (agent ${division.agent.name}) — ${division.description}`)
   .join('\n');
 
+/** The user's fixed order between divisions, told to the coordinator so its plan fits it. */
+const describeFlow = (flow: Array<[string, string]>): string => (flow.length === 0 ? '' : [
+  '',
+  '## Workflow set by the user',
+  flow.map(([from, to]) => `- ${from} -> ${to}`).join('\n'),
+  'Tasks of a division automatically wait for every task of the divisions before it in this workflow; divisions on separate branches run in parallel.',
+  'Plan to fit this order. Divisions that are not in the workflow are free to be placed wherever the case needs them.',
+].join('\n'));
+
 const describeNotes = (notes: OfficeMessage[]): string => notes
   .map((note) => `- ${String(note.payload.text ?? '').trim()}`)
   .filter((line) => line !== '- ')
@@ -102,6 +111,8 @@ export function buildCoordinatorPlanPrompt(input: {
   workers: OfficeDivision[];
   notes: OfficeMessage[];
   skills: PromptSkill[];
+  /** Workflow arrows as division slug pairs; empty leaves the order to the coordinator. */
+  flow?: Array<[string, string]>;
 }): string {
   const notes = describeNotes(input.notes);
   return [
@@ -114,6 +125,7 @@ export function buildCoordinatorPlanPrompt(input: {
     '',
     '## Divisions you can assign work to',
     describeWorkers(input.workers),
+    describeFlow(input.flow ?? []),
     '',
     '## What to do now',
     'Look at the repository as much as you need, then split the case into sub-tasks for the divisions above.',
@@ -151,6 +163,7 @@ export function buildCoordinatorCheckpointPrompt(input: {
   workers: OfficeDivision[];
   userNotes: OfficeMessage[];
   failureNotes: OfficeMessage[];
+  flow?: Array<[string, string]>;
 }): string {
   const userNotes = describeNotes(input.userNotes);
   const failures = input.failureNotes
@@ -165,6 +178,7 @@ export function buildCoordinatorCheckpointPrompt(input: {
     '',
     '## Divisions',
     describeWorkers(input.workers),
+    describeFlow(input.flow ?? []),
     '',
     '## What to do now',
     'Decide how to react. You may add new tasks (use new ids), and a new task may set "replaces" to the id of a failed task it takes over — tasks blocked by the failed one will then wait for the replacement instead.',
@@ -296,5 +310,43 @@ export function buildAuditRetryPrompt(error: string): string {
     `Your verdict could not be used: ${error}`,
     'Reply again with ONLY the JSON in a single ```json code block:',
     '{ "pass": true or false, "notes": "string", "fixes": ["string"] }',
+  ].join('\n');
+}
+
+const ANALYSIS_JSON_SHAPE = `{
+  "summary": "one paragraph: what the app is, its stack, how it is structured and run",
+  "divisions": [
+    {
+      "name": "Storefront",
+      "slug": "storefront",
+      "description": "one line: what this division owns",
+      "color": "#2551BD",
+      "agent_name": "a short first name",
+      "role_prompt": "markdown: what the agent focuses on, which folders/files it owns, conventions to keep, what it must not touch"
+    }
+  ]
+}`;
+
+/**
+ * The one-off turn that reads an existing app and proposes the divisions of
+ * its workspace. It only reads: the user reviews the proposal before anything
+ * is created, and the coordinator and audit layer are added automatically.
+ */
+export function buildAppAnalysisPrompt(input: { locale: string; projectName: string }): string {
+  return [
+    `You are setting up an AI team (a "workspace") for the existing app "${input.projectName}" in the current folder.`,
+    'Read the repository only as much as you need: README, package/manifests, the folder layout, entry points, tests, deployment files.',
+    'Do NOT change, create or delete any file and do not run commands that modify anything. This is a read-only survey.',
+    '',
+    '## What to produce',
+    '1. "summary": one paragraph a new teammate needs first — what the app does, its stack and main frameworks, how the code is organized, how it is built, run and tested.',
+    '2. "divisions": 3 to 7 divisions (teams) that fit THIS app, each owning a clear area (for example: API, web UI, mobile, data/migrations, infrastructure, tests, docs).',
+    '   Base them on what really exists in the repository; do not add a division for something the app does not have.',
+    '   Do not propose a coordinator or an audit/QA-review division: the workspace always has those.',
+    '   Each "role_prompt" must name the real folders/files the division owns and the conventions it has to follow there.',
+    languageLine(input.locale),
+    '',
+    'Reply with ONLY this JSON in a ```json code block:',
+    ANALYSIS_JSON_SHAPE,
   ].join('\n');
 }

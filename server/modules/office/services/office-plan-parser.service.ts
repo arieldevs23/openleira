@@ -365,3 +365,60 @@ export function extractResultSummary(text: string): string {
   }
   return `…${summary.slice(summary.length - MAX_RESULT_SUMMARY_LENGTH)}`;
 }
+
+/** What the "analyse an existing app" agent answered, before the user reviews it. */
+export type ParsedAppAnalysis = {
+  summary: string;
+  divisions: Array<{
+    name: string;
+    slug: string;
+    description: string;
+    color: string;
+    agentName: string;
+    rolePrompt: string;
+  }>;
+};
+
+const PROPOSAL_COLORS = ['#2551BD', '#7C3AED', '#059669', '#0EA5E9', '#DC2626', '#D97706', '#DB2777', '#4B5563'];
+
+/**
+ * Parses the analysis agent's `{ summary, divisions: [...] }`. Divisions need
+ * a name; the rest is filled in (slug from the name, a palette colour, the
+ * division name as agent name) so a sloppy answer is still usable. The
+ * coordinator and audit layer are always added by the workspace itself, so
+ * proposals for them are dropped.
+ */
+export function parseAppAnalysis(text: string): ParseResult<ParsedAppAnalysis> {
+  const value = extractJsonValue(text);
+  if (!isRecord(value)) {
+    return { ok: false, error: 'No JSON object with "summary" and "divisions" was found.' };
+  }
+  if (!Array.isArray(value.divisions)) {
+    return { ok: false, error: '"divisions" must be an array.' };
+  }
+
+  const divisions: ParsedAppAnalysis['divisions'] = [];
+  for (const raw of value.divisions) {
+    if (!isRecord(raw)) {
+      continue;
+    }
+    const name = readText(raw.name);
+    const slug = (readText(raw.slug) || name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    if (!name || ['coordinator', 'koordinator', 'audit', 'qa-audit'].includes(slug)) {
+      continue;
+    }
+    const color = readText(raw.color);
+    divisions.push({
+      name,
+      slug: slug || 'division',
+      description: readText(raw.description),
+      color: /^#[0-9a-fA-F]{6}$/.test(color) ? color : PROPOSAL_COLORS[divisions.length % PROPOSAL_COLORS.length],
+      agentName: readText(raw.agent_name ?? raw.agentName) || name,
+      rolePrompt: readText(raw.role_prompt ?? raw.rolePrompt),
+    });
+  }
+  if (divisions.length === 0) {
+    return { ok: false, error: 'The analysis proposed no division.' };
+  }
+  return { ok: true, value: { summary: readText(value.summary), divisions: divisions.slice(0, 12) } };
+}

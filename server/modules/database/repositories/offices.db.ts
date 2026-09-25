@@ -7,7 +7,9 @@ import type {
   OfficeAgent,
   OfficeDivision,
   OfficeDivisionInput,
+  OfficeFlowEdge,
   OfficePermissionMode,
+  OfficeWorkspaceSummary,
 } from '@/shared/types.js';
 import { buildSqlAssignments, readJsonStringArray } from '@/shared/utils.js';
 
@@ -35,6 +37,8 @@ type DivisionWithAgentRow = {
   is_coordinator: number;
   is_audit: number;
   created_at: string;
+  pos_x: number | null;
+  pos_y: number | null;
   agent_id: string;
   agent_name: string;
   agent_role_prompt: string;
@@ -52,7 +56,7 @@ const OFFICE_COLUMNS =
 const DIVISION_WITH_AGENT_SELECT = `
   SELECT
     d.id, d.office_id, d.name, d.slug, d.description, d.color, d.sort_order,
-    d.is_coordinator, d.is_audit, d.created_at,
+    d.is_coordinator, d.is_audit, d.created_at, d.pos_x, d.pos_y,
     a.id AS agent_id, a.name AS agent_name, a.role_prompt AS agent_role_prompt,
     a.provider AS agent_provider, a.model AS agent_model,
     a.allowed_tools AS agent_allowed_tools, a.skills AS agent_skills,
@@ -104,6 +108,7 @@ const toDivision = (row: DivisionWithAgentRow): OfficeDivision => {
     isCoordinator: Boolean(row.is_coordinator),
     isAudit: Boolean(row.is_audit),
     createdAt: row.created_at,
+    position: row.pos_x === null || row.pos_y === null ? null : { x: row.pos_x, y: row.pos_y },
     agent,
   };
 };
@@ -169,6 +174,23 @@ type DivisionPatch = {
   description?: string;
   color?: string;
   sortOrder?: number;
+  /** `null` returns the node to automatic layout. */
+  position?: { x: number; y: number } | null;
+};
+
+type FlowEdgeRow = { from_division_id: string; to_division_id: string; created_at: string };
+
+const toFlowEdge = (row: FlowEdgeRow): OfficeFlowEdge => ({
+  fromDivisionId: row.from_division_id,
+  toDivisionId: row.to_division_id,
+  createdAt: row.created_at,
+});
+
+type WorkspaceSummaryRow = OfficeRow & {
+  project_id: string;
+  custom_project_name: string | null;
+  active_cases: number;
+  total_cases: number;
 };
 
 /** Patchable agent fields; omitted fields are left unchanged. */
@@ -193,6 +215,59 @@ export const officesDb = {
       .prepare(`SELECT ${OFFICE_COLUMNS} FROM offices WHERE id = ?`)
       .get(officeId) as OfficeRow | undefined;
     return row ? toOffice(row) : null;
+  },
+
+  /**
+   * Every workspace (office) with its project folder and live case counts,
+   * newest first; feeds the workspace switcher.
+   */
+  listWorkspaces(): OfficeWorkspaceSummary[] {
+    const rows = getConnection().prepare(`
+      SELECT
+        o.id, o.project_path, o.name, o.locale, o.max_parallel, o.permission_mode, o.permission_warning_ack,
+        o.created_at, o.updated_at,
+        p.project_id, p.custom_project_name,
+        (SELECT COUNT(*) FROM office_cases c WHERE c.office_id = o.id AND c.status IN ('running', 'waiting_user')) AS active_cases,
+        (SELECT COUNT(*) FROM office_cases c WHERE c.office_id = o.id) AS total_cases
+      FROM offices o
+      JOIN projects p ON p.project_path = o.project_path
+      ORDER BY o.created_at DESC
+    `).all() as WorkspaceSummaryRow[];
+    return rows.map((row) => ({
+      office: toOffice(row),
+      projectId: row.project_id,
+      projectName: row.custom_project_name || row.project_path.split(/[\\/]/).filter(Boolean).pop() || row.project_path,
+      activeCases: row.active_cases,
+      totalCases: row.total_cases,
+    }));
+  },
+
+  /** Deletes an office; divisions, agents, cases, tasks, messages and flow cascade. */
+  deleteOffice(officeId: string): boolean {
+    return getConnection().prepare('DELETE FROM offices WHERE id = ?').run(officeId).changes > 0;
+  },
+
+  listFlowEdges(officeId: string): OfficeFlowEdge[] {
+    const rows = getConnection()
+      .prepare('SELECT from_division_id, to_division_id, created_at FROM office_flow_edges WHERE office_id = ? ORDER BY created_at ASC')
+      .all(officeId) as FlowEdgeRow[];
+    return rows.map(toFlowEdge);
+  },
+
+  /** Adds one flow arrow; adding an arrow that already exists is a no-op. */
+  addFlowEdge(officeId: string, fromDivisionId: string, toDivisionId: string): void {
+    getConnection()
+      .prepare(`
+        INSERT OR IGNORE INTO office_flow_edges (office_id, from_division_id, to_division_id, created_at)
+        VALUES (?, ?, ?, ?)
+      `)
+      .run(officeId, fromDivisionId, toDivisionId, new Date().toISOString());
+  },
+
+  deleteFlowEdge(officeId: string, fromDivisionId: string, toDivisionId: string): boolean {
+    return getConnection()
+      .prepare('DELETE FROM office_flow_edges WHERE office_id = ? AND from_division_id = ? AND to_division_id = ?')
+      .run(officeId, fromDivisionId, toDivisionId).changes > 0;
   },
 
   getOfficeByProjectPath(projectPath: string): Office | null {
@@ -287,6 +362,8 @@ export const officesDb = {
       ['description', patch.description],
       ['color', patch.color],
       ['sort_order', patch.sortOrder],
+      ['pos_x', patch.position === undefined ? undefined : patch.position?.x ?? null],
+      ['pos_y', patch.position === undefined ? undefined : patch.position?.y ?? null],
     ]);
     if (sql) {
       getConnection().prepare(`UPDATE office_divisions SET ${sql} WHERE id = ?`).run(...values, divisionId);

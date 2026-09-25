@@ -1,5 +1,6 @@
 import express, { type Request } from 'express';
 
+import type { OfficeAnalyzer } from '@/modules/office/services/office-analysis.service.js';
 import type { OfficeOrchestrator } from '@/modules/office/services/office-orchestrator.service.js';
 import type { officeService } from '@/modules/office/services/office.service.js';
 import { AppError, asyncHandler, createApiSuccessResponse } from '@/shared/utils.js';
@@ -8,6 +9,7 @@ import { AppError, asyncHandler, createApiSuccessResponse } from '@/shared/utils
 type OfficeRouteDependencies = {
   office: typeof officeService;
   orchestrator: OfficeOrchestrator;
+  analyzer: OfficeAnalyzer;
 };
 
 type JsonBody = Record<string, unknown>;
@@ -93,6 +95,42 @@ function readModelChoice(body: JsonBody): { provider: string; model: string } | 
   return { provider: readRequiredString(body, 'provider'), model: readRequiredString(body, 'model') };
 }
 
+/** Reads a canvas position: absent leaves it alone, `null` returns the node to automatic layout. */
+function readOptionalPosition(body: JsonBody): { x: number; y: number } | null | undefined {
+  if (!('position' in body)) {
+    return undefined;
+  }
+  if (body.position === null) {
+    return null;
+  }
+  const position = body.position && typeof body.position === 'object' ? body.position as JsonBody : {};
+  if (typeof position.x !== 'number' || typeof position.y !== 'number') {
+    throw badRequest('position must be { x, y } numbers or null.');
+  }
+  return { x: position.x, y: position.y };
+}
+
+/** Reads the reviewed division proposals a workspace is created from, when there are any. */
+function readProposals(body: JsonBody) {
+  if (body.divisions === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(body.divisions)) {
+    throw badRequest('divisions must be an array.');
+  }
+  return body.divisions.map((entry) => {
+    const proposal = entry && typeof entry === 'object' ? entry as JsonBody : {};
+    return {
+      name: readRequiredString(proposal, 'name'),
+      slug: readOptionalString(proposal, 'slug') ?? '',
+      description: readOptionalString(proposal, 'description') ?? '',
+      color: readOptionalString(proposal, 'color') ?? '',
+      agentName: readOptionalString(proposal, 'agentName') ?? '',
+      rolePrompt: readOptionalString(proposal, 'rolePrompt') ?? '',
+    };
+  });
+}
+
 const readUserId = (req: Request): string | null => {
   const id = (req as Request & { user?: { id?: unknown } }).user?.id;
   return typeof id === 'string' || typeof id === 'number' ? String(id) : null;
@@ -103,7 +141,7 @@ const readUserId = (req: Request): string | null => {
  * input, call the office service or orchestrator, and wrap the result.
  */
 export function createOfficeRouter(dependencies: OfficeRouteDependencies): express.Router {
-  const { office, orchestrator } = dependencies;
+  const { office, orchestrator, analyzer } = dependencies;
   const router = express.Router();
 
   router.get('/', asyncHandler(async (req, res) => {
@@ -119,12 +157,53 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     const snapshot = office.createOffice({
       projectId: readRequiredString(body, 'projectId'),
       locale: readOptionalString(body, 'locale') ?? null,
+      divisions: readProposals(body),
+      appSummary: readOptionalString(body, 'appSummary') ?? null,
     });
     res.status(201).json(createApiSuccessResponse(snapshot));
   }));
 
+  // Static paths first, so they never match the `:officeId` parameter.
+  router.get('/workspaces', asyncHandler(async (_req, res) => {
+    res.json(createApiSuccessResponse({ workspaces: office.listWorkspaces() }));
+  }));
+
+  router.post('/analyses', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const provider = await office.requireReadyModel(readRequiredString(body, 'provider'), readRequiredString(body, 'model'));
+    const analysis = analyzer.start({
+      projectId: readRequiredString(body, 'projectId'),
+      provider,
+      model: readRequiredString(body, 'model'),
+      locale: readOptionalString(body, 'locale') ?? null,
+      userId: readUserId(req),
+    });
+    res.status(202).json(createApiSuccessResponse(analysis));
+  }));
+
+  router.get('/analyses/:analysisId', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse(analyzer.get(readParam(req, 'analysisId'))));
+  }));
+
   router.get('/:officeId', asyncHandler(async (req, res) => {
     res.json(createApiSuccessResponse(office.getSnapshot(readParam(req, 'officeId'))));
+  }));
+
+  router.delete('/:officeId', asyncHandler(async (req, res) => {
+    office.deleteOffice(readParam(req, 'officeId'));
+    res.json(createApiSuccessResponse({ deleted: true }));
+  }));
+
+  router.post('/:officeId/flow', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const flow = office.addFlowEdge(readParam(req, 'officeId'), readRequiredString(body, 'fromDivisionId'), readRequiredString(body, 'toDivisionId'));
+    res.status(201).json(createApiSuccessResponse({ flow }));
+  }));
+
+  router.delete('/:officeId/flow', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const flow = office.deleteFlowEdge(readParam(req, 'officeId'), readRequiredString(body, 'fromDivisionId'), readRequiredString(body, 'toDivisionId'));
+    res.json(createApiSuccessResponse({ flow }));
   }));
 
   router.patch('/:officeId', asyncHandler(async (req, res) => {
@@ -144,6 +223,9 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
       name: readRequiredString(body, 'name'),
       description: readOptionalString(body, 'description'),
       color: readOptionalString(body, 'color'),
+      agentName: readOptionalString(body, 'agentName'),
+      rolePrompt: readOptionalString(body, 'rolePrompt'),
+      position: readOptionalPosition(body),
     });
     res.status(201).json(createApiSuccessResponse(division));
   }));
@@ -155,6 +237,7 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
       description: readOptionalString(body, 'description'),
       color: readOptionalString(body, 'color'),
       sortOrder: readOptionalInteger(body, 'sortOrder'),
+      position: readOptionalPosition(body),
     });
     res.json(createApiSuccessResponse(division));
   }));
@@ -206,6 +289,10 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
 
   router.get('/:officeId/cases/:caseId', asyncHandler(async (req, res) => {
     res.json(createApiSuccessResponse(office.getCaseDetail(readParam(req, 'officeId'), readParam(req, 'caseId'))));
+  }));
+
+  router.get('/:officeId/cases/:caseId/usage', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse(await office.getCaseUsage(readParam(req, 'officeId'), readParam(req, 'caseId'))));
   }));
 
   router.patch('/:officeId/cases/:caseId', asyncHandler(async (req, res) => {

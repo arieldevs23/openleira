@@ -6,6 +6,7 @@ import type { AgentTurnResult, OfficeAgentRunner } from '@/modules/office/servic
 import {
   broadcastOfficeLog,
   broadcastOfficeUpdate,
+  extractChangedFiles,
   toOfficeLogEntry,
 } from '@/modules/office/services/office-events.service.js';
 import {
@@ -31,6 +32,7 @@ import {
 import type { PromptSkill } from '@/modules/office/services/office-prompts.service.js';
 import {
   applyAuditVerdict,
+  applyFlowOrder,
   isCaseFullyResolved,
   MAX_AUDIT_RETRIES,
   planSchedulerStep,
@@ -343,6 +345,17 @@ export function createOfficeOrchestrator(dependencies: {
         input.onSessionReady(sessionId);
       },
       onEvent: (event) => {
+        // Files a task writes are recorded on it, so the result panel can show where the work landed.
+        if (handle.kind === 'task' && handle.taskId) {
+          const written = extractChangedFiles(event, context.office.projectPath);
+          if (written.length > 0) {
+            const current = officeCasesDb.getTask(handle.taskId);
+            const known = new Set(current?.changedFiles ?? []);
+            if (current && written.some((filePath) => !known.has(filePath))) {
+              saveTask(context.office.id, handle.taskId, { changedFiles: [...new Set([...current.changedFiles, ...written])] });
+            }
+          }
+        }
         const entry = toOfficeLogEntry(event);
         if (entry && logSessionId) {
           broadcastOfficeLog({
@@ -469,6 +482,13 @@ export function createOfficeOrchestrator(dependencies: {
       : { output: null, error: parsed.error, crashed: false };
   };
 
+  /** The workspace flow as `slug -> slug` pairs of enabled divisions, for the coordinator prompts. */
+  const describeFlowFor = (context: CaseContext): Array<[string, string]> => officesDb
+    .listFlowEdges(context.office.id)
+    .map((edge) => [context.divisionsById.get(edge.fromDivisionId), context.divisionsById.get(edge.toDivisionId)] as const)
+    .filter(([from, to]) => from && to)
+    .map(([from, to]) => [(from as OfficeDivision).slug, (to as OfficeDivision).slug]);
+
   /**
    * Turns parsed tasks into rows. Refs are resolved to ids; a task that
    * replaces a failed one takes over the dependants that were blocked by it.
@@ -514,6 +534,13 @@ export function createOfficeOrchestrator(dependencies: {
           error: null,
         });
       }
+    }
+
+    // The workspace flow is the user's order between divisions; it is applied on
+    // top of the plan every time tasks are added.
+    const flowChanges = applyFlowOrder(officeCasesDb.listTasks(context.caseItem.id), officesDb.listFlowEdges(context.office.id));
+    for (const [taskId, dependsOn] of flowChanges) {
+      saveTask(context.office.id, taskId, { dependsOn });
     }
   };
 
@@ -563,6 +590,7 @@ export function createOfficeOrchestrator(dependencies: {
       workers: context.workers,
       notes: notes.filter((note) => !isFailureNote(note)),
       skills,
+      flow: describeFlowFor(context),
     });
     const allowedDivisionSlugs = context.workers.map((division) => division.slug);
     const result = await coordinatorJsonTurn(
@@ -601,6 +629,7 @@ export function createOfficeOrchestrator(dependencies: {
       workers: context.workers,
       userNotes: notes.filter((note) => !isFailureNote(note)),
       failureNotes: notes.filter(isFailureNote),
+      flow: describeFlowFor(context),
     });
     const allowedDivisionSlugs = context.workers.map((division) => division.slug);
     const result = await coordinatorJsonTurn(

@@ -1,6 +1,8 @@
 import { connectedClients, WS_OPEN_STATE } from '@/modules/websocket/index.js';
 import type {
   NormalizedMessage,
+  OfficeAnalysis,
+  OfficeAnalysisEvent,
   OfficeLogEntry,
   OfficeLogEvent,
   OfficeUpdateChange,
@@ -34,6 +36,11 @@ export function broadcastOfficeUpdate(officeId: string, change: OfficeUpdateChan
 }
 
 /** Streams one transcript line of a running office session to every client. */
+/** Sends an `office:analysis` frame: an app analysis started, finished or failed. */
+export function broadcastOfficeAnalysis(analysis: OfficeAnalysis): void {
+  broadcast(JSON.stringify({ kind: 'office:analysis', analysis } satisfies OfficeAnalysisEvent));
+}
+
 export function broadcastOfficeLog(event: Omit<OfficeLogEvent, 'kind'>): void {
   broadcast(JSON.stringify({ kind: 'office:log', ...event } satisfies OfficeLogEvent));
 }
@@ -89,4 +96,52 @@ export function toOfficeLogEntry(event: NormalizedMessage): OfficeLogEntry | nul
     default:
       return null;
   }
+}
+
+/** Tool names that write files across providers (Claude, Codex's file changes, Cursor, OpenCode). */
+const FILE_WRITING_TOOL_PATTERN = /(write|edit|patch|filechange|create_file|str_replace)/i;
+
+const readToolInput = (input: unknown): Record<string, unknown> | null => {
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input) as unknown;
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+    } catch {
+      return null;
+    }
+  }
+  return input && typeof input === 'object' ? input as Record<string, unknown> : null;
+};
+
+const pathFields = (record: Record<string, unknown>): string[] => ['file_path', 'filePath', 'notebook_path', 'path']
+  .map((field) => record[field])
+  .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+/**
+ * The files a live event says the agent wrote or edited, relative to the
+ * project folder when they are inside it. Used by the orchestrator to show
+ * where a task left its results.
+ */
+export function extractChangedFiles(event: NormalizedMessage, projectPath: string): string[] {
+  if (event.kind !== 'tool_use' || !FILE_WRITING_TOOL_PATTERN.test(event.toolName ?? '')) {
+    return [];
+  }
+  const input = readToolInput(event.toolInput);
+  if (!input) {
+    return [];
+  }
+  const paths = pathFields(input);
+  if (Array.isArray(input.changes)) {
+    for (const change of input.changes) {
+      const record = readToolInput(change);
+      if (record) {
+        paths.push(...pathFields(record));
+      }
+    }
+  }
+  const root = projectPath.replace(/[\\/]+$/, '');
+  return [...new Set(paths.map((filePath) => {
+    const normalized = filePath.trim();
+    return normalized.startsWith(`${root}/`) || normalized.startsWith(`${root}\\`) ? normalized.slice(root.length + 1) : normalized;
+  }))];
 }

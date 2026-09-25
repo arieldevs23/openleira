@@ -179,3 +179,140 @@ export function isCaseFullyResolved(
 
   return tasks.length > 0 && tasks.every((task) => resolved(task, 0));
 }
+
+/** The slice of a task the flow rule reads. */
+type FlowTask = Pick<OfficeTask, 'id' | 'status' | 'dependsOn' | 'divisionId' | 'parentTaskId'>;
+
+/** One arrow of the workspace flow, between division ids. */
+type FlowArrow = { fromDivisionId: string; toDivisionId: string };
+
+/**
+ * Applies the workspace flow to a case's tasks. Pure: returns the new
+ * `dependsOn` of every queued task whose dependencies change.
+ *
+ * - A queued task waits for every live task of the divisions directly before
+ *   its own division. A division with no task in the case is looked through,
+ *   so `planner -> backend -> docs` still orders docs after planner when
+ *   backend got no work. A task that was replaced does not count; its
+ *   replacement does.
+ * - Divisions on separate branches get no dependency on each other, so their
+ *   tasks run in parallel.
+ * - The flow is the user's rule and wins over the coordinator: when a
+ *   dependency from the plan would make tasks wait on each other in a loop,
+ *   that plan dependency is dropped. Flow dependencies alone cannot loop,
+ *   because the flow itself is kept free of loops.
+ */
+export function applyFlowOrder(tasks: FlowTask[], flow: FlowArrow[]): Map<string, string[]> {
+  if (flow.length === 0) {
+    return new Map();
+  }
+  const replaced = new Set(tasks.map((task) => task.parentTaskId).filter((id): id is string => Boolean(id)));
+  const liveTasksByDivision = new Map<string, string[]>();
+  for (const task of tasks) {
+    if (task.divisionId && !replaced.has(task.id)) {
+      liveTasksByDivision.set(task.divisionId, [...(liveTasksByDivision.get(task.divisionId) ?? []), task.id]);
+    }
+  }
+  const predecessors = new Map<string, string[]>();
+  for (const arrow of flow) {
+    predecessors.set(arrow.toDivisionId, [...(predecessors.get(arrow.toDivisionId) ?? []), arrow.fromDivisionId]);
+  }
+
+  const upstreamTaskIds = (divisionId: string): Set<string> => {
+    const found = new Set<string>();
+    const visited = new Set<string>();
+    const stack = [...(predecessors.get(divisionId) ?? [])];
+    while (stack.length > 0) {
+      const current = stack.pop() as string;
+      if (visited.has(current)) {
+        continue;
+      }
+      visited.add(current);
+      const live = liveTasksByDivision.get(current) ?? [];
+      if (live.length > 0) {
+        live.forEach((id) => found.add(id));
+      } else {
+        stack.push(...(predecessors.get(current) ?? []));
+      }
+    }
+    return found;
+  };
+
+  // Dependencies of every queued task: the plan's plus the flow's.
+  const planDeps = new Map<string, Set<string>>();
+  const flowDeps = new Map<string, Set<string>>();
+  for (const task of tasks) {
+    if (task.status !== 'queued') {
+      continue;
+    }
+    planDeps.set(task.id, new Set(task.dependsOn));
+    const fromFlow = task.divisionId ? upstreamTaskIds(task.divisionId) : new Set<string>();
+    fromFlow.delete(task.id);
+    flowDeps.set(task.id, fromFlow);
+  }
+  const dependenciesOf = (taskId: string): string[] => [
+    ...new Set([...(planDeps.get(taskId) ?? []), ...(flowDeps.get(taskId) ?? [])]),
+  ];
+
+  // Break loops among queued tasks by dropping plan dependencies on them.
+  const findLoop = (): string[] | null => {
+    const state = new Map<string, 'open' | 'closed'>();
+    const path: string[] = [];
+    const visit = (taskId: string): string[] | null => {
+      state.set(taskId, 'open');
+      path.push(taskId);
+      for (const dependencyId of dependenciesOf(taskId)) {
+        if (!planDeps.has(dependencyId)) {
+          continue;
+        }
+        if (state.get(dependencyId) === 'open') {
+          return [...path.slice(path.indexOf(dependencyId)), dependencyId];
+        }
+        if (!state.has(dependencyId)) {
+          const loop = visit(dependencyId);
+          if (loop) {
+            return loop;
+          }
+        }
+      }
+      path.pop();
+      state.set(taskId, 'closed');
+      return null;
+    };
+    for (const taskId of planDeps.keys()) {
+      if (!state.has(taskId)) {
+        const loop = visit(taskId);
+        if (loop) {
+          return loop;
+        }
+      }
+    }
+    return null;
+  };
+  for (let loop = findLoop(); loop; loop = findLoop()) {
+    let dropped = false;
+    for (let index = 0; index < loop.length - 1 && !dropped; index += 1) {
+      const [taskId, dependencyId] = [loop[index], loop[index + 1]];
+      if (!flowDeps.get(taskId)?.has(dependencyId)) {
+        planDeps.get(taskId)?.delete(dependencyId);
+        dropped = true;
+      }
+    }
+    if (!dropped) {
+      break;
+    }
+  }
+
+  const changes = new Map<string, string[]>();
+  for (const task of tasks) {
+    if (!planDeps.has(task.id)) {
+      continue;
+    }
+    const next = dependenciesOf(task.id);
+    const before = new Set(task.dependsOn);
+    if (next.length !== before.size || next.some((id) => !before.has(id))) {
+      changes.set(task.id, next);
+    }
+  }
+  return changes;
+}
