@@ -11,7 +11,8 @@
   "toolbar": {
     "models": "Agent models",
     "addDivision": "Add division",
-    "settings": "Settings"
+    "settings": "Settings",
+    "providers": "Providers"
   },
   "missingModels": {
     "banner_one": "{{count}} agent has no model yet",
@@ -102,6 +103,7 @@
       "interrupted": "The server restarted while this ran. Resume to continue where it left off."
     },
     "modelsMissing": "Can't run yet: pick a model for {{names}}.",
+    "providersMissing": "Can't run yet: log in to {{providers}} first.",
     "finalSummary": "Final summary",
     "timeline": "Task timeline",
     "noTasks": "No tasks yet.",
@@ -180,8 +182,12 @@
     "rowLabel": "Model for {{name}}",
     "stillMissing_one": "{{count}} enabled agent still has no model.",
     "stillMissing_other": "{{count}} enabled agents still have no model.",
-    "noModels": "No provider models could be loaded.",
-    "later": "Later"
+    "noModels": "No models yet: connect a provider first.",
+    "later": "Later",
+    "steps": "Setup steps",
+    "stepProviders": "Connect providers",
+    "stepModels": "Pick models",
+    "next": "Next"
   },
   "permission": {
     "title": "Agents will run without asking",
@@ -220,5 +226,20 @@
     "save": "Save",
     "saving": "Saving...",
     "close": "Close"
+  },
+  "providers": {
+    "title": "Connect an AI provider",
+    "subtitle": "Agents run on the provider CLIs installed on the server this app runs on. Log in to at least one; only connected providers show up in the model list.",
+    "checking": "Checking...",
+    "connected": "Connected",
+    "connectedAs": "Connected as {{email}}",
+    "notConnected": "Not connected",
+    "notConnectedShort": "not connected",
+    "connect": "Connect",
+    "hint": "Connect opens a terminal on the server (your VPS, for example) and runs the provider's login command there. The login stays on that server; the office never stores an API key.",
+    "recheck": "Check again",
+    "noneBanner": "No AI provider is connected yet, so agents cannot run",
+    "disconnectedBanner": "Agents use a provider that is not connected: {{providers}}",
+    "connectAction": "Connect provider"
   }
 }

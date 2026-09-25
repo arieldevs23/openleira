@@ -1,4 +1,4 @@
-import { Building2, Cpu, Loader2, Plus, Settings2, X } from 'lucide-react';
+import { Building2, Cpu, Loader2, Plug, Plus, Settings2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,13 +11,15 @@ import SkillsPanel from '@/modules/office/SkillsPanel';
 import { useCaseDetail } from '@/modules/office/hooks/useCaseDetail';
 import { useInstalledSkills } from '@/modules/office/hooks/useInstalledSkills';
 import { useOffice } from '@/modules/office/hooks/useOffice';
+import { OFFICE_PROVIDER_LABELS, useOfficeProviders } from '@/modules/office/hooks/useOfficeProviders';
 import { useProviderModelCatalog } from '@/modules/office/hooks/useProviderModelCatalog';
 import DivisionModal from '@/modules/office/modals/DivisionModal';
 import ModelWizardModal from '@/modules/office/modals/ModelWizardModal';
 import OfficeSettingsModal from '@/modules/office/modals/OfficeSettingsModal';
 import PermissionWarningModal from '@/modules/office/modals/PermissionWarningModal';
+import { ProviderLoginModal } from '@/modules/provider-auth';
 import { Button } from '@/shared/ui';
-import type { OfficeSelection, OfficeTask, Project } from '@/shared/types';
+import type { LLMProvider, OfficeSelection, OfficeTask, Project } from '@/shared/types';
 import { cn } from '@/shared/utils';
 
 /** Below this width the right panel turns into a drawer and the tree scrolls sideways. */
@@ -58,7 +60,8 @@ type OfficePageProps = {
 export default function OfficePage({ project, onOpenSession }: OfficePageProps) {
   const { t, i18n } = useTranslation('office');
   const { snapshot, loadState, loadError, reload, actions } = useOffice(project);
-  const modelGroups = useProviderModelCatalog();
+  const modelCatalog = useProviderModelCatalog();
+  const providers = useOfficeProviders();
   const installedSkills = useInstalledSkills(project.fullPath);
   const isNarrow = useIsNarrowLayout();
 
@@ -68,8 +71,10 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
   const [selection, setSelection] = useState<OfficeSelection>({ type: 'case' });
   // Below 900px the right panel is a drawer; this opens it. Ignored on wide screens.
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  // Whether the model wizard is open (also opened once automatically when models are missing).
+  // Whether the setup wizard is open (also opened once automatically while setup is unfinished).
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  // The wizard step to open on; unset lets the wizard choose from the connected providers.
+  const [wizardStep, setWizardStep] = useState<'providers' | 'models' | undefined>(undefined);
   // Whether the "add division" dialog is open.
   const [isDivisionModalOpen, setIsDivisionModalOpen] = useState(false);
   // Whether the office settings dialog is open.
@@ -86,6 +91,19 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
   const divisions = useMemo(() => snapshot?.divisions ?? [], [snapshot?.divisions]);
   const cases = useMemo(() => snapshot?.cases ?? [], [snapshot?.cases]);
   const missingModelAgents = divisions.filter((division) => division.agent.enabled && (!division.agent.provider || !division.agent.model));
+  const connectedProviders = providers.connected;
+  // Only a logged-in provider's models are offered; the others could not run.
+  const modelGroups = useMemo(
+    () => modelCatalog.filter((group) => connectedProviders.includes(group.provider)),
+    [connectedProviders, modelCatalog],
+  );
+  const providersChecked = !providers.isChecking;
+  const noProviderConnected = providersChecked && connectedProviders.length === 0;
+  const disconnectedProviders = providersChecked
+    ? [...new Set(divisions
+      .filter((division) => division.agent.enabled && division.agent.provider && !connectedProviders.includes(division.agent.provider))
+      .map((division) => division.agent.provider as LLMProvider))]
+    : [];
 
   const activeCaseId = cases.some((caseItem) => caseItem.id === selectedCaseId) ? selectedCaseId : cases[0]?.id ?? null;
   const detail = useCaseDetail(office?.id ?? null, activeCaseId);
@@ -93,13 +111,35 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
   const tasks = detail?.tasks ?? [];
   const messages = detail?.messages ?? [];
 
-  // The model wizard opens by itself once, the first time an office with unpicked models is shown.
+  // The setup wizard opens by itself once, the first time an office with unfinished setup
+  // (no provider logged in, or agents without a model) is shown.
   useEffect(() => {
-    if (office && missingModelAgents.length > 0 && autoWizardOfficeRef.current !== office.id) {
+    if (!office || !providersChecked || autoWizardOfficeRef.current === office.id) {
+      return;
+    }
+    if (noProviderConnected || missingModelAgents.length > 0) {
       autoWizardOfficeRef.current = office.id;
+      setWizardStep(undefined);
       setIsWizardOpen(true);
     }
-  }, [missingModelAgents.length, office]);
+  }, [missingModelAgents.length, noProviderConnected, office, providersChecked]);
+
+  const openWizard = (step?: 'providers' | 'models') => {
+    setWizardStep(step);
+    setIsWizardOpen(true);
+  };
+
+  // The login shell and the wizard are both modal, so the wizard steps aside while a
+  // provider logs in and comes back on the provider step afterwards.
+  const connectProvider = (provider: LLMProvider) => {
+    setIsWizardOpen(false);
+    providers.openLogin(provider);
+  };
+
+  const closeProviderLogin = () => {
+    providers.closeLogin();
+    openWizard('providers');
+  };
 
   const select = (next: OfficeSelection) => {
     setSelection(next);
@@ -226,9 +266,11 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
           messages={messages}
           divisions={divisions}
           missingModelAgents={missingModelAgents}
+          disconnectedProviders={disconnectedProviders.map((provider) => OFFICE_PROVIDER_LABELS[provider])}
+          onConnectProviders={() => openWizard('providers')}
           actions={actions}
           onStart={startCase}
-          onOpenWizard={() => setIsWizardOpen(true)}
+          onOpenWizard={() => openWizard()}
           onSelectTask={selectTask}
           onOpenSession={onOpenSession}
         />
@@ -242,7 +284,11 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
       <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2">
         <Building2 className="h-4 w-4 text-navy dark:text-blue-200" />
         <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{office.name}</h1>
-        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5 text-xs" onClick={() => setIsWizardOpen(true)}>
+        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5 text-xs" onClick={() => openWizard('providers')}>
+          <Plug className="h-3.5 w-3.5" />
+          {t('toolbar.providers')}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5 text-xs" onClick={() => openWizard()}>
           <Cpu className="h-3.5 w-3.5" />
           {t('toolbar.models')}
         </Button>
@@ -256,10 +302,24 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
         </Button>
       </div>
 
-      {missingModelAgents.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200">
+      {noProviderConnected ? (
+        <div data-testid="office-setup-banner" className="flex flex-wrap items-center gap-2 border-b border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200">
+          <span>{t('providers.noneBanner')}</span>
+          <button type="button" className="font-medium underline underline-offset-2" onClick={() => openWizard('providers')}>
+            {t('providers.connectAction')}
+          </button>
+        </div>
+      ) : disconnectedProviders.length > 0 ? (
+        <div data-testid="office-setup-banner" className="flex flex-wrap items-center gap-2 border-b border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200">
+          <span>{t('providers.disconnectedBanner', { providers: disconnectedProviders.map((provider) => OFFICE_PROVIDER_LABELS[provider]).join(', ') })}</span>
+          <button type="button" className="font-medium underline underline-offset-2" onClick={() => openWizard('providers')}>
+            {t('providers.connectAction')}
+          </button>
+        </div>
+      ) : missingModelAgents.length > 0 && (
+        <div data-testid="office-setup-banner" className="flex flex-wrap items-center gap-2 border-b border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200">
           <span>{t('missingModels.banner', { count: missingModelAgents.length })}</span>
-          <button type="button" className="font-medium underline underline-offset-2" onClick={() => setIsWizardOpen(true)}>
+          <button type="button" className="font-medium underline underline-offset-2" onClick={() => openWizard('models')}>
             {t('missingModels.action')}
           </button>
         </div>
@@ -341,7 +401,21 @@ export default function OfficePage({ project, onOpenSession }: OfficePageProps) 
           onOpenChange={setIsWizardOpen}
           divisions={divisions}
           groups={modelGroups}
+          providerStatuses={providers.statuses}
+          connectedProviders={connectedProviders}
+          isCheckingProviders={providers.isChecking}
+          onConnectProvider={connectProvider}
+          onRefreshProviders={() => void providers.refresh()}
+          initialStep={wizardStep}
           onSave={actions.assignModels}
+        />
+      )}
+      {providers.loginProvider && (
+        <ProviderLoginModal
+          isOpen
+          provider={providers.loginProvider}
+          onClose={closeProviderLogin}
+          onComplete={providers.onLoginComplete}
         />
       )}
       {isDivisionModalOpen && (

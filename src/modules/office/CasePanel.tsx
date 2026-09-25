@@ -15,6 +15,9 @@ type CasePanelProps = {
   messages: OfficeMessage[];
   divisions: OfficeDivision[];
   missingModelAgents: OfficeDivision[];
+  /** Names of providers that enabled agents use but that are not logged in. */
+  disconnectedProviders: string[];
+  onConnectProviders: () => void;
   actions: OfficeActions;
   /** Starts the case, showing the one-time permission warning first when needed. */
   onStart: () => Promise<void>;
@@ -34,6 +37,8 @@ export default function CasePanel({
   messages,
   divisions,
   missingModelAgents,
+  disconnectedProviders,
+  onConnectProviders,
   actions,
   onStart,
   onOpenWizard,
@@ -53,7 +58,7 @@ export default function CasePanel({
   const divisionsById = new Map(divisions.map((division) => [division.id, division]));
   const coordinator = divisions.find((division) => division.isCoordinator);
   const isActive = caseItem.status === 'running' || caseItem.status === 'waiting_user';
-  const canStart = caseItem.status === 'draft' && missingModelAgents.length === 0;
+  const canStart = caseItem.status === 'draft' && missingModelAgents.length === 0 && disconnectedProviders.length === 0;
 
   const run = async (name: string, action: () => Promise<unknown>) => {
     setBusyAction(name);
@@ -123,6 +128,15 @@ export default function CasePanel({
           <p>{t('case.modelsMissing', { names: missingModelAgents.map((division) => division.name).join(', ') })}</p>
           <button type="button" onClick={onOpenWizard} className="mt-1 font-medium underline underline-offset-2">
             {t('missingModels.action')}
+          </button>
+        </div>
+      )}
+
+      {['draft', 'waiting_user'].includes(caseItem.status) && disconnectedProviders.length > 0 && (
+        <div className="rounded-[10px] border border-amber-400/40 bg-amber-500/5 p-2.5 text-xs text-amber-800 dark:text-amber-200">
+          <p>{t('case.providersMissing', { providers: disconnectedProviders.join(', ') })}</p>
+          <button type="button" onClick={onConnectProviders} className="mt-1 font-medium underline underline-offset-2">
+            {t('providers.connectAction')}
           </button>
         </div>
       )}

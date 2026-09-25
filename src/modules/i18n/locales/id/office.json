@@ -11,7 +11,8 @@
   "toolbar": {
     "models": "model agent",
     "addDivision": "tambah divisi",
-    "settings": "pengaturan"
+    "settings": "pengaturan",
+    "providers": "provider"
   },
   "missingModels": {
     "banner": "{{count}} agent belum punya model",
@@ -99,6 +100,7 @@
       "interrupted": "server sempet restart pas ini jalan. klik lanjut buat nerusin dari posisi terakhir."
     },
     "modelsMissing": "belum bisa jalan: pilih model dulu buat {{names}}.",
+    "providersMissing": "belum bisa jalan: login ke {{providers}} dulu.",
     "finalSummary": "ringkasan akhir",
     "timeline": "timeline task",
     "noTasks": "belum ada task.",
@@ -175,8 +177,12 @@
     "applyAll": "terapkan ke semua",
     "rowLabel": "model buat {{name}}",
     "stillMissing": "{{count}} agent aktif masih belum punya model.",
-    "noModels": "daftar model provider gagal dimuat.",
-    "later": "nanti aja"
+    "noModels": "belum ada model. hubungkan provider dulu.",
+    "later": "nanti aja",
+    "steps": "langkah setup",
+    "stepProviders": "hubungkan provider",
+    "stepModels": "pilih model",
+    "next": "lanjut"
   },
   "permission": {
     "title": "agent bakal jalan tanpa nanya",
@@ -215,5 +221,20 @@
     "save": "simpan",
     "saving": "lagi nyimpen...",
     "close": "tutup"
+  },
+  "providers": {
+    "title": "hubungkan provider AI",
+    "subtitle": "agent jalan pakai CLI provider yang ke-install di server tempat app ini jalan. login minimal satu. model yang muncul cuma dari provider yang udah terhubung.",
+    "checking": "lagi dicek...",
+    "connected": "terhubung",
+    "connectedAs": "terhubung sebagai {{email}}",
+    "notConnected": "belum terhubung",
+    "notConnectedShort": "belum terhubung",
+    "connect": "hubungkan",
+    "hint": "tombol hubungkan buka terminal di server (misalnya VPS kamu) terus jalanin perintah login provider di sana. login-nya nyimpen di server itu, kantor ga nyimpen API key apa pun.",
+    "recheck": "cek lagi",
+    "noneBanner": "belum ada provider AI yang terhubung, jadi agent belum bisa kerja",
+    "disconnectedBanner": "ada agent yang pakai provider yang belum terhubung: {{providers}}",
+    "connectAction": "hubungkan provider"
   }
 }

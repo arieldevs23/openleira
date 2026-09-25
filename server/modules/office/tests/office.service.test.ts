@@ -6,6 +6,8 @@ import test from 'node:test';
 
 import { closeConnection, initializeDatabase, officeCasesDb, projectsDb } from '@/modules/database/index.js';
 import { officeService } from '@/modules/office/services/office.service.js';
+import { providerModelsService } from '@/modules/providers/index.js';
+import type { LLMProvider, ProviderAuthStatus } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
 async function withProject(run: (projectId: string) => Promise<void>): Promise<void> {
@@ -120,6 +122,57 @@ test('agent models must come from the provider catalog; the wizard applies all o
       model: 'default',
     })));
     assert.equal(officeService.findAgentsMissingModel(office.id).length, 0);
+  });
+});
+
+test('a case cannot run while an agent sits on a provider that is not logged in', async () => {
+  await withProject(async (projectId) => {
+    const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });
+    const status = (provider: LLMProvider, authenticated: boolean, installed = true): ProviderAuthStatus => ({
+      provider, installed, authenticated, email: null, method: null,
+    });
+
+    // Agents without a model use no provider, so there is nothing to check yet.
+    await officeService.requireConnectedProviders(office.id, async () => {
+      throw new Error('no provider should be checked');
+    });
+
+    await officeService.assignModels(office.id, divisions.map((division) => ({
+      agentId: division.agent.id,
+      provider: 'claude',
+      model: 'default',
+    })));
+    const codexModel = (await providerModelsService.getProviderModels('codex')).OPTIONS[0]?.value;
+    assert.ok(codexModel, 'the codex catalog lists at least one model');
+    await officeService.updateAgent(office.id, divisions[1].agent.id, { model: { provider: 'codex', model: codexModel } });
+
+    const checked: LLMProvider[] = [];
+    await assert.rejects(
+      officeService.requireConnectedProviders(office.id, async (provider) => {
+        checked.push(provider);
+        return status(provider, provider === 'claude');
+      }),
+      (error: unknown) => {
+        rejectsWith('OFFICE_PROVIDERS_NOT_CONNECTED')(error);
+        assert.deepEqual((error as AppError).details, { providers: ['codex'] });
+        return true;
+      },
+    );
+    assert.deepEqual(checked.sort(), ['claude', 'codex'], 'each provider is checked once');
+
+    // Not installed counts as not connected, and so does a failing status check.
+    await assert.rejects(
+      officeService.requireConnectedProviders(office.id, async (provider) => status(provider, true, provider !== 'claude')),
+      rejectsWith('OFFICE_PROVIDERS_NOT_CONNECTED'),
+    );
+    await assert.rejects(
+      officeService.requireConnectedProviders(office.id, async () => {
+        throw new Error('cli missing');
+      }),
+      rejectsWith('OFFICE_PROVIDERS_NOT_CONNECTED'),
+    );
+
+    await officeService.requireConnectedProviders(office.id, async (provider) => status(provider, true));
   });
 });
 

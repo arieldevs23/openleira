@@ -55,7 +55,11 @@ Koordinator memakai **satu sesi yang sama** untuk semua gilirannya, jadi dia ing
 
 1. Pilih proyek di sidebar, lalu klik **kantor** di bagian bawah sidebar.
 2. Klik **bikin kantor**. Delapan divisi default dibuat dengan peran bawaan dan **tanpa model**.
-3. Wizard **pilih model** terbuka sekali: pilih model per agent (daftar diambil dari katalog model provider di app, termasuk model custom) atau pakai **terapkan ke semua**. Bisa dibuka lagi kapan saja lewat **model agent**. Kasus tidak bisa dijalankan selama ada agent aktif yang belum punya model — alasannya ditampilkan.
+3. Wizard setup terbuka sekali, dengan dua langkah:
+   - **Hubungkan provider.** Daftar Claude, Codex, Cursor, dan OpenCode beserta status login-nya. Tombol **hubungkan** membuka terminal di server tempat app jalan (misalnya VPS) dan menjalankan perintah login CLI provider itu, sama seperti di onboarding dan Settings > Agents. Login tersimpan di CLI provider di server; kantor tidak menyimpan API key. Langkah berikutnya baru bisa dibuka kalau minimal satu provider sudah terhubung.
+   - **Pilih model.** Pilih model per agent atau pakai **terapkan ke semua**. Yang muncul **hanya model dari provider yang sudah terhubung** (katalog model provider di app, termasuk model custom). Model yang sudah tersimpan di provider yang kemudian logout tetap terlihat, dengan tanda "belum terhubung".
+
+   Wizard bisa dibuka lagi kapan saja lewat **provider** atau **model agent** di toolbar. Kasus tidak bisa dijalankan selama ada agent aktif yang belum punya model, atau yang provider-nya belum login. Alasannya ditampilkan di banner dan panel kasus, dan server juga menolak `start`/`resume` dengan kode `OFFICE_PROVIDERS_NOT_CONNECTED`.
 4. Buat kasus (judul + deskripsi), lalu **jalanin**. Pantau bagan, timeline task, dan transcript; kirim pesan ke koordinator kapan saja; **jeda**, **lanjut**, atau **batal** (membatalkan menghentikan semua sesi yang sedang jalan).
 
 Bagan bisa di-zoom (scroll, pinch, atau tombol + / − di pojok kanan bawah; keyboard `+` `-` `0`) dan digeser dengan menarik latar kosong atau tombol panah. Tombol pas-layar mengembalikan tampilan awal. Node yang dipilih diberi outline biru.
@@ -85,7 +89,7 @@ Semua di bawah `/api/office` (butuh login):
 | PATCH | `/:officeId/agents/:agentId` | Edit agent (`model: null` menghapus model) |
 | PUT | `/:officeId/agents/models` | Wizard: `{ assignments: [{ agentId, provider, model }] }` |
 | POST/GET/PATCH/DELETE | `/:officeId/cases[/:caseId]` | Kelola kasus |
-| POST | `/:officeId/cases/:caseId/{start,pause,resume,cancel}` | Kontrol kasus |
+| POST | `/:officeId/cases/:caseId/{start,pause,resume,cancel}` | Kontrol kasus (`start`/`resume` ditolak 409 `OFFICE_PROVIDERS_NOT_CONNECTED` kalau provider agent aktif belum login) |
 | POST | `/:officeId/cases/:caseId/notes` | Pesan ke koordinator `{ text }` |
 
 Kode backend ada di `server/modules/office` (orkestrator, parser rencana, scheduler, prompt, runner), repository di `server/modules/database/repositories/office*.db.ts`, frontend di `src/modules/office`.

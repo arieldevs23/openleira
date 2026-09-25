@@ -223,7 +223,10 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
   }));
 
   router.post('/:officeId/cases/:caseId/start', asyncHandler(async (req, res) => {
-    res.json(createApiSuccessResponse(orchestrator.startCase(readParam(req, 'officeId'), readParam(req, 'caseId'))));
+    const officeId = readParam(req, 'officeId');
+    const caseId = readParam(req, 'caseId');
+    await office.requireConnectedProviders(officeId);
+    res.json(createApiSuccessResponse(orchestrator.startCase(officeId, caseId)));
   }));
 
   router.post('/:officeId/cases/:caseId/pause', asyncHandler(async (req, res) => {
@@ -231,7 +234,10 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
   }));
 
   router.post('/:officeId/cases/:caseId/resume', asyncHandler(async (req, res) => {
-    res.json(createApiSuccessResponse(orchestrator.resumeCase(readParam(req, 'officeId'), readParam(req, 'caseId'))));
+    const officeId = readParam(req, 'officeId');
+    const caseId = readParam(req, 'caseId');
+    await office.requireConnectedProviders(officeId);
+    res.json(createApiSuccessResponse(orchestrator.resumeCase(officeId, caseId)));
   }));
 
   router.post('/:officeId/cases/:caseId/cancel', asyncHandler(async (req, res) => {

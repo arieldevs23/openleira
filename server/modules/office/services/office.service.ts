@@ -1,5 +1,5 @@
 import { officeCasesDb, officesDb, projectsDb } from '@/modules/database/index.js';
-import { providerModelsService } from '@/modules/providers/index.js';
+import { providerAuthService, providerModelsService } from '@/modules/providers/index.js';
 import { broadcastOfficeUpdate } from '@/modules/office/services/office-events.service.js';
 import { buildDefaultDivisions, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
 import type {
@@ -10,6 +10,7 @@ import type {
   OfficeDivision,
   OfficePermissionMode,
   OfficeSnapshot,
+  ProviderAuthStatus,
 } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
@@ -347,6 +348,38 @@ export const officeService = {
     return officesDb
       .listDivisions(officeId)
       .filter((division) => division.agent.enabled && (!division.agent.provider || !division.agent.model));
+  },
+
+  /**
+   * Refuses to go on while an enabled agent runs on a provider that is not
+   * installed or not logged in, so a case fails up front with a clear message
+   * instead of every agent turn failing one by one.
+   */
+  async requireConnectedProviders(
+    officeId: string,
+    getStatus: (provider: LLMProvider) => Promise<ProviderAuthStatus> = (provider) => providerAuthService.getProviderAuthStatus(provider),
+  ): Promise<void> {
+    requireOffice(officeId);
+    const providers = [...new Set(officesDb
+      .listDivisions(officeId)
+      .filter((division) => division.agent.enabled && division.agent.provider)
+      .map((division) => division.agent.provider as LLMProvider))];
+    const statuses = await Promise.all(providers.map(async (provider) => {
+      try {
+        const status = await getStatus(provider);
+        return { provider, connected: status.installed && status.authenticated };
+      } catch {
+        return { provider, connected: false };
+      }
+    }));
+    const disconnected = statuses.filter((status) => !status.connected).map((status) => status.provider);
+    if (disconnected.length > 0) {
+      throw conflict(
+        `Connect ${disconnected.join(', ')} before running a case: log in from the office setup or from Settings > Agents.`,
+        'OFFICE_PROVIDERS_NOT_CONNECTED',
+        { providers: disconnected },
+      );
+    }
   },
 
   createCase(officeId: string, input: { title: string; description?: string; createdBy: string | null }): OfficeCase {

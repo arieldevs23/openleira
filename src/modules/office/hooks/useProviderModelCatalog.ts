@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 
+import { OFFICE_PROVIDERS } from '@/modules/office/hooks/useOfficeProviders';
 import { api } from '@/shared/api';
-import type { LLMProvider, OfficeModelGroup, ProviderModelsDefinition } from '@/shared/types';
-
-/** Providers an office agent can run on, in the order the model menus list them. */
-const PROVIDERS: LLMProvider[] = ['claude', 'codex', 'cursor', 'opencode'];
+import type { OfficeModelGroup, ProviderModelsDefinition } from '@/shared/types';
 
 let cachedGroups: OfficeModelGroup[] | null = null;
 let inFlight: Promise<OfficeModelGroup[]> | null = null;
@@ -18,7 +16,7 @@ async function loadOfficeModelGroups(): Promise<OfficeModelGroup[]> {
     return cachedGroups;
   }
   inFlight ??= (async () => {
-    const groups = await Promise.all(PROVIDERS.map(async (provider): Promise<OfficeModelGroup | null> => {
+    const groups = await Promise.all(OFFICE_PROVIDERS.map(async (provider): Promise<OfficeModelGroup | null> => {
       try {
         const response = await api.providers.models(provider);
         const body = await response.json() as { success?: boolean; data?: { models?: ProviderModelsDefinition } };
@@ -39,7 +37,10 @@ async function loadOfficeModelGroups(): Promise<OfficeModelGroup[]> {
   return inFlight;
 }
 
-/** The model catalog of every provider, grouped for the agent model dropdowns. */
+/**
+ * The model catalog of every provider, grouped for the agent model dropdowns.
+ * The office page narrows it to the providers that are logged in.
+ */
 export function useProviderModelCatalog() {
   // Loaded groups; starts from the module cache so reopening the page renders instantly.
   const [groups, setGroups] = useState<OfficeModelGroup[]>(cachedGroups ?? []);

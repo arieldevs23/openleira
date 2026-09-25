@@ -117,12 +117,14 @@ test('case routes record the author and route controls to the orchestrator', asy
   });
   assert.deepEqual(calls.map((call) => call.method), [
     'office.createCase',
+    'office.requireConnectedProviders',
     'orchestrator.startCase',
     'orchestrator.pauseCase',
+    'office.requireConnectedProviders',
     'orchestrator.resumeCase',
     'orchestrator.cancelCase',
     'orchestrator.postNote',
   ]);
   assert.deepEqual(calls[0].args, ['o1', { title: 'Login', description: 'd', createdBy: '42' }]);
-  assert.deepEqual(calls[5].args, ['o1', 'c1', 'hi']);
+  assert.deepEqual(calls[7].args, ['o1', 'c1', 'hi']);
 });
