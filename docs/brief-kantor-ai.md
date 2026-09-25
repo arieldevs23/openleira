@@ -64,7 +64,7 @@ Gunakan kembali runner, session synchronizer, dan WebSocket yang sudah ada. Jang
 - Test: unit test untuk parser rencana koordinator (JSON valid/invalid), scheduler dependensi (task jalan hanya jika dependensi done, batas paralel), transisi status audit (pass/fail/ulang maks 2). Test frontend minimal untuk komponen bagan (render node sesuai divisi, status class).
 - Tangani error: JSON dari koordinator tidak valid → coba minta ulang sekali dengan instruksi lebih ketat, lalu tandai case failed dengan pesan jelas. Sesi provider crash → task failed, koordinator diberi tahu.
 - Jangan menyimpan API key baru; pakai autentikasi provider yang sudah ada.
-- Dokumentasi singkat di `docs/kantor-ai.md`: konsep, alur data, cara menambah divisi, keterbatasan.
+- Dokumentasi singkat di `docs/workspace-ai.md`: konsep, alur data, cara menambah divisi, keterbatasan.
 
 ## 5. Yang tidak perlu di versi ini
 

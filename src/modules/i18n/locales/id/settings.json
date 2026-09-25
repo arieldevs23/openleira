@@ -546,7 +546,7 @@
     "scheduledPromptPlugin": {
       "name": "Scheduled Prompts",
       "badge": "ga resmi",
-      "description": "jadwalin prompt workspace, cek riwayat run, sama kelola task lokal berulang.",
+      "description": "jadwalin prompt workspace, cek histori run, sama kelola task lokal berulang.",
       "install": "install"
     },
     "claudeWatchPlugin": {
@@ -588,7 +588,7 @@
     "claudeUsagePlugin": {
       "name": "Claude Usage",
       "badge": "ga resmi",
-      "description": "pantau limit plan Claude Code live, plus riwayat token sama biaya 30 hari.",
+      "description": "pantau limit plan Claude Code live, plus histori token sama biaya 30 hari.",
       "install": "install"
     },
     "codexUsagePlugin": {

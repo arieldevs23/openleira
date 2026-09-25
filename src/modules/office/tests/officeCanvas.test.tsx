@@ -382,7 +382,7 @@ test('the coordinator menu offers no flow or delete entries', () => {
   const labels = screen.getAllByRole('menuitem').map((item) => item.textContent);
   assert.ok(labels.includes('Model'));
   assert.ok(!labels.includes('Connect to…'));
-  assert.ok(!labels.includes('Delete division'));
+  assert.ok(!labels.includes('Delete team'));
   assert.ok(!labels.includes('Disable'));
 });
 
@@ -466,7 +466,7 @@ test('an open question from the coordinator shows on the canvas and can be answe
   });
   const bubble = screen.getByTestId('office-question-bubble');
   assert.ok(bubble.textContent?.includes('Which app, HR or payroll?'));
-  fireEvent.change(screen.getByRole('textbox', { name: 'Answer the coordinator' }), { target: { value: 'payroll' } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Answer the orchestrator' }), { target: { value: 'payroll' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send answer' }));
   await Promise.resolve();
   assert.deepEqual(answers, ['payroll']);
