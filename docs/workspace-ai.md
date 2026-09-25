@@ -54,12 +54,12 @@ Setiap task baru dimulai dengan sesi orchestrator yang baru. Supaya dia tetap ny
 - Setiap perubahan workspace/tim/agent/task/subtask/pesan dikirim lewat WebSocket chat yang sudah ada sebagai frame `office:update` berisi baris yang berubah. Transcript sesi yang berjalan mengalir sebagai frame `office:log`. Halaman workspace tidak pernah polling; setelah reconnect dia mengambil snapshot sekali.
 - Saat server start, task yang tadinya `running` diparkir jadi `waiting_user` (alasan `interrupted`) dan subtask yang sedang jalan kembali ke `queued`. Klik **lanjut** untuk meneruskan; subtask melanjutkan sesinya sendiri.
 
-## Mode normal dan mode canvas
+## Mode Chat dan mode Node Design
 
-Pojok kanan atas header sekarang berisi saklar **normal / canvas** (dulu tempat tab chat, shell, file).
+Pojok kanan atas header berisi saklar **Chat | Node Design** (dulu tempat tab chat, shell, file).
 
-- **Mode normal:** sidebar berisi tab **chat** (obrolan bebas), **proyek**, **jalan**, dan **arsip**. Tab chat, shell, file (plus browser/tasks/plugin kalau aktif) ada di **rail ikon vertikal** di kiri konten; di HP jadi baris di bawah header.
-- **Mode canvas:** sidebar proyek disembunyikan dan diganti sidebar workspace sendiri, jadi dua dunia itu tidak bercampur. Tata letaknya: sidebar workspace di kiri, canvas di tengah, panel hasil di kanan. Di bawah 900px, sidebar dan panel kanan jadi drawer.
+- **Mode Chat:** sidebar berisi tab **chat** (obrolan bebas), **proyek**, **jalan**, dan **arsip**. Tab chat, shell, file (plus browser/tasks/plugin kalau aktif) ada di **rail ikon vertikal** di kiri konten; di HP jadi baris di bawah header.
+- **Mode Node Design (canvas):** sidebar proyek disembunyikan dan diganti sidebar workspace sendiri, jadi dua dunia itu tidak bercampur. Tata letaknya: sidebar workspace di kiri, canvas di tengah, panel hasil di kanan. Di bawah 900px, sidebar dan panel kanan jadi drawer.
 
 ![Mode normal: rail tab di kiri, saklar mode di kanan atas](images/kantor-ai/workspace-normal-mode.png)
 
@@ -97,6 +97,13 @@ Workspace selalu terikat ke folder, jadi foldernya dipilih dulu:
 
      **Progres dan background.** Selama analisis jalan, modal menampilkan tahapnya (mulai → baca kode → nyusun usulan → selesai), waktu berjalan, jumlah langkah, dan daftar live file yang dibaca serta pencarian yang dilakukan agent (40 langkah terakhir). Modal boleh ditutup (**jalan di background**): analisisnya jalan di server, bukan di browser. Analisis yang masih jalan, sudah selesai, atau berhenti muncul di grup **workspace** di sidebar dengan tahap dan jumlah langkahnya. Klik untuk membuka lagi modalnya di posisi terakhir (progres, review, atau coba lagi). Analisis yang masih jalan bisa **dibatalin** (sesinya dihentikan). Yang sudah selesai bisa dibuang dengan tombol ×. Semua update lewat frame WebSocket `office:analysis` (tanpa polling). Hasilnya disimpan di memori server selama satu jam, dan hilang dari daftar begitu foldernya sudah punya workspace.
    - **Pakai tim default** tanpa analisis.
+3. **Dari GitHub atau server git lain:** isi URL repo, folder tujuan (repo-nya dapet subfolder sendiri), dan akses:
+   - **token GitHub** yang disimpan di Pengaturan (atau tempel token khusus buat clone ini, ga disimpan) untuk repo private lewat https;
+   - **tanpa token** untuk repo publik atau URL SSH (`git@github.com:owner/repo.git`), yang pakai SSH key server tempat app ini jalan.
+
+   Progres clone tampil live. Setelah selesai, lanjut seperti aplikasi yang udah ada: analisis AI atau tim default. Token ga pernah masuk URL, argumen proses, atau `.git/config` (pakai credential helper khusus `github.com` lewat env).
+
+**Flow bawaan workspace baru:** koordinator → planner → tim, bukan semua paralel. Panah bawaannya `planner → designer / backend / frontend / security / docs`, `designer → frontend`, dan `backend → security`. Buat tim hasil analisis, tim yang slug-nya mirip planner jadi pusat yang ngasih kerjaan ke tim lain.
 
 Path harus berada di dalam `WORKSPACES_ROOT` server, sama seperti pembuatan proyek biasa.
 
@@ -123,6 +130,20 @@ Task tidak bisa dijalankan selama ada agent aktif tanpa model atau yang provider
   - node skill: buka skill, hubungkan ke agent…, salin, balikin posisi, hapus dari bagan;
   - garis skill: lepas skill dari agent.
 - Tiap node menampilkan model, status live, dan **token** yang dipakai tim itu di task yang dipilih.
+- **Putus dan pindah panah:** klik panah terus tekan **Delete** buat mutusin. Panah yang dipilih punya dua titik di ujungnya: seret ujungnya ke tim lain buat mindahin, atau lepas di area kosong buat mutusin (kayak draw.io). Garis skill yang diklik juga bisa diputus pakai **Delete**.
+
+### Alat gambar
+
+Toolbar di kiri atas canvas buat nambah bentuk sendiri, kayak draw.io: **pointer** (`V`), **kotak** (`R`), **kotak rounded** (`U`), **bulat** (`O`), **belah ketupat** (`D`), dan **teks** (`T`). Pilih alat, terus seret di canvas (atau klik buat ukuran bawaan).
+
+- Bentuk bisa digeser, diubah ukurannya lewat 8 titik di sekelilingnya, dan teksnya diedit langsung (klik dua kali; `Ctrl+Enter` simpan, `Esc` batal).
+- Panel kanan buat ganti jenis bentuk, teks, warna isi, garis, warna teks, ukuran teks, dan urutan (depan/belakang). Klik kanan: edit teks, gaya, bawa ke depan, kirim ke belakang, duplikat, hapus. **Delete** ngapus bentuk yang dipilih.
+- Bentuk ikut seleksi Shift (bisa digeser barengan node).
+- Bentuk cuma tampilan: disimpan per workspace (tabel `office_shapes`) dan ga pernah dibaca orchestrator.
+
+### Plan per tim
+
+Tim yang hasilnya diterusin ke tim lain (biasanya planner) dikasih tau siapa aja penerimanya, dan diminta nulis bagian bersama dulu, lalu satu subbagian `### <nama tim>` per tim. Tiap tim yang nerima cuma dapet bagian bersama plus subbagiannya sendiri, jadi frontend ga ikut baca plan buat backend. Hasil yang ga dipecah per tim tetap diterusin utuh.
 
 ![Menu klik kanan](images/kantor-ai/workspace-context-menu.png)
 
@@ -145,10 +166,15 @@ Skill tidak lagi diatur di sidebar atau panel agent, tapi di bagan:
 - Server menyimpan node skill (`office_skill_nodes`) dan hubungannya (`office_skill_links`), lalu menulis ulang daftar skill agent dari hubungan itu, jadi orkestrator tetap memakai `agent.skills`. Skill yang sudah dipasang ke agent sebelum fitur ini otomatis ditaruh di bagan dan dihubungkan.
 - Panel agent menampilkan skill yang terhubung (hanya baca). Klik node skill untuk melihat deskripsinya, agent mana saja yang punya, melepasnya, menyalin, atau menghapus node. Node skill yang tidak ter-install ditandai.
 
-### Pertanyaan orchestrator dan pesan
+### Pertanyaan orchestrator dan chat
 
 - Kalau orchestrator bertanya (task `waiting_user`, alasan `question`), pertanyaannya muncul sebagai **gelembung di sebelah node orchestrator**, lengkap dengan kotak jawab. Jawaban dikirim sebagai pesan ke orchestrator, dan itu yang melanjutkan task-nya. Gelembung bisa dikecilkan jadi chip supaya tidak menutupi node.
-- Kotak **pesan ke orchestrator** menempel di bawah panel kanan dan tetap terlihat walau panelnya di-scroll atau sedang menampilkan agent/skill. Klik kanan → **kirim pesan ke orchestrator** membuka panel dan langsung menaruh kursor di kotak itu.
+- **Chat sama orchestrator ada di dock bawah canvas**, bukan di sidebar lagi:
+  - **kecil:** kotak pesan plus baris pesan terakhir;
+  - **lebar:** latar gelap nutupin bagian bawah bagan dan nampilin seluruh obrolan (balasan orchestrator di-render markdown);
+  - **disembunyiin:** cuma tombol kecil.
+
+  Pilihannya diinget per browser dan bisa diatur di Pengaturan → Node Design. Klik kanan → **kirim pesan ke orchestrator** munculin dock dan naruh kursor di kotaknya. Task cepat ga punya dock (ga ada orchestrator).
 
 ### Kalau ada yang gagal
 
@@ -171,13 +197,22 @@ Flow diterapkan setiap kali subtask ditambahkan (rencana awal dan check-in). Men
 
 Untuk task yang dipilih ada tiga tab:
 
-- **Hasil:** kontrol task, timeline subtask, chat dengan orchestrator, dan ringkasan akhir (sama seperti sebelumnya).
-- **File:** **"hasilnya disimpan di"** path folder workspace (bisa disalin), lalu pohon folder seperti file explorer berisi file yang ditulis/diedit tiap subtask (dicatat dari tool call `Write`/`Edit`/patch agent; titik warna menunjukkan tim mana). Klik file untuk pratinjau isinya. File di luar folder workspace ditampilkan terpisah.
+- **Hasil:** kontrol task, timeline subtask, dan ringkasan akhir (chat dengan orchestrator pindah ke dock di canvas).
+- **File:** **"hasilnya disimpan di"** path folder workspace (bisa disalin), lalu pohon folder seperti file explorer berisi file yang ditulis/diedit tiap subtask (dicatat dari tool call `Write`/`Edit`/patch agent; titik warna menunjukkan tim mana). Klik file untuk pratinjau isinya. File di luar folder workspace ditampilkan terpisah. **Klik kanan** file buat download file-nya; klik kanan folder (atau tombol download di kotak "disimpan di") buat download foldernya jadi zip sesuai isi di disk sekarang (folder yang diabaikan kayak `node_modules` dan `.git` ga ikut), atau cuma file yang diubah task itu.
 - **Token:** total token task (input, output, cache), batang per tim, dan rincian per sesi. Angka diambil dari transcript provider sendiri: sesi Claude dijumlahkan per pesan API, Codex dan OpenCode memakai total berjalan yang mereka laporkan, Cursor tidak melaporkan token. Angka diperbarui saat ada perubahan subtask/task (frame WebSocket), bukan polling.
 
 Klik node atau agent di sidebar membuka panel agent. Setiap bagiannya bisa dilipat: agent (nama, tim, warna, aktif), model, peran (pratinjau markdown atau edit), tools, skills, serta kerjaan dan transcript.
 
 ![Tab file](images/kantor-ai/workspace-files.png)
+
+## Git dan GitHub
+
+- **Panel git** (fetch, pull, push, publish) pakai token GitHub aktif yang disimpen di Pengaturan buat remote https `github.com`, lewat credential helper yang sama dengan clone. Remote SSH pakai SSH key server.
+- **Agent** jalanin git pakai kredensial server sendiri (SSH key di `~/.ssh` atau setup kredensial git di VPS). Token yang disimpen belum diselipin ke sesi agent; lihat Keterbatasan.
+
+## Pengaturan → Node Design
+
+Tab baru di Pengaturan yang ngumpulin fitur workspace: aturan proyek vs chat bebas (plus folder chat bebas dan kunci file), cara dock chat kebuka, tombol buat munculin lagi panel samping yang dilipet, flow bawaan, akses git (link ke token di tab Git, penjelasan SSH), penanganan gagal (limit provider, ulangi yang gagal, task cepat), dan daftar pintasan canvas.
 
 ## API
 
@@ -197,6 +232,7 @@ Semua di bawah `/api/office` (butuh login):
 | GET | `/:officeId/cases/:caseId/usage` | Pemakaian token task |
 | POST / PATCH / DELETE | `/:officeId/skills[/:nodeId]` | Tambah node skill `{ skillName, position }`, pindah `{ position }`, hapus |
 | POST / DELETE | `/:officeId/skills/:nodeId/links[/:divisionId]` | Hubungkan / lepas skill dari tim `{ divisionId }` |
+| POST / PATCH / DELETE | `/:officeId/shapes[/:shapeId]` | Bentuk gambar `{ kind, x, y, width, height, text?, fill?, stroke?, textColor?, fontSize? }`; PATCH juga `stack: 'front' \| 'back'` |
 | PATCH | `/:officeId` | `name`, `maxParallel`, `permissionMode`, `permissionWarningAcknowledged` |
 | POST/PATCH/DELETE | `/:officeId/divisions[/:divisionId]` | Kelola tim (termasuk `agentName`, `rolePrompt`, `position`) |
 | PATCH | `/:officeId/agents/:agentId` | Edit agent (`model: null` menghapus model) |
@@ -220,6 +256,8 @@ Kode backend ada di `server/modules/office` (orchestrator, parser rencana, sched
 - **Orchestrator hanya bisa menambah atau mengganti subtask,** belum bisa membatalkan subtask yang sudah direncanakan.
 - **Tiap subtask dan audit adalah sesi sendiri** (dinamai `<nama workspace> · tim · T1 judul`). Sesi-sesi ini ga muncul di sidebar, tapi tetap ada di database dan bisa dibuka dari canvas.
 - **API eksternal `POST /api/agent` (pakai API key) belum dikunci ke canvas.** Itu jalur integrasi, jadi dibiarkan; kalau mau ditutup juga, tinggal pasang guard yang sama.
+- **Token GitHub belum dikasih ke sesi agent.** Tiap provider bikin env-nya sendiri, jadi agent pakai kredensial git server. Pasang SSH key atau kredensial git di server kalau agent perlu push.
+- **Pemecahan plan per tim bergantung ke judul subbagian** (`### <nama tim>`). Kalau planner ga nulis subbagian, hasilnya diterusin utuh ke semua tim.
 - **Kunci file cuma di app ini.** Editor lain atau shell yang ngedit file langsung ga ketahan; terminal cuma ngasih peringatan.
 - **Biaya token.** Tiap subtask minimal dua giliran (kerja + audit), ditambah giliran orchestrator (rencana, check-in, ringkasan).
 - **Pembacaan file yang diubah bergantung pada tool call.** File yang diubah lewat `Bash` (misalnya `sed -i` atau generator) tidak tercatat di tab file.

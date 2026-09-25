@@ -1652,7 +1652,6 @@ export default function OfficeCanvas({
                 return null;
               }
               const path = connectorPath(positionOf(from), nodeSize, positionOf(to), nodeSize);
-              const ends = connectorEnds(positionOf(from), nodeSize, positionOf(to), nodeSize);
               return (
                 <g key={`flow-${from.id}-${to.id}`}>
                   <path
@@ -1674,27 +1673,6 @@ export default function OfficeCanvas({
                     onClick={() => { setSelectedLink(null); onSelect({ type: 'edge', fromDivisionId: from.id, toDivisionId: to.id }); }}
                     onContextMenu={(event) => openMenu(event, { kind: 'flow', fromDivisionId: from.id, toDivisionId: to.id })}
                   />
-                  {selected && (['from', 'to'] as const).map((end) => {
-                    const at = end === 'from' ? ends.start : ends.end;
-                    return (
-                      <circle
-                        key={end}
-                        cx={at.x}
-                        cy={at.y}
-                        r={6 / view.zoom + 2}
-                        data-edge-end={end}
-                        data-edge-from={from.id}
-                        data-edge-to={to.id}
-                        data-testid={`office-flow-end-${end}-${from.slug}-${to.slug}`}
-                        fill="hsl(var(--background))"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        style={{ pointerEvents: 'all', cursor: 'move' }}
-                      >
-                        <title>{t('tree.dragArrowEnd')}</title>
-                      </circle>
-                    );
-                  })}
                 </g>
               );
             })}
@@ -1829,6 +1807,39 @@ export default function OfficeCanvas({
           </button>
 
           {divisions.map(renderNode)}
+
+          {/* the draggable ends of the selected arrow, above the nodes so they can always be grabbed */}
+          {selection.type === 'edge' && !reconnecting && (() => {
+            const from = divisions.find((division) => division.id === selection.fromDivisionId);
+            const to = divisions.find((division) => division.id === selection.toDivisionId);
+            if (!from || !to) return null;
+            const ends = connectorEnds(positionOf(from), nodeSize, positionOf(to), nodeSize);
+            return (
+              <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" style={{ zIndex: 20 }} width={1} height={1} aria-hidden>
+                {(['from', 'to'] as const).map((end) => {
+                  const at = end === 'from' ? ends.start : ends.end;
+                  return (
+                    <circle
+                      key={end}
+                      cx={at.x}
+                      cy={at.y}
+                      r={6 / view.zoom + 2}
+                      data-edge-end={end}
+                      data-edge-from={from.id}
+                      data-edge-to={to.id}
+                      data-testid={`office-flow-end-${end}-${from.slug}-${to.slug}`}
+                      fill="hsl(var(--background))"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      style={{ pointerEvents: 'all', cursor: 'move' }}
+                    >
+                      <title>{t('tree.dragArrowEnd')}</title>
+                    </circle>
+                  );
+                })}
+              </svg>
+            );
+          })()}
 
           {/* message-count chips on the coordinator → division spokes */}
           {coordinator && spokeTargets.map((division) => {
@@ -2053,7 +2064,7 @@ export default function OfficeCanvas({
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
       </div>
-      <p className="pointer-events-none absolute bottom-4 left-3 z-30 hidden text-[10.5px] text-muted-foreground/80 min-[900px]:block">
+      <p className="pointer-events-none absolute bottom-4 left-3 right-48 z-10 hidden truncate text-[10.5px] text-muted-foreground/80 min-[900px]:block" title={t('tree.hint')}>
         {t('tree.hint')}
       </p>
 
