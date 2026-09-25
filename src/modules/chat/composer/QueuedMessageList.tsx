@@ -109,7 +109,7 @@ export default function QueuedMessageList({
                   onClick={() => onSendNow(draft.id)}
                   aria-label={sendNowLabel}
                   title={sendNowLabel}
-                  className="rounded-md p-1 text-amber-600 transition-colors hover:bg-amber-500/10 hover:text-amber-500 dark:text-amber-400"
+                  className="rounded-md p-1 text-warn transition-colors hover:bg-warn/10 hover:text-warn"
                 >
                   <ZapIcon className="h-3.5 w-3.5" />
                 </button>

@@ -96,8 +96,8 @@ export default function ActivityIndicator({ activity, onAbort, isInputFocused = 
   const tabSurfaceClassName = [
     'chat-activity-tab inline-flex h-8 items-center rounded-b-none rounded-t-lg border border-b-0 bg-card px-3 text-xs transition-all duration-200',
     isInputFocused
-      ? 'border-primary/30 shadow-[0_-1px_2px_hsl(var(--foreground)/0.08),1px_0_2px_hsl(var(--foreground)/0.06),-1px_0_2px_hsl(var(--foreground)/0.06)]'
-      : 'border-border/50 shadow-[0_-1px_1px_hsl(var(--foreground)/0.04),1px_0_1px_hsl(var(--foreground)/0.03),-1px_0_1px_hsl(var(--foreground)/0.03)]',
+      ? 'border-border-strong'
+      : 'border-border',
   ].join(' ');
 
   return (
@@ -110,7 +110,7 @@ export default function ActivityIndicator({ activity, onAbort, isInputFocused = 
         <div className={`${tabSurfaceClassName} min-w-0 max-w-full gap-2`}>
           <span
             className={`h-1.5 w-1.5 shrink-0 animate-pulse rounded-full ${
-              isBackground ? 'bg-purple-500 dark:bg-purple-400' : 'bg-primary'
+              isBackground ? 'bg-primary' : 'bg-primary'
             }`}
             aria-hidden
           />

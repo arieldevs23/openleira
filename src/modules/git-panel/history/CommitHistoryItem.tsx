@@ -29,7 +29,7 @@ function RefBadge({ refName, color }: { refName: string; color: string }) {
       style={{
         borderColor: color,
         color,
-        backgroundColor: isHead ? `${color}22` : 'transparent',
+        backgroundColor: isHead ? `color-mix(in srgb, ${color} 13%, transparent)` : 'transparent',
       }}
       title={refName}
     >
@@ -67,7 +67,7 @@ export default function CommitHistoryItem({
 
   // Must stay a literal hex value: RefBadge derives its HEAD tint by
   // appending an alpha byte (`${color}22`), which breaks for var() strings.
-  const badgeColor = graphRow ? laneColor(graphRow.nodeLane) : '#0ea5e9';
+  const badgeColor = graphRow ? laneColor(graphRow.nodeLane) : 'var(--accent)';
 
   return (
     <div className="flex border-b border-border last:border-0">
@@ -137,11 +137,11 @@ export default function CommitHistoryItem({
                 </div>
                 <div>
                   <div className="text-muted-foreground/60">{t('git:history.added')}</div>
-                  <div className="font-semibold text-green-600 dark:text-green-400">+{fileSummary.totalInsertions}</div>
+                  <div className="font-semibold text-ok">+{fileSummary.totalInsertions}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground/60">{t('git:history.removed')}</div>
-                  <div className="font-semibold text-red-600 dark:text-red-400">-{fileSummary.totalDeletions}</div>
+                  <div className="font-semibold text-err">-{fileSummary.totalDeletions}</div>
                 </div>
               </div>
             )}
@@ -173,11 +173,11 @@ export default function CommitHistoryItem({
                       </span>
                       <span className="flex-shrink-0 font-mono text-muted-foreground/60">
                         {file.insertions > 0 && (
-                          <span className="text-green-600 dark:text-green-400">+{file.insertions}</span>
+                          <span className="text-ok">+{file.insertions}</span>
                         )}
                         {file.insertions > 0 && file.deletions > 0 && '/'}
                         {file.deletions > 0 && (
-                          <span className="text-red-600 dark:text-red-400">-{file.deletions}</span>
+                          <span className="text-err">-{file.deletions}</span>
                         )}
                       </span>
                     </div>

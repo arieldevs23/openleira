@@ -193,7 +193,7 @@ function SidebarProjectItem({
                           {isStarred && (
                             <Star
                               aria-label={t('contextMenu.starred', 'Starred')}
-                              className="h-2.5 w-2.5 flex-shrink-0 fill-current text-yellow-600 dark:text-yellow-400"
+                              className="h-2.5 w-2.5 flex-shrink-0 fill-current text-warn"
                             />
                           )}
                         </h3>
@@ -290,7 +290,7 @@ function SidebarProjectItem({
                     {isStarred && (
                       <Star
                         aria-label={t('contextMenu.starred', 'Starred')}
-                        className="h-2.5 w-2.5 flex-shrink-0 fill-current text-yellow-600 dark:text-yellow-400"
+                        className="h-2.5 w-2.5 flex-shrink-0 fill-current text-warn"
                       />
                     )}
                   </div>
@@ -312,7 +312,7 @@ function SidebarProjectItem({
             {isEditing ? (
               <>
                 <div
-                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-green-600 transition-colors hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-900/20"
+                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-ok transition-colors hover:bg-ok/10 hover:text-ok"
                   onClick={(event) => {
                     event.stopPropagation();
                     saveProjectName();
@@ -321,7 +321,7 @@ function SidebarProjectItem({
                   <Check className="h-3 w-3" />
                 </div>
                 <div
-                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-800"
+                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   onClick={(event) => {
                     event.stopPropagation();
                     onCancelEditingProject();

@@ -38,7 +38,7 @@ export default function AboutTab() {
         <img
           src="/logo-256.png"
           alt="OpenLeira"
-          className="h-16 w-16 rounded-2xl bg-white shadow-md ring-1 ring-black/5"
+          className="h-16 w-16 rounded-2xl bg-card shadow-md ring-1 ring-border"
         />
         <h2
           className="mt-3 text-2xl font-semibold tracking-tight text-foreground"

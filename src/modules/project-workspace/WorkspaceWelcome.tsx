@@ -172,7 +172,7 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-5 pb-6">
-        <img src="/logo-256.png" alt="" className="h-14 w-14 rounded-2xl bg-white shadow-md ring-1 ring-black/5" />
+        <img src="/logo-256.png" alt="" className="h-14 w-14 rounded-2xl bg-card shadow-md ring-1 ring-border" />
         <h1
           className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground"
           style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}

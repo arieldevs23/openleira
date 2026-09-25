@@ -18,8 +18,8 @@ const TERMINAL_RESIZE_DELAY_MS = 50;
 
 const TERMINAL_OPTIONS: ITerminalOptions = {
   cursorBlink: true,
-  fontSize: 14,
-  fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+  fontSize: 12.5,
   allowProposedApi: true,
   allowTransparency: false,
   convertEol: true,
@@ -28,14 +28,11 @@ const TERMINAL_OPTIONS: ITerminalOptions = {
   windowsMode: false,
   macOptionIsMeta: true,
   macOptionClickForcesSelection: true,
-  // Keep the runtime theme keys used by the previous JSX implementation.
+  // The surface colours come from the --term-* design tokens at creation time
+  // (see buildTerminalOptions). The 16-colour ANSI palette below is the
+  // VS Code "Dark+" terminal palette, kept as a library theme: programs running
+  // in the pty choose these colours, the app does not.
   theme: {
-    background: '#1e1e1e',
-    foreground: '#d4d4d4',
-    cursor: '#ffffff',
-    cursorAccent: '#1e1e1e',
-    selectionBackground: '#264f78',
-    selectionForeground: '#ffffff',
     black: '#000000',
     red: '#cd3131',
     green: '#0dbc79',
@@ -72,6 +69,35 @@ const TERMINAL_OPTIONS: ITerminalOptions = {
     ],
   },
 };
+
+/** Reads one design token from the document root, with a fallback for tests. */
+function readToken(name: string, fallback: string): string {
+  if (typeof document === 'undefined') {
+    return fallback;
+  }
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+/**
+ * xterm.js needs concrete colours, so the terminal surface is resolved from
+ * the --term-* tokens in src/index.css when the terminal is created.
+ */
+function buildTerminalOptions(): ITerminalOptions {
+  const background = readToken('--term-bg', 'black');
+  return {
+    ...TERMINAL_OPTIONS,
+    theme: {
+      ...TERMINAL_OPTIONS.theme,
+      background,
+      foreground: readToken('--term-fg', 'white'),
+      cursor: readToken('--term-cursor', 'white'),
+      cursorAccent: background,
+      selectionBackground: readToken('--term-selection', 'gray'),
+      selectionForeground: readToken('--term-fg', 'white'),
+    },
+  };
+}
 
 // CLIs running inside the pty (e.g. `claude auth login`'s "press c to copy"
 // device-flow prompt) write to the clipboard via an OSC 52 escape sequence,
@@ -177,7 +203,7 @@ export function useShellTerminal({
       return;
     }
 
-    const nextTerminal = new Terminal(TERMINAL_OPTIONS);
+    const nextTerminal = new Terminal(buildTerminalOptions());
     terminalRef.current = nextTerminal;
 
     const nextFitAddon = new FitAddon();

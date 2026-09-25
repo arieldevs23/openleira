@@ -215,7 +215,7 @@ export function ContextMenu({ position, items, ariaLabel, header, className, onC
             className={cn(
               'flex w-full items-start gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors duration-150 focus-visible:outline-none disabled:opacity-60',
               isDanger
-                ? 'text-red-600 hover:bg-red-500/10 focus-visible:bg-red-500/10 dark:text-red-400'
+                ? 'text-err hover:bg-err/10 focus-visible:bg-err/10'
                 : 'text-foreground hover:bg-foreground/[0.06] focus-visible:bg-foreground/[0.06]',
             )}
           >

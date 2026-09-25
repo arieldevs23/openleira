@@ -40,8 +40,8 @@ export default function SidebarFooter({
           <div className="nav-divider" />
           <div className="px-2 py-1.5 md:px-2 md:py-1.5">
             <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-500 dark:text-amber-400" />
-              <span className="min-w-0 flex-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 text-warn" />
+              <span className="min-w-0 flex-1 text-xs font-medium text-warn">
                 {t('version.restartRequired')}
               </span>
             </div>

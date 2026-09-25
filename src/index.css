@@ -112,6 +112,13 @@
     --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.45);  /* modals and dropdowns only */
     --orn: 0.05;                       /* ornament opacity */
 
+    /* Terminal surface. Stays on the dark values in both modes because the
+       ANSI palette programs print with assumes a dark background. */
+    --term-bg: #141416;
+    --term-fg: #F2F2F0;
+    --term-cursor: #C9CCD4;
+    --term-selection: #3A3A40;
+
     /* Type */
     --font-display: "Cinzel", Georgia, serif;
     --font-serif: "Playfair Display", Georgia, serif;

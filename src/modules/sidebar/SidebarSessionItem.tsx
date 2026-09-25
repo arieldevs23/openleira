@@ -83,10 +83,10 @@ function SidebarSessionItem({
         className={cn(
           'block h-1.5 w-1.5 flex-shrink-0 rounded-full',
           showAttentionIndicator
-            ? 'bg-amber-500'
+            ? 'bg-warn'
             : showBackgroundIndicator
-              ? 'bg-purple-500 dark:bg-purple-400'
-              : 'bg-green-500',
+              ? 'bg-primary'
+              : 'bg-ok',
         )}
       />
     </Tooltip>

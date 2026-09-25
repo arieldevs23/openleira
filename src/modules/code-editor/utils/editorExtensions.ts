@@ -70,12 +70,10 @@ export const createMinimapExtension = ({
   file,
   showDiff,
   minimapEnabled,
-  isDarkMode,
 }: {
   file: CodeEditorFile;
   showDiff: boolean;
   minimapEnabled: boolean;
-  isDarkMode: boolean;
 }) => {
   if (!file.diffInfo || !showDiff || !minimapEnabled) {
     return [];
@@ -92,12 +90,15 @@ export const createMinimapExtension = ({
         delete gutters[Number(key)];
       });
 
+      // The minimap paints on a canvas, so the --ok token is resolved to a concrete colour.
+      const insertedLineColour = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || 'green';
+
       chunks.forEach((chunk) => {
         const fromLine = state.doc.lineAt(chunk.fromB).number;
         const toLine = state.doc.lineAt(Math.min(chunk.toB, state.doc.length)).number;
 
         for (let lineNumber = fromLine; lineNumber <= toLine; lineNumber += 1) {
-          gutters[lineNumber] = isDarkMode ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 1)';
+          gutters[lineNumber] = insertedLineColour;
         }
       });
 

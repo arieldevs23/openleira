@@ -314,7 +314,7 @@ export default function FileContextMenu({
                     action.isDisabled
                       ? 'opacity-50 cursor-not-allowed'
                       : action.isDanger
-                      ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950'
+                      ? 'text-err hover:bg-err/10'
                       : 'hover:bg-accent',
                     isLoading && 'pointer-events-none',
                   )}

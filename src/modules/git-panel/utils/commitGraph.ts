@@ -14,19 +14,18 @@ type GraphCommit = {
   parents?: string[];
 };
 
-// Colors cycle per lane, VSCode Git Graph style. Chosen to stay readable on
-// both light and dark backgrounds.
+// Colours cycle per lane, VSCode Git Graph style. They are design tokens so
+// the rails follow the active theme; the silver accent comes first so the main
+// line reads as the primary one. Callers apply them through `style`, because
+// SVG presentation attributes do not resolve var().
 const GRAPH_COLORS = [
-  '#0ea5e9', // sky
-  '#f97316', // orange
-  '#a855f7', // purple
-  '#22c55e', // green
-  '#ef4444', // red
-  '#eab308', // yellow
-  '#14b8a6', // teal
-  '#ec4899', // pink
-  '#6366f1', // indigo
-  '#84cc16', // lime
+  'var(--accent)',
+  'var(--info)',
+  'var(--ok)',
+  'var(--warn)',
+  'var(--text-dim)',
+  'var(--err)',
+  'var(--muted)',
 ];
 
 export const laneColor = (lane: number) => GRAPH_COLORS[lane % GRAPH_COLORS.length];

@@ -100,7 +100,7 @@ export const BashCommandDisplay: React.FC<BashCommandDisplayProps> = ({
             !hasOutput && 'opacity-0',
           )}
         />
-        <Terminal className={cn('h-3 w-3 flex-shrink-0 opacity-70', isError && 'text-red-500 opacity-100')} />
+        <Terminal className={cn('h-3 w-3 flex-shrink-0 opacity-70', isError && 'text-err opacity-100')} />
         <span className="flex-shrink-0 font-medium text-foreground/70">Bash</span>
         {/* Not a <code> tag: the global `.chat-message code` rule forces
             `white-space: pre-wrap !important`, which would defeat `truncate`. */}
@@ -118,7 +118,7 @@ export const BashCommandDisplay: React.FC<BashCommandDisplayProps> = ({
           title={t('chat:misc.copyCommand')}
           aria-label={t('chat:misc.copyCommand')}
         >
-          {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+          {copied ? <Check className="h-3 w-3 text-ok" /> : <Copy className="h-3 w-3" />}
         </button>
       </div>
 
@@ -134,7 +134,7 @@ export const BashCommandDisplay: React.FC<BashCommandDisplayProps> = ({
           <pre
             className={cn(
               'max-h-80 overflow-auto whitespace-pre-wrap break-all px-2.5 py-2 leading-relaxed',
-              isError ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground',
+              isError ? 'text-err' : 'text-muted-foreground',
             )}
           >
             {trimmedOutput}

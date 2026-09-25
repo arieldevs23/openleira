@@ -104,7 +104,7 @@ export default function McpServers({ selectedProvider, currentProjects }: McpSer
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <Server className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-500" />
+          <Server className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
           <div className="min-w-0 space-y-1">
             <h3 className="text-lg font-medium text-foreground">{t('mcpServers.title')}</h3>
             <p className="text-sm text-muted-foreground">{description}</p>
@@ -147,7 +147,7 @@ export default function McpServers({ selectedProvider, currentProjects }: McpSer
       </div>
 
       {(loadError || deleteError) && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-200">
+        <div className="rounded-lg border border-err/30 bg-err/10 px-3 py-2 text-sm text-err">
           {deleteError || loadError}
         </div>
       )}
@@ -232,7 +232,7 @@ export default function McpServers({ selectedProvider, currentProjects }: McpSer
                       onClick={() => deleteServer(server)}
                       variant="ghost"
                       size="sm"
-                      className="text-red-600 hover:text-red-700"
+                      className="text-err hover:text-err"
                       title={t('mcpServers.actions.delete')}
                     >
                       <Trash2 className="h-4 w-4" />

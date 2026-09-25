@@ -26,7 +26,7 @@ export default function AuthLoadingScreen({ exiting = false }: AuthLoadingScreen
         <img
           src="/logo-256.png"
           alt="OpenLeira"
-          className="splash-logo h-20 w-20 rounded-[1.4rem] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
+          className="splash-logo h-20 w-20 rounded-[1.4rem] bg-card shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-border"
         />
         <h1
           className="mt-5 text-xl font-semibold tracking-tight text-foreground"

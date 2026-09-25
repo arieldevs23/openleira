@@ -61,7 +61,7 @@ function TreeItemIcon({ item, isOpen, renderFileIcon }: TreeItemIconProps) {
           )}
         />
         {isOpen ? (
-          <FolderOpen className="h-4 w-4 flex-shrink-0 text-blue-500" />
+          <FolderOpen className="h-4 w-4 flex-shrink-0 text-primary" />
         ) : (
           <Folder className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
         )}
@@ -124,7 +124,7 @@ export default function FileTreeNode({
     isDirectory && isOpen && 'border-l-2 border-primary/30',
     (isDirectory && !isOpen) || !isDirectory ? 'border-l-2 border-transparent' : '',
     'relative',
-    isDropTarget && 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/40',
+    isDropTarget && 'bg-primary/10 ring-1 ring-inset ring-primary/40',
   );
 
   // Render rename input if this item is being renamed

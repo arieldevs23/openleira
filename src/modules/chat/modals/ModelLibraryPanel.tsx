@@ -268,7 +268,7 @@ export default function ModelLibraryPanel({
             </div>
           )}
           {notice && !error && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-ok/25 bg-ok/10 px-3 py-2 text-xs text-ok">
               <Check className="h-3.5 w-3.5" />
               {notice}
             </div>
