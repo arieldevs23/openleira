@@ -129,6 +129,13 @@ export function useChatRealtimeHandlers({
           onWebSocketReconnect?.();
           return;
 
+        // Kantor AI frames share this socket but belong to the office page.
+        // They carry no sessionId, so letting them fall through would file
+        // them under whichever session is open here.
+        case 'office:update':
+        case 'office:log':
+          return;
+
         case 'history_truncated': {
           // An already-sent message was replaced. Every client watching this
           // session drops the superseded turns before the replacement streams
