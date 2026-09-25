@@ -982,7 +982,8 @@ export function createOfficeOrchestrator(dependencies: {
   const launchAudit = (context: CaseContext, task: OfficeTask): void => {
     const caseId = context.caseItem.id;
     const auditModel = context.audit ? readyModel(context.audit.agent) : null;
-    if (!context.audit || !auditModel) {
+    // A quick task skips the audit on purpose; with the audit layer switched off, results are accepted too.
+    if (!context.audit || !auditModel || context.caseItem.quickDivisionId) {
       // With the audit layer switched off, a finished task is accepted as is.
       saveTask(context.office.id, task.id, { status: 'done', finishedAt: new Date().toISOString() });
       postMessage(context.office.id, {
@@ -1012,6 +1013,21 @@ export function createOfficeOrchestrator(dependencies: {
       });
   };
 
+  /** A quick task ends with its one agent's result as the summary; no orchestrator turn. */
+  const finishQuickCase = (context: CaseContext): void => {
+    const tasks = officeCasesDb.listTasks(context.caseItem.id);
+    const resolved = isCaseFullyResolved(tasks);
+    const summary = tasks.map((task) => task.resultSummary ?? task.error ?? '').filter(Boolean).join('\n\n');
+    saveCase(context.caseItem.id, {
+      status: resolved ? 'done' : 'failed',
+      finalSummary: summary || null,
+      error: resolved ? null : text(context.office.locale, 'someTasksFailed'),
+      phase: null,
+      waitingReason: null,
+      finishedAt: new Date().toISOString(),
+    });
+  };
+
   /**
    * Derives and starts the next work for a case from its stored state. Only
    * running cases move; a paused case lets in-flight turns finish (their
@@ -1033,7 +1049,9 @@ export function createOfficeOrchestrator(dependencies: {
         return;
       }
 
-      const unreadNotes = officeCasesDb.listUnreadNotes(caseId, context.coordinator.id);
+      // A quick task has no orchestrator turns at all.
+      const isQuick = Boolean(caseItem.quickDivisionId);
+      const unreadNotes = isQuick ? [] : officeCasesDb.listUnreadNotes(caseId, context.coordinator.id);
       let checkpointRunning = coordinatorRunning;
       if (unreadNotes.length > 0 && !coordinatorRunning) {
         launchCoordinator(context, 'checkpoint', unreadNotes);
@@ -1067,8 +1085,12 @@ export function createOfficeOrchestrator(dependencies: {
       }
 
       if (step.settled && !checkpointRunning && workHandles.length === 0) {
-        saveCase(caseId, { phase: 'finalizing' });
-        launchCoordinator(context, 'final');
+        if (isQuick) {
+          finishQuickCase(context);
+        } else {
+          saveCase(caseId, { phase: 'finalizing' });
+          launchCoordinator(context, 'final');
+        }
       }
     } catch (error) {
       console.error('[Office] Tick failed', { caseId, error });
@@ -1093,6 +1115,33 @@ export function createOfficeOrchestrator(dependencies: {
       const caseItem = officeService.requireCase(officeId, caseId);
       if (caseItem.status !== 'draft') {
         throw conflict('Only a draft case can be started.', 'OFFICE_CASE_NOT_DRAFT');
+      }
+      if (caseItem.quickDivisionId) {
+        // A quick task only needs its own agent: straight to one task, no plan.
+        const division = officesDb.getDivision(caseItem.quickDivisionId);
+        if (!division || division.officeId !== officeId || !readyModel(division.agent)) {
+          throw conflict('The team of this quick task is disabled, gone, or has no model.', 'OFFICE_MODELS_MISSING');
+        }
+        const [task] = officeCasesDb.createTasks(caseId, [{
+          id: randomUUID(),
+          divisionId: division.id,
+          parentTaskId: null,
+          ref: 'T1',
+          title: caseItem.title,
+          instruction: caseItem.description.trim() || caseItem.title,
+          dependsOn: [],
+          status: 'queued',
+        }]);
+        broadcastOfficeUpdate(officeId, { entity: 'task', task });
+        const started = saveCase(caseId, {
+          status: 'running',
+          phase: 'executing',
+          waitingReason: null,
+          error: null,
+          startedAt: new Date().toISOString(),
+        }) as OfficeCase;
+        scheduleTick(caseId);
+        return started;
       }
       requireRunnableModels(officeId);
       const hasWorkers = officesDb.listDivisions(officeId)
@@ -1161,6 +1210,9 @@ export function createOfficeOrchestrator(dependencies: {
       const caseItem = officeService.requireCase(officeId, caseId);
       if (caseItem.status === 'done' || caseItem.status === 'failed') {
         throw conflict('This case has already finished.', 'OFFICE_CASE_FINISHED');
+      }
+      if (caseItem.quickDivisionId) {
+        throw conflict('A quick task has no orchestrator to message; start a full task instead.', 'OFFICE_QUICK_NO_NOTES');
       }
       const trimmed = noteText.trim();
       if (!trimmed || trimmed.length > MAX_NOTE_LENGTH) {

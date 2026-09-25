@@ -237,6 +237,42 @@ test('a new case is planned with the workspace folder and what earlier cases did
   });
 });
 
+test('a quick task goes straight to one team: no plan, no audit, its result is the summary', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'task') return { text: 'Changed the button.\n\n## Summary\nButton is blue now.' };
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const frontend = officesDb.listDivisions(office.id).find((division) => division.slug === 'frontend');
+    assert.ok(frontend);
+
+    const created = officeService.createCase(office.id, {
+      title: 'Blue button', description: 'make the submit button blue', createdBy: null, quickDivisionId: frontend.id,
+    });
+    assert.equal(created.quickDivisionId, frontend.id);
+    orchestrator.startCase(office.id, created.id);
+    const finished = await waitFor(created.id, isFinished);
+
+    assert.equal(finished.status, 'done');
+    assert.equal(finished.finalSummary, 'Button is blue now.');
+    assert.deepEqual(turns.map((turn) => turn.kind), ['task'], 'only the one agent ran');
+    assert.match(turns[0].request.prompt, /make the submit button blue/);
+    const [task] = officeCasesDb.listTasks(created.id);
+    assert.equal(task.divisionId, frontend.id);
+    assert.equal(task.status, 'done');
+
+    assert.throws(() => orchestrator.postNote(office.id, created.id, 'hi'), /finished|quick task/);
+    const draft = officeService.createCase(office.id, { title: 'x', createdBy: null, quickDivisionId: frontend.id });
+    assert.throws(() => orchestrator.postNote(office.id, draft.id, 'hi'), /quick task/);
+    const coordinator = officesDb.listDivisions(office.id).find((division) => division.isCoordinator);
+    assert.throws(
+      () => officeService.createCase(office.id, { title: 'x', createdBy: null, quickDivisionId: coordinator?.id }),
+      /working team/,
+    );
+  });
+});
+
 test('a failed audit re-runs the task in its session with the notes, and passes on the retry', async () => {
   await withOffice(async ({ office }) => {
     let audits = 0;

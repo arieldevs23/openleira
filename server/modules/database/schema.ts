@@ -340,6 +340,8 @@ CREATE TABLE IF NOT EXISTS office_cases (
     coordinator_session_id TEXT,
     final_summary TEXT,
     error TEXT,
+    -- A quick task goes straight to this division's agent: no plan, no audit, no summary turn.
+    quick_division_id TEXT,
     created_by TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,

@@ -339,6 +339,7 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
       title: readRequiredString(body, 'title'),
       description: readOptionalString(body, 'description'),
       createdBy: readUserId(req),
+      quickDivisionId: readOptionalString(body, 'quickDivisionId') ?? null,
     });
     res.status(201).json(createApiSuccessResponse(created));
   }));
@@ -368,7 +369,8 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
   router.post('/:officeId/cases/:caseId/start', asyncHandler(async (req, res) => {
     const officeId = readParam(req, 'officeId');
     const caseId = readParam(req, 'caseId');
-    await office.requireConnectedProviders(officeId);
+    const quickDivisionId = office.requireCase(officeId, caseId).quickDivisionId;
+    await office.requireConnectedProviders(officeId, undefined, quickDivisionId ? [quickDivisionId] : undefined);
     res.json(createApiSuccessResponse(orchestrator.startCase(officeId, caseId)));
   }));
 
@@ -379,7 +381,8 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
   router.post('/:officeId/cases/:caseId/resume', asyncHandler(async (req, res) => {
     const officeId = readParam(req, 'officeId');
     const caseId = readParam(req, 'caseId');
-    await office.requireConnectedProviders(officeId);
+    const quickDivisionId = office.requireCase(officeId, caseId).quickDivisionId;
+    await office.requireConnectedProviders(officeId, undefined, quickDivisionId ? [quickDivisionId] : undefined);
     res.json(createApiSuccessResponse(orchestrator.resumeCase(officeId, caseId)));
   }));
 

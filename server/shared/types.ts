@@ -1764,6 +1764,8 @@ export type OfficeCase = {
   coordinatorSessionId: string | null;
   finalSummary: string | null;
   error: string | null;
+  /** A quick task: straight to this division's agent, with no plan, audit or summary turn. Null for a full task. */
+  quickDivisionId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

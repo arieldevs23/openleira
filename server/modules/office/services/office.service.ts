@@ -711,10 +711,13 @@ export const officeService = {
   async requireConnectedProviders(
     officeId: string,
     getStatus: (provider: LLMProvider) => Promise<ProviderAuthStatus> = (provider) => providerAuthService.getProviderAuthStatus(provider),
+    /** Only these divisions will run (a quick task); omitted means every enabled one. */
+    onlyDivisionIds?: string[],
   ): Promise<void> {
     requireOffice(officeId);
     const providers = [...new Set(officesDb
       .listDivisions(officeId)
+      .filter((division) => !onlyDivisionIds || onlyDivisionIds.includes(division.id))
       .filter((division) => division.agent.enabled && division.agent.provider)
       .map((division) => division.agent.provider as LLMProvider))];
     const statuses = await Promise.all(providers.map(async (provider) => {
@@ -788,13 +791,28 @@ export const officeService = {
     };
   },
 
-  createCase(officeId: string, input: { title: string; description?: string; createdBy: string | null }): OfficeCase {
+  /**
+   * Creates a task (case). With `quickDivisionId` it is a quick task: it goes
+   * straight to that team's agent, without the orchestrator's plan, the audit
+   * or a summary turn.
+   */
+  createCase(
+    officeId: string,
+    input: { title: string; description?: string; createdBy: string | null; quickDivisionId?: string | null },
+  ): OfficeCase {
     requireOffice(officeId);
+    if (input.quickDivisionId) {
+      const division = requireDivision(officeId, input.quickDivisionId);
+      if (division.isCoordinator || division.isAudit) {
+        throw badRequest('A quick task goes to a working team, not to the orchestrator or the audit layer.', 'OFFICE_QUICK_TARGET');
+      }
+    }
     const caseItem = officeCasesDb.createCase({
       officeId,
       title: readBoundedText(input.title, 'title', LIMITS.caseTitle, true),
       description: readBoundedText(input.description ?? '', 'description', LIMITS.caseDescription, false),
       createdBy: input.createdBy,
+      quickDivisionId: input.quickDivisionId ?? null,
     });
     broadcastOfficeUpdate(officeId, { entity: 'case', id: caseItem.id, case: caseItem });
     return caseItem;

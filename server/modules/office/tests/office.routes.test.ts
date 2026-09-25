@@ -118,16 +118,18 @@ test('case routes record the author and route controls to the orchestrator', asy
   });
   assert.deepEqual(calls.map((call) => call.method), [
     'office.createCase',
+    'office.requireCase',
     'office.requireConnectedProviders',
     'orchestrator.startCase',
     'orchestrator.pauseCase',
+    'office.requireCase',
     'office.requireConnectedProviders',
     'orchestrator.resumeCase',
     'orchestrator.cancelCase',
     'orchestrator.postNote',
   ]);
-  assert.deepEqual(calls[0].args, ['o1', { title: 'Login', description: 'd', createdBy: '42' }]);
-  assert.deepEqual(calls[7].args, ['o1', 'c1', 'hi']);
+  assert.deepEqual(calls[0].args, ['o1', { title: 'Login', description: 'd', createdBy: '42', quickDivisionId: null }]);
+  assert.deepEqual(calls[9].args, ['o1', 'c1', 'hi']);
 });
 
 test('workspace, flow, position and analysis routes parse their input', async () => {
