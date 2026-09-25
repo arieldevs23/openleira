@@ -87,7 +87,7 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fit": "Fit to screen",
-    "hint": "Drag to move · Shift+drag selects an area, Shift+click adds or removes a node, then drag them together · drag the dot of an agent onto another agent (flow) or onto a skill · right-click for more · Ctrl+C / Ctrl+V copies a skill",
+    "hint": "Drag to move · Shift+drag selects an area, Shift+click adds or removes a node, then drag them together · drag the dot of an agent onto another agent (flow) or onto a skill · click a line and press Delete to cut it, or drag its end elsewhere · right-click for more · Ctrl+C / Ctrl+V copies a skill",
     "dragToConnect": "Drag onto another agent to add a flow arrow",
     "connectHint": "Click the agent that comes after {{name}}",
     "dragToSkill": "Drag onto a skill to give this agent that skill",
@@ -97,7 +97,8 @@
     "skillAgents_one": "{{count}} agent",
     "skillAgents_other": "{{count}} agents",
     "skillMissing": "not installed",
-    "connectSkillHint": "Click the agent that should get {{name}}"
+    "connectSkillHint": "Click the agent that should get {{name}}",
+    "dragArrowEnd": "Drag this end onto another team to move the arrow, or onto empty canvas to cut it"
   },
   "case": {
     "run": "Run",

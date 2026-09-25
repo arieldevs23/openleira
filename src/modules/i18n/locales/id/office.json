@@ -85,7 +85,7 @@
     "zoomIn": "perbesar",
     "zoomOut": "perkecil",
     "fit": "pas ke layar",
-    "hint": "seret buat mindahin · shift+seret buat pilih area, shift+klik buat nambah/ngurangin node, terus seret barengan · tarik titik agent ke agent lain (flow) atau ke skill · klik kanan buat opsi lain · Ctrl+C / Ctrl+V buat salin skill",
+    "hint": "seret buat mindahin · shift+seret buat pilih area, shift+klik buat nambah/ngurangin node, terus seret barengan · tarik titik agent ke agent lain (flow) atau ke skill · klik garis terus tekan Delete buat mutusin, atau seret ujungnya ke tempat lain · klik kanan buat opsi lain · Ctrl+C / Ctrl+V buat salin skill",
     "dragToConnect": "tarik ke agent lain buat nambah panah flow",
     "connectHint": "klik agent yang jalan setelah {{name}}",
     "dragToSkill": "tarik ke skill biar agent ini punya skill itu",
@@ -93,7 +93,8 @@
     "skillNode": "skill {{name}} · {{count}} agent",
     "skillAgents": "{{count}} agent",
     "skillMissing": "belum ke-install",
-    "connectSkillHint": "klik agent yang mau dikasih {{name}}"
+    "connectSkillHint": "klik agent yang mau dikasih {{name}}",
+    "dragArrowEnd": "seret ujung ini ke tim lain buat mindahin panah, atau ke area kosong buat mutusin"
   },
   "case": {
     "run": "jalanin",

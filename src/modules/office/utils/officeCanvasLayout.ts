@@ -144,3 +144,23 @@ export function formatTokens(value: number): string {
 export function autoSkillPositions(anchor: CanvasPoint, nodeIds: string[]): Map<string, CanvasPoint> {
   return new Map(nodeIds.map((id, index) => [id, { x: anchor.x + index * (SKILL_WIDTH + SKILL_GAP), y: anchor.y + NODE_HEIGHT + 36 }]));
 }
+
+/**
+ * Where a connector drawn by `connectorPath` starts and ends: the bottom (or
+ * facing side) of the first box and the top of the second. The canvas puts
+ * the draggable end handles of a selected arrow here.
+ */
+export function connectorEnds(
+  from: CanvasPoint,
+  fromSize: { width: number; height: number },
+  to: CanvasPoint,
+  toSize: { width: number; height: number },
+): { start: CanvasPoint; end: CanvasPoint } {
+  const startX = from.x + fromSize.width / 2;
+  const end = { x: to.x + toSize.width / 2, y: to.y };
+  if (to.y >= from.y + fromSize.height - 8) {
+    return { start: { x: startX, y: from.y + fromSize.height }, end };
+  }
+  const leavesRight = end.x >= startX;
+  return { start: { x: leavesRight ? from.x + fromSize.width : from.x, y: from.y + fromSize.height / 2 }, end };
+}

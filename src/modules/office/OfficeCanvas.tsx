@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 import OfficeStatusBadge from '@/modules/office/OfficeStatusBadge';
 import {
   autoSkillPositions,
+  connectorEnds,
   CASE_HEIGHT,
   CASE_WIDTH,
   casePosition,
@@ -128,6 +129,7 @@ type Gesture =
   | { kind: 'skill'; pointerId: number; nodeId: string; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
   | { kind: 'connect'; pointerId: number; from: ConnectEnd }
   | { kind: 'marquee'; pointerId: number; start: CanvasPoint; base: ReadonlySet<string> }
+  | { kind: 'reconnect'; pointerId: number; fromDivisionId: string; toDivisionId: string; end: 'from' | 'to' }
   | { kind: 'group'; pointerId: number; startX: number; startY: number; origins: ReadonlyMap<string, CanvasPoint>; moved: boolean; pressedKey: string }
   | { kind: 'pinch'; distance: number; zoom: number };
 
@@ -383,6 +385,16 @@ export default function OfficeCanvas({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   // Nodes picked with Shift (a rectangle or Shift+click), moved and deleted together; keys as in pendingPositions.
   const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set());
+  // An arrow end being dragged off its node: the arrow, which end, and where the pointer is.
+  const [reconnecting, setReconnecting] = useState<{ fromDivisionId: string; toDivisionId: string; end: 'from' | 'to'; point: CanvasPoint } | null>(null);
+  // The skill line picked with a click, so Delete can cut it.
+  const [selectedLink, setSelectedLink] = useState<{ nodeId: string; divisionId: string } | null>(null);
+  // A picked skill line only stays picked while its skill is the selection.
+  useEffect(() => {
+    if (selection.type !== 'skill') {
+      setSelectedLink(null);
+    }
+  }, [selection.type]);
   // The Shift+drag selection rectangle, in canvas pixels.
   const [marquee, setMarquee] = useState<{ from: CanvasPoint; to: CanvasPoint } | null>(null);
   // The loose end of a line being drawn from a node's handle, in canvas pixels.
@@ -611,6 +623,18 @@ export default function OfficeCanvas({
       return;
     }
 
+    // Dragging an end of the selected arrow detaches it; dropping it on another team reconnects it.
+    const edgeEnd = target.closest<SVGElement>('[data-edge-end]');
+    if (edgeEnd) {
+      const fromDivisionId = edgeEnd.dataset.edgeFrom as string;
+      const toDivisionId = edgeEnd.dataset.edgeTo as string;
+      const end = edgeEnd.dataset.edgeEnd === 'from' ? 'from' : 'to';
+      gestureRef.current = { kind: 'reconnect', pointerId: event.pointerId, fromDivisionId, toDivisionId, end };
+      capture();
+      setReconnecting({ fromDivisionId, toDivisionId, end, point: toCanvasPoint(event.clientX, event.clientY) });
+      return;
+    }
+
     const handle = target.closest<HTMLElement>('[data-connect-from]');
     if (handle) {
       const from: ConnectEnd = { kind: handle.dataset.connectKind === 'skill' ? 'skill' : 'division', id: handle.dataset.connectFrom as string };
@@ -727,6 +751,10 @@ export default function OfficeCanvas({
       setConnectingTo({ from: gesture.from, point: toCanvasPoint(event.clientX, event.clientY) });
       return;
     }
+    if (gesture.kind === 'reconnect') {
+      setReconnecting({ fromDivisionId: gesture.fromDivisionId, toDivisionId: gesture.toDivisionId, end: gesture.end, point: toCanvasPoint(event.clientX, event.clientY) });
+      return;
+    }
     if (gesture.kind === 'marquee') {
       const to = toCanvasPoint(event.clientX, event.clientY);
       setMarquee({ from: gesture.start, to });
@@ -788,6 +816,30 @@ export default function OfficeCanvas({
     }
     if (gesture.kind === 'marquee') {
       setMarquee(null);
+      return;
+    }
+    if (gesture.kind === 'reconnect') {
+      setReconnecting(null);
+      if (event.type !== 'pointerup') {
+        return;
+      }
+      const dropped = endAt(event.clientX, event.clientY);
+      const keep = gesture.end === 'from' ? gesture.toDivisionId : gesture.fromDivisionId;
+      const moved = gesture.end === 'from' ? gesture.fromDivisionId : gesture.toDivisionId;
+      if (dropped?.kind === 'division' && dropped.id === moved) {
+        return;
+      }
+      setCanvasError(null);
+      // Off every node: the arrow is cut. On another team: it is cut and drawn again to that team.
+      const next = dropped?.kind === 'division' && dropped.id !== keep
+        ? (gesture.end === 'from' ? [dropped.id, keep] as const : [keep, dropped.id] as const)
+        : null;
+      actions.deleteFlowEdge(gesture.fromDivisionId, gesture.toDivisionId)
+        .then(() => (next ? actions.addFlowEdge(next[0], next[1]) : undefined))
+        .then(() => {
+          onSelect(next ? { type: 'edge', fromDivisionId: next[0], toDivisionId: next[1] } : { type: 'case' });
+        })
+        .catch(report);
       return;
     }
     if (gesture.kind === 'pan') {
@@ -864,6 +916,19 @@ export default function OfficeCanvas({
       setMarked(new Set([...divisions.map((division) => division.id), ...skillNodes.map((node) => skillKey(node.id))]));
       return;
     }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && selection.type === 'edge' && marked.size === 0) {
+      event.preventDefault();
+      setCanvasError(null);
+      actions.deleteFlowEdge(selection.fromDivisionId, selection.toDivisionId).then(() => onSelect({ type: 'case' })).catch(report);
+      return;
+    }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && selectedLink && marked.size === 0) {
+      event.preventDefault();
+      setCanvasError(null);
+      actions.unlinkSkill(selectedLink.nodeId, selectedLink.divisionId).catch(report);
+      setSelectedLink(null);
+      return;
+    }
     if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && marked.size > 0) {
       event.preventDefault();
       deleteMarkedSkills();
@@ -914,6 +979,7 @@ export default function OfficeCanvas({
       return;
     }
     clearMarked();
+    setSelectedLink(null);
     if (connectSource) {
       const from = connectSource;
       setConnectSource(null);
@@ -933,6 +999,7 @@ export default function OfficeCanvas({
       return;
     }
     clearMarked();
+    setSelectedLink(null);
     if (connectSource) {
       const from = connectSource;
       setConnectSource(null);
@@ -1287,7 +1354,11 @@ export default function OfficeCanvas({
               const to = divisions.find((division) => division.id === edge.toDivisionId) as OfficeDivision;
               const active = divisionStates.get(to.id)?.status === 'running' || flowingDivisionIds.has(to.id);
               const selected = selection.type === 'edge' && selection.fromDivisionId === from.id && selection.toDivisionId === to.id;
+              if (reconnecting && reconnecting.fromDivisionId === from.id && reconnecting.toDivisionId === to.id) {
+                return null;
+              }
               const path = connectorPath(positionOf(from), nodeSize, positionOf(to), nodeSize);
+              const ends = connectorEnds(positionOf(from), nodeSize, positionOf(to), nodeSize);
               return (
                 <g key={`flow-${from.id}-${to.id}`}>
                   <path
@@ -1306,9 +1377,30 @@ export default function OfficeCanvas({
                     strokeWidth={14}
                     data-hit
                     style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                    onClick={() => onSelect({ type: 'edge', fromDivisionId: from.id, toDivisionId: to.id })}
+                    onClick={() => { setSelectedLink(null); onSelect({ type: 'edge', fromDivisionId: from.id, toDivisionId: to.id }); }}
                     onContextMenu={(event) => openMenu(event, { kind: 'flow', fromDivisionId: from.id, toDivisionId: to.id })}
                   />
+                  {selected && (['from', 'to'] as const).map((end) => {
+                    const at = end === 'from' ? ends.start : ends.end;
+                    return (
+                      <circle
+                        key={end}
+                        cx={at.x}
+                        cy={at.y}
+                        r={6 / view.zoom + 2}
+                        data-edge-end={end}
+                        data-edge-from={from.id}
+                        data-edge-to={to.id}
+                        data-testid={`office-flow-end-${end}-${from.slug}-${to.slug}`}
+                        fill="hsl(var(--background))"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        style={{ pointerEvents: 'all', cursor: 'move' }}
+                      >
+                        <title>{t('tree.dragArrowEnd')}</title>
+                      </circle>
+                    );
+                  })}
                 </g>
               );
             })}
@@ -1337,7 +1429,8 @@ export default function OfficeCanvas({
               const division = divisions.find((candidate) => candidate.id === divisionId);
               if (!division) return null;
               const path = connectorPath(positionOf(division), nodeSize, skillPositionOf(node), { width: SKILL_WIDTH, height: SKILL_HEIGHT });
-              const selected = selection.type === 'skill' && selection.nodeId === node.id;
+              const selected = (selection.type === 'skill' && selection.nodeId === node.id)
+                || (selectedLink?.nodeId === node.id && selectedLink.divisionId === divisionId);
               return (
                 <g key={`skill-link-${node.id}-${divisionId}`}>
                   <path
@@ -1355,12 +1448,35 @@ export default function OfficeCanvas({
                     strokeWidth={12}
                     data-hit
                     style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                    onClick={() => onSelect({ type: 'skill', nodeId: node.id })}
+                    onClick={() => { setSelectedLink({ nodeId: node.id, divisionId }); onSelect({ type: 'skill', nodeId: node.id }); }}
                     onContextMenu={(event) => openMenu(event, { kind: 'skillLink', nodeId: node.id, divisionId })}
                   />
                 </g>
               );
             }))}
+
+            {/* an arrow end being dragged to another team */}
+            {reconnecting && (() => {
+              const from = divisions.find((division) => division.id === reconnecting.fromDivisionId);
+              const to = divisions.find((division) => division.id === reconnecting.toDivisionId);
+              if (!from || !to) return null;
+              const ends = connectorEnds(positionOf(from), nodeSize, positionOf(to), nodeSize);
+              const start = reconnecting.end === 'from' ? reconnecting.point : ends.start;
+              const end = reconnecting.end === 'to' ? reconnecting.point : ends.end;
+              return (
+                <line
+                  x1={start.x}
+                  y1={start.y}
+                  x2={end.x}
+                  y2={end.y}
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  markerEnd={`url(#office-arrow-${officeId})`}
+                  data-testid="office-reconnect-line"
+                />
+              );
+            })()}
 
             {/* the line being drawn */}
             {connectingTo && (() => {

@@ -568,3 +568,62 @@ test('Ctrl+A selects every node and Delete removes the selected skill nodes only
   assert.deepEqual(calls, [{ method: 'deleteSkillNode', args: ['n-review'] }]);
   assert.equal(screen.getByTestId('office-node-backend').dataset.marked, 'true', 'teams stay: they are deleted one by one');
 });
+
+test('a selected arrow is cut with Delete', async () => {
+  const calls: Recorded[] = [];
+  const selections: OfficeSelection[] = [];
+  renderTree({
+    calls,
+    flow: [arrow('backend', 'frontend')],
+    selection: { type: 'edge', fromDivisionId: 'div-backend', toDivisionId: 'div-frontend' },
+    onSelect: (selection) => selections.push(selection),
+  });
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'Delete' });
+  assert.deepEqual(calls, [{ method: 'deleteFlowEdge', args: ['div-backend', 'div-frontend'] }]);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(selections, [{ type: 'case' }]);
+});
+
+test('dragging an end of a selected arrow off every node cuts it; onto another team moves it', async () => {
+  const calls: Recorded[] = [];
+  renderTree({
+    calls,
+    flow: [arrow('backend', 'frontend')],
+    selection: { type: 'edge', fromDivisionId: 'div-backend', toDivisionId: 'div-frontend' },
+  });
+  const end = screen.getByTestId('office-flow-end-to-backend-frontend');
+
+  fireEvent.pointerDown(end, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 10, clientY: 10 });
+  // The arrow's own end handle goes away while it is dragged; the canvas holds the pointer (capture).
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+  fireEvent.pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 40, clientY: 40 });
+  assert.ok(screen.getByTestId('office-reconnect-line'));
+  fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 40, clientY: 40 });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(calls, [{ method: 'deleteFlowEdge', args: ['div-backend', 'div-frontend'] }]);
+
+  calls.length = 0;
+  const docs = screen.getByTestId('office-node-docs');
+  const original = document.elementFromPoint;
+  document.elementFromPoint = () => docs;
+  try {
+    fireEvent.pointerDown(screen.getByTestId('office-flow-end-to-backend-frontend'), { pointerId: 2, button: 0, pointerType: 'mouse', clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 50, clientY: 50 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    document.elementFromPoint = original;
+  }
+  assert.deepEqual(calls, [
+    { method: 'deleteFlowEdge', args: ['div-backend', 'div-frontend'] },
+    { method: 'addFlowEdge', args: ['div-backend', 'div-docs'] },
+  ]);
+});
+
+test('a clicked skill line is cut with Delete', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  fireEvent.click(screen.getByTestId('office-skill-link-review-backend').nextElementSibling as Element);
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'Delete' });
+  assert.deepEqual(calls, [{ method: 'unlinkSkill', args: ['n-review', 'div-backend'] }]);
+});
