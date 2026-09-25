@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next';
 
 import { api } from '@/shared/api';
 import { subscribeToUserPreferences } from '@/shared/userSettings';
-import { isBuiltInWorkspaceProject } from '@/shared/utils';
+import { isBuiltInWorkspaceProject, isObrolanProject } from '@/shared/utils';
 import { usePaletteOps } from '@/modules/command-palette';
 import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationProjectResult, ConversationSearchResults, LLMProvider, Project, ProjectSession, ProjectSortOrder, RecentConversationListItem, SearchProgress, ActiveSidebarRename, PendingSidebarDeletion, SessionTitleSearchResult, SessionWithProvider, SidebarSearchMode } from '@/shared/types';
 import {
@@ -711,12 +711,15 @@ export function useSidebarController({
   );
 
   const filteredArchivedSessions = useMemo(() => {
+    // Only free chats are conversations the user had; a project's sessions are
+    // its canvas agents' work and stay hidden here as everywhere else.
+    const chatSessions = archivedSessions.filter((session) => isObrolanProject({ fullPath: session.projectPath ?? '', path: session.projectPath ?? '' }));
     const normalizedSearch = debouncedSearchQuery.trim().toLowerCase();
     if (!normalizedSearch) {
-      return archivedSessions;
+      return chatSessions;
     }
 
-    return archivedSessions.filter((session) => {
+    return chatSessions.filter((session) => {
       const searchableFields = [
         session.sessionTitle,
         session.projectDisplayName,

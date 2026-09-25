@@ -372,5 +372,9 @@
     "tokensLabel_other": "tokens",
     "escClosesModal": "Esc closes the modal.",
     "close": "Close"
+  },
+  "canvasOnly": {
+    "body": "Agents in this project are prompted through the workspace canvas. Chat here is read-only.",
+    "open": "Open canvas"
   }
 }

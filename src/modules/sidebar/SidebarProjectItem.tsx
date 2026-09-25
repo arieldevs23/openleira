@@ -1,106 +1,61 @@
 import { memo, useEffect, useRef } from 'react';
-import { Check, ChevronDown, ChevronRight, Edit3, Star, StarOff, Trash2, X } from 'lucide-react';
+import { Check, Edit3, LayoutGrid, Star, StarOff, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Button, ContextMenu, useContextMenu } from '@/shared/ui';
 import { cn } from '@/shared/utils';
-import type { LLMProvider, MCPServerStatus, Project, ProjectSession, SessionWithProvider } from '@/shared/types';
+import type { MCPServerStatus, Project } from '@/shared/types';
 import { getTaskIndicatorStatus } from '@/modules/sidebar/utils/sidebarProjectFormatting';
 import TaskIndicator from '@/modules/sidebar/TaskIndicator';
-import SidebarProjectSessions from '@/modules/sidebar/SidebarProjectSessions';
 import { useCompactSidebar } from '@/modules/sidebar/hooks/useCompactSidebar';
 
 type SidebarProjectItemProps = {
   project: Project;
   selectedProject: Project | null;
-  selectedSession: ProjectSession | null;
-  isExpanded: boolean;
   isDeleting: boolean;
   isStarred: boolean;
   /** Resolved for this row: only the project being renamed re-renders on a keystroke. */
   isEditing: boolean;
   renameDraft: string;
-  sessions: SessionWithProvider[];
-  initialSessionsLoaded: boolean;
-  isLoadingMoreSessions: boolean;
-  currentTime: Date;
-  /** The session being renamed, when it belongs to this project. */
-  sessionRenameId: string | null;
-  sessionRenameDraft: string;
   tasksEnabled: boolean;
   mcpServerStatus: MCPServerStatus;
   onRenameDraftChange: (name: string) => void;
-  onToggleProject: (projectId: string) => void;
   onProjectSelect: (project: Project) => void;
   onToggleStarProject: (projectId: string) => void;
   onStartEditingProject: (project: Project) => void;
   onCancelEditingProject: () => void;
   onSaveProjectName: (projectId: string, nextName: string) => void;
   onDeleteProject: (project: Project) => void;
-  onSessionSelect: (session: SessionWithProvider, projectName: string) => void;
-  onDeleteSession: (sessionId: string, sessionTitle: string) => void;
-  onForkSession?: (session: SessionWithProvider) => void;
-  onLoadMoreSessions: (projectId: string) => void;
-  activeSessions: ReadonlySet<string>;
-  backgroundSessionIds: ReadonlySet<string>;
-  attentionSessionIds: ReadonlySet<string>;
-  onNewSession: (project: Project) => void;
-  onStartEditingSession: (projectId: string, sessionId: string, initialName: string) => void;
-  onCancelEditingSession: () => void;
-  onSaveEditingSession: (projectName: string, sessionId: string, summary: string, provider: LLMProvider) => void;
   t: TFunction;
 };
 
-const getSessionCountDisplay = (project: Project, sessions: SessionWithProvider[]): string => {
-  const total = Number(project.sessionMeta?.total ?? sessions.length);
-  return String(total);
-};
-
-/** Rendered by SidebarProjectList for one project row, with its star, rename and delete actions on a right-click / long-press context menu. */
+/**
+ * Rendered by SidebarProjectList for one project row, with its star, rename and
+ * delete actions on a right-click / long-press context menu. Projects are
+ * prompted only through their workspace canvas, so a click opens the canvas and
+ * the row lists no chat sessions.
+ */
 function SidebarProjectItem({
   project,
   selectedProject,
-  selectedSession,
-  isExpanded,
   isDeleting,
   isStarred,
   isEditing,
   renameDraft,
-  sessions,
-  initialSessionsLoaded,
-  isLoadingMoreSessions,
-  currentTime,
-  sessionRenameId,
-  sessionRenameDraft,
   tasksEnabled,
   mcpServerStatus,
   onRenameDraftChange,
-  onToggleProject,
   onProjectSelect,
   onToggleStarProject,
   onStartEditingProject,
   onCancelEditingProject,
   onSaveProjectName,
   onDeleteProject,
-  onSessionSelect,
-  onDeleteSession,
-  onForkSession,
-  onLoadMoreSessions,
-  activeSessions,
-  backgroundSessionIds,
-  attentionSessionIds,
-  onNewSession,
-  onStartEditingSession,
-  onCancelEditingSession,
-  onSaveEditingSession,
   t,
 }: SidebarProjectItemProps) {
   // Project identity is tracked by the DB-assigned `projectId` everywhere
   // after the projectName → projectId migration.
   const isSelected = selectedProject?.projectId === project.projectId;
-  const totalSessionCount = Number(project.sessionMeta?.total ?? sessions.length);
-  const sessionCountDisplay = getSessionCountDisplay(project, sessions);
-  const sessionCountLabel = `${sessionCountDisplay} session${totalSessionCount === 1 ? '' : 's'}`;
   const taskStatus = getTaskIndicatorStatus(project, mcpServerStatus);
   const mobileRenameInputRef = useRef<HTMLInputElement>(null);
 
@@ -129,20 +84,14 @@ function SidebarProjectItem({
   const isCompact = useCompactSidebar();
   const { triggerHandlers, position: menuPosition, close: closeMenu } = useContextMenu({ enabled: !isEditing });
 
-  const toggleProject = () => onToggleProject(project.projectId);
   const toggleStarProject = () => onToggleStarProject(project.projectId);
 
   const saveProjectName = () => {
     onSaveProjectName(project.projectId, renameDraft);
   };
 
-  const selectAndToggleProject = () => {
-    if (selectedProject?.projectId !== project.projectId) {
-      onProjectSelect(project);
-    }
-
-    toggleProject();
-  };
+  // A project is worked on through its workspace canvas, so opening it goes straight there.
+  const openProject = () => onProjectSelect(project);
 
   return (
     <div className={cn('md:space-y-1', isDeleting && 'opacity-50 pointer-events-none')}>
@@ -154,7 +103,7 @@ function SidebarProjectItem({
               'mx-3 my-1 select-none rounded-lg p-3 transition-colors duration-150',
               isSelected ? 'sidebar-item-active' : 'active:bg-muted',
             )}
-            onClick={toggleProject}
+            onClick={openProject}
           >
             <div className="flex items-center justify-between">
               <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -205,7 +154,7 @@ function SidebarProjectItem({
                           />
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{sessionCountLabel}</p>
+                      <p className="truncate text-xs text-muted-foreground" title={project.fullPath}>{project.fullPath}</p>
                     </>
                   )}
                 </div>
@@ -236,11 +185,7 @@ function SidebarProjectItem({
                 ) : (
                   <>
                     <div className="flex h-6 w-6 items-center justify-center">
-                      {isExpanded ? (
-                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                      )}
+                      <LayoutGrid className="h-3 w-3 text-muted-foreground" />
                     </div>
                   </>
                 )}
@@ -257,7 +202,7 @@ function SidebarProjectItem({
             'sticky top-0 z-10 flex h-auto w-full justify-between rounded-lg p-2 font-normal',
             isSelected ? 'sidebar-item-active' : 'bg-card hover:bg-muted',
           )}
-          onClick={selectAndToggleProject}
+          onClick={openProject}
         >
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="min-w-0 flex-1 text-left">
@@ -295,13 +240,9 @@ function SidebarProjectItem({
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {sessionCountDisplay}
-                    {project.fullPath !== project.displayName && (
-                      <span className="ml-1 opacity-60" title={project.fullPath}>
-                        {' - '}
-                        {project.fullPath.length > 25 ? `...${project.fullPath.slice(-22)}` : project.fullPath}
-                      </span>
-                    )}
+                    <span className="opacity-60" title={project.fullPath}>
+                      {project.fullPath.length > 32 ? `...${project.fullPath.slice(-29)}` : project.fullPath}
+                    </span>
                   </div>
                 </div>
               )}
@@ -332,11 +273,10 @@ function SidebarProjectItem({
               </>
             ) : (
               <>
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
-                )}
+                <LayoutGrid
+                  aria-label={t('projects.openCanvas', 'Open canvas')}
+                  className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground"
+                />
               </>
             )}
           </div>
@@ -380,32 +320,6 @@ function SidebarProjectItem({
         )}
       </div>
 
-      <SidebarProjectSessions
-        project={project}
-        isExpanded={isExpanded}
-        sessions={sessions}
-        selectedSession={selectedSession}
-        initialSessionsLoaded={initialSessionsLoaded}
-        hasMoreSessions={Boolean(project.sessionMeta?.hasMore)}
-        isLoadingMoreSessions={isLoadingMoreSessions}
-        activeSessions={activeSessions}
-        backgroundSessionIds={backgroundSessionIds}
-        attentionSessionIds={attentionSessionIds}
-        currentTime={currentTime}
-        sessionRenameId={sessionRenameId}
-        sessionRenameDraft={sessionRenameDraft}
-        onRenameDraftChange={onRenameDraftChange}
-        onStartEditingSession={onStartEditingSession}
-        onCancelEditingSession={onCancelEditingSession}
-        onSaveEditingSession={onSaveEditingSession}
-        onProjectSelect={onProjectSelect}
-        onSessionSelect={onSessionSelect}
-        onDeleteSession={onDeleteSession}
-        onForkSession={onForkSession}
-        onLoadMoreSessions={onLoadMoreSessions}
-        onNewSession={onNewSession}
-        t={t}
-      />
     </div>
   );
 }

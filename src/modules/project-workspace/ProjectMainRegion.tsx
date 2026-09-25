@@ -22,7 +22,16 @@ function ProjectMainRegion({
     externalMessageUpdate,
     newSessionTrigger,
     registerOptimisticSession,
+    projects,
+    handleProjectSelect,
   } = useProjectMainState();
+
+  const handleCanvasProjectChange = useCallback((projectId: string) => {
+    const project = projects.find((candidate) => candidate.projectId === projectId);
+    if (project && project.projectId !== selectedProject?.projectId) {
+      handleProjectSelect(project);
+    }
+  }, [handleProjectSelect, projects, selectedProject?.projectId]);
 
   const handleOpenSidebar = useCallback(() => {
     setSidebarOpen(true);
@@ -58,6 +67,7 @@ function ProjectMainRegion({
       onShowSettings={openSettings}
       externalMessageUpdate={externalMessageUpdate}
       newSessionTrigger={newSessionTrigger}
+      onCanvasProjectChange={handleCanvasProjectChange}
     />
   );
 }

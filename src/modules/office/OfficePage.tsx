@@ -101,8 +101,14 @@ const readStoredWorkspace = (): string | null => {
 };
 
 type OfficePageProps = {
-  /** The project open in normal mode; its workspace is shown first when it has one. */
+  /**
+   * The project the user opened (a project is prompted only through its
+   * canvas). It is shown even before it has a workspace, with the offer to
+   * make one; null falls back to the last workspace on screen.
+   */
   initialProjectId: string | null;
+  /** Tells the app which project the canvas shows, so files and terminal in normal mode follow it. */
+  onProjectChange?: (projectId: string) => void;
   /** Opens a workspace session in the regular chat view. */
   onOpenSession: (sessionId: string) => void;
 };
@@ -113,25 +119,46 @@ type OfficePageProps = {
  * case result, files, tokens or the picked agent on the right. Rendered by
  * the project-workspace module in place of the project sidebar and tabs.
  */
-export default function OfficePage({ initialProjectId, onOpenSession }: OfficePageProps) {
+export default function OfficePage({ initialProjectId, onProjectChange, onOpenSession }: OfficePageProps) {
   const { t, i18n } = useTranslation('office');
   const { workspaces, error: workspacesError } = useWorkspaces();
   const { analyses, forgetProject } = useAnalyses();
   const isNarrow = useIsNarrowLayout();
 
   // The workspace on screen, by its project folder id.
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => readStoredWorkspace() ?? initialProjectId);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => initialProjectId ?? readStoredWorkspace());
 
-  // Falls back to a listed workspace when the remembered one is gone (or none was remembered).
+  // A project opened from elsewhere in the app takes over the canvas.
+  useEffect(() => {
+    if (initialProjectId) {
+      setSelectedProjectId(initialProjectId);
+    }
+  }, [initialProjectId]);
+
+  // Falls back to a listed workspace when the remembered one is gone (or none was remembered);
+  // the project the user opened stays, even without a workspace yet.
   useEffect(() => {
     if (!workspaces || workspaces.length === 0) {
       return;
     }
-    if (!selectedProjectId || !workspaces.some((workspace) => workspace.projectId === selectedProjectId)) {
-      const preferred = workspaces.find((workspace) => workspace.projectId === initialProjectId) ?? workspaces[0];
-      setSelectedProjectId(preferred.projectId);
+    const isKnown = selectedProjectId !== null
+      && (selectedProjectId === initialProjectId || workspaces.some((workspace) => workspace.projectId === selectedProjectId));
+    if (!isKnown) {
+      setSelectedProjectId(workspaces[0].projectId);
     }
   }, [initialProjectId, selectedProjectId, workspaces]);
+
+  // Keeps the app's selected project on the canvas's one. Read through a ref:
+  // reporting back when the opened project changes would undo that pick.
+  const initialProjectIdRef = useRef(initialProjectId);
+  useEffect(() => {
+    initialProjectIdRef.current = initialProjectId;
+  }, [initialProjectId]);
+  useEffect(() => {
+    if (selectedProjectId && selectedProjectId !== initialProjectIdRef.current) {
+      onProjectChange?.(selectedProjectId);
+    }
+  }, [selectedProjectId, onProjectChange]);
 
   const selectWorkspace = (projectId: string) => {
     setSelectedProjectId(projectId);

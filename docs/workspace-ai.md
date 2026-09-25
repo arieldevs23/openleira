@@ -58,10 +58,24 @@ Setiap task baru dimulai dengan sesi orchestrator yang baru. Supaya dia tetap ny
 
 Pojok kanan atas header sekarang berisi saklar **normal / canvas** (dulu tempat tab chat, shell, file).
 
-- **Mode normal:** sidebar proyek (chat, proyek, sesi) seperti biasa. Tab chat, shell, file (plus browser/tasks/plugin kalau aktif) pindah ke **rail ikon vertikal** di kiri konten; di HP jadi baris di bawah header.
+- **Mode normal:** sidebar berisi tab **chat** (obrolan bebas), **proyek**, **jalan**, dan **arsip**. Tab chat, shell, file (plus browser/tasks/plugin kalau aktif) ada di **rail ikon vertikal** di kiri konten; di HP jadi baris di bawah header.
 - **Mode canvas:** sidebar proyek disembunyikan dan diganti sidebar workspace sendiri, jadi dua dunia itu tidak bercampur. Tata letaknya: sidebar workspace di kiri, canvas di tengah, panel hasil di kanan. Di bawah 900px, sidebar dan panel kanan jadi drawer.
 
 ![Mode normal: rail tab di kiri, saklar mode di kanan atas](images/kantor-ai/workspace-normal-mode.png)
+
+### Proyek cuma di-prompt lewat canvas
+
+Supaya agent di workspace ga bentrok sama chat manual di folder yang sama, semua proyek cuma bisa dikasih perintah lewat canvas.
+
+- **Klik proyek = buka canvas-nya.** Baris proyek di sidebar ga lagi punya daftar sesi atau tombol "sesi baru". Proyek yang belum punya workspace langsung ditawari bikin workspace.
+- **Chat bebas tetap ada** di tab **chat** (workspace bawaan `obrolan`). Itu satu-satunya tempat kotak chat biasa.
+- **Sesi lama proyek disembunyiin**, bukan dihapus: tab "percakapan" hilang, arsip cuma nampilin chat obrolan. Sesi agent masih bisa dibuka dari canvas (tombol "buka sesi") buat dibaca; kotak ketiknya diganti tulisan "prompt lewat canvas" plus tombol **buka canvas**.
+- **Shell dan file tetap ada** di mode normal buat proyek yang lagi kebuka di canvas (ganti workspace di canvas, proyek di mode normal ikut ganti). Terminal di proyek selalu shell biasa, bukan CLI agent. Selama ada task yang `running` di proyek itu, simpan/buat/rename/hapus/upload file ditolak (`423 PROJECT_BUSY`) dan terminal ngasih peringatan.
+- **Dijaga di server juga:** `chat.send` / `chat.edit-send` dan `POST /api/providers/sessions` ditolak dengan `PROJECT_CANVAS_ONLY` kalau foldernya bukan workspace obrolan (termasuk `cwd` yang dikirim klien). Runner canvas tetap jalan karena lewat `runDetachedChatTurn`, bukan jalur chat. Folder obrolan dibaca dari `VITE_OBROLAN_DIR`, atau `<VITE_HOME_DIR>/obrolan`, default `/home/hermes/obrolan`, sama kayak frontend.
+
+### Task cepat
+
+Klik kanan tim kerja → **kasih task cepat**: isi judul (dan detail kalau perlu), langsung jalan di tim itu. Ga ada rencana orchestrator, audit, atau ringkasan; hasilnya jawaban tim itu sendiri. Cocok buat kerjaan kecil. Cuma provider tim itu yang harus sudah login. Task cepat ditandai label **cepat** di daftar task dan ga punya kotak pesan ke orchestrator.
 
 ### Sidebar workspace
 
@@ -173,7 +187,7 @@ Semua di bawah `/api/office` (butuh login):
 | POST/PATCH/DELETE | `/:officeId/divisions[/:divisionId]` | Kelola tim (termasuk `agentName`, `rolePrompt`, `position`) |
 | PATCH | `/:officeId/agents/:agentId` | Edit agent (`model: null` menghapus model) |
 | PUT | `/:officeId/agents/models` | Wizard: `{ assignments: [{ agentId, provider, model }] }` |
-| POST/GET/PATCH/DELETE | `/:officeId/cases[/:caseId]` | Kelola task |
+| POST/GET/PATCH/DELETE | `/:officeId/cases[/:caseId]` | Kelola task (`quickDivisionId` di POST bikin task cepat untuk satu tim) |
 | POST | `/:officeId/cases/:caseId/{start,pause,resume,cancel}` | Kontrol task (`start`/`resume` ditolak 409 `OFFICE_PROVIDERS_NOT_CONNECTED` kalau provider agent aktif belum login) |
 | POST | `/:officeId/cases/:caseId/notes` | Pesan ke orchestrator `{ text }` |
 
@@ -190,7 +204,9 @@ Kode backend ada di `server/modules/office` (orchestrator, parser rencana, sched
 - **Skills diambil dari skill Claude** (`~/.claude/skills` dan `.claude/skills` proyek). Agent dengan provider lain hanya diberi tahu nama skill di prompt-nya.
 - **Ringkasan hasil diambil dari jawaban agent.** Agent diminta menutup jawabannya dengan bagian `## Ringkasan`; kalau lupa, dipakai ekor jawabannya (maks. 4000 karakter). Tidak ada panggilan LLM terpisah untuk meringkas.
 - **Orchestrator hanya bisa menambah atau mengganti subtask,** belum bisa membatalkan subtask yang sudah direncanakan.
-- **Sesi workspace menambah daftar sesi proyek.** Tiap subtask dan audit adalah sesi sendiri (dinamai `<nama workspace> · tim · T1 judul`), jadi satu task bisa menghasilkan belasan sesi.
+- **Tiap subtask dan audit adalah sesi sendiri** (dinamai `<nama workspace> · tim · T1 judul`). Sesi-sesi ini ga muncul di sidebar, tapi tetap ada di database dan bisa dibuka dari canvas.
+- **API eksternal `POST /api/agent` (pakai API key) belum dikunci ke canvas.** Itu jalur integrasi, jadi dibiarkan; kalau mau ditutup juga, tinggal pasang guard yang sama.
+- **Kunci file cuma di app ini.** Editor lain atau shell yang ngedit file langsung ga ketahan; terminal cuma ngasih peringatan.
 - **Biaya token.** Tiap subtask minimal dua giliran (kerja + audit), ditambah giliran orchestrator (rencana, check-in, ringkasan).
 - **Pembacaan file yang diubah bergantung pada tool call.** File yang diubah lewat `Bash` (misalnya `sed -i` atau generator) tidak tercatat di tab file.
 - **Token Cursor tidak tersedia**, dan token sesi yang transcript-nya sudah dihapus dihitung nol.

@@ -362,5 +362,9 @@
     "tokensLabel_other": "token",
     "escClosesModal": "esc buat nutup modal.",
     "close": "tutup"
+  },
+  "canvasOnly": {
+    "body": "Agent di proyek ini cuma bisa di-prompt lewat canvas. Chat di sini cuma buat dibaca.",
+    "open": "Buka canvas"
   }
 }

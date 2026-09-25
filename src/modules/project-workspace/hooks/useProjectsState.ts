@@ -11,6 +11,7 @@ import type { ServerEvent,
   ProjectSession,IsSessionProcessing } from '@/shared/types';
 import { mergeProjectSelectionMetadata } from '@/modules/project-workspace/utils/projectSelectionMetadata';
 import { readSelectedProvider } from '@/shared/selectedProvider';
+import { isBuiltInWorkspaceProject } from '@/shared/utils';
 
 type UseProjectsStateArgs = {
   sessionId?: string;
@@ -1018,10 +1019,15 @@ export function useProjectsState({
     })();
   }, [navigate, sessionId, projects, selectedProject, selectedSession?.id, selectedSession?.__provider]);
 
+  // A project (anything but the free-chat and home workspaces) is prompted only
+  // through its workspace canvas, so selecting one opens the canvas.
   const handleProjectSelect = useCallback(
     (project: Project) => {
       setSelectedProject(project);
       setSelectedSession(null);
+      if (!isBuiltInWorkspaceProject(project)) {
+        setActiveTab('office');
+      }
       navigate('/');
 
       if (isMobile) {
@@ -1062,8 +1068,13 @@ export function useProjectsState({
     (project: Project) => {
       setSelectedProject(project);
       setSelectedSession(null);
-      setActiveTab('chat');
-      setNewSessionTrigger((previous) => previous + 1);
+      // A new chat exists only in the free-chat workspace; a project's work starts on its canvas.
+      if (isBuiltInWorkspaceProject(project)) {
+        setActiveTab('chat');
+        setNewSessionTrigger((previous) => previous + 1);
+      } else {
+        setActiveTab('office');
+      }
       navigate('/');
 
       if (isMobile) {

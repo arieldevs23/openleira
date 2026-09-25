@@ -17,7 +17,8 @@
     "projects": "proyek",
     "noMatchingProjects": "ga ada proyek yang cocok",
     "tryDifferentSearch": "coba kata kunci lain",
-    "runClaudeCli": "jalanin Claude CLI di folder proyek buat mulai"
+    "runClaudeCli": "jalanin Claude CLI di folder proyek buat mulai",
+    "openCanvas": "Buka canvas"
   },
   "app": {
     "title": "OpenLeira",
