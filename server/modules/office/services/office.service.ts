@@ -1,4 +1,7 @@
+import fs from 'node:fs/promises';
+
 import { officeCasesDb, officesDb, projectsDb } from '@/modules/database/index.js';
+import { createProject } from '@/modules/projects/index.js';
 import { providerAuthService, providerModelsService, providerTokenUsageService } from '@/modules/providers/index.js';
 import { broadcastOfficeUpdate } from '@/modules/office/services/office-events.service.js';
 import { buildDefaultDivisions, buildDivisionsFromProposals, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
@@ -17,7 +20,7 @@ import type {
   OfficeSnapshot,
   ProviderAuthStatus,
 } from '@/shared/types.js';
-import { AppError } from '@/shared/utils.js';
+import { AppError, validateWorkspacePath } from '@/shared/utils.js';
 
 const LLM_PROVIDERS: LLMProvider[] = ['claude', 'codex', 'cursor', 'opencode'];
 const PERMISSION_MODES: OfficePermissionMode[] = ['bypassPermissions', 'acceptEdits', 'default'];
@@ -186,6 +189,34 @@ function readProposal(proposal: OfficeDivisionProposal, taken: Set<string>): Off
   };
 }
 
+/** What the "add workspace" dialog gets back for a folder: its project row and whether it has a workspace. */
+type PreparedFolder = {
+  projectId: string;
+  projectPath: string;
+  projectName: string;
+  hasWorkspace: boolean;
+};
+
+type FolderDependencies = {
+  validatePath: typeof validateWorkspacePath;
+  readFolder: (folderPath: string) => Promise<string[] | null>;
+  createProject: (projectPath: string) => Promise<void>;
+};
+
+const defaultFolderDependencies: FolderDependencies = {
+  validatePath: validateWorkspacePath,
+  readFolder: async (folderPath) => {
+    try {
+      return await fs.readdir(folderPath);
+    } catch {
+      return null;
+    }
+  },
+  createProject: async (projectPath) => {
+    await createProject({ projectPath, customName: null });
+  },
+};
+
 /** Agent fields the UI may change; each is optional. */
 type AgentUpdateInput = {
   name?: string;
@@ -213,6 +244,45 @@ export const officeService = {
       divisions: officesDb.listDivisions(office.id),
       flow: officesDb.listFlowEdges(office.id),
       cases: officeCasesDb.listCases(office.id),
+    };
+  },
+
+  /**
+   * Readies the folder a new workspace works in. `new` makes a fresh folder
+   * (refusing one that already has files), `existing` takes a folder that is
+   * already there. Either way the folder becomes a project the same way the
+   * project wizard does it, unless it already is one.
+   */
+  async prepareFolder(
+    input: { path: string; mode: 'new' | 'existing' },
+    dependencies: FolderDependencies = defaultFolderDependencies,
+  ): Promise<PreparedFolder> {
+    const validation = await dependencies.validatePath(input.path);
+    if (!validation.valid || !validation.resolvedPath) {
+      throw badRequest(validation.error ?? 'This folder cannot be used.', 'OFFICE_FOLDER_INVALID');
+    }
+    const folderPath = validation.resolvedPath;
+    const entries = await dependencies.readFolder(folderPath);
+    if (input.mode === 'new' && entries && entries.length > 0) {
+      throw conflict('That folder already has files; add it as an existing app instead.', 'OFFICE_FOLDER_NOT_EMPTY');
+    }
+    if (input.mode === 'existing' && entries === null) {
+      throw notFound('That folder does not exist.', 'OFFICE_FOLDER_MISSING');
+    }
+
+    let project = projectsDb.getProjectPath(folderPath);
+    if (!project) {
+      await dependencies.createProject(folderPath);
+      project = projectsDb.getProjectPath(folderPath);
+    }
+    if (!project) {
+      throw new AppError('The folder could not be added as a project.', { code: 'OFFICE_FOLDER_FAILED', statusCode: 500 });
+    }
+    return {
+      projectId: project.project_id,
+      projectPath: project.project_path,
+      projectName: project.custom_project_name?.trim() || project.project_path.split(/[\\/]/).filter(Boolean).pop() || project.project_path,
+      hasWorkspace: Boolean(officesDb.getOfficeByProjectPath(project.project_path)),
     };
   },
 

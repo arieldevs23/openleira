@@ -270,6 +270,41 @@ test('case usage sums the coordinator, task and audit sessions; unreadable ones 
   });
 });
 
+test('a workspace folder is either a fresh empty folder or an existing one, registered as a project once', async () => {
+  await withProject(async (projectId) => {
+    const existingPath = projectsDb.getProjectPathById(projectId) as string;
+    const created: string[] = [];
+    const folders: Record<string, string[] | null> = { '/srv/new-app': null, '/srv/busy': ['index.js'], [existingPath]: ['README.md'] };
+    const dependencies = {
+      validatePath: async (requested: string) => ({ valid: true, resolvedPath: requested }),
+      readFolder: async (folderPath: string) => folders[folderPath] ?? null,
+      createProject: async (folderPath: string) => {
+        created.push(folderPath);
+        projectsDb.createProjectPath(folderPath);
+      },
+    };
+
+    const fresh = await officeService.prepareFolder({ path: '/srv/new-app', mode: 'new' }, dependencies);
+    assert.equal(fresh.projectName, 'new-app');
+    assert.equal(fresh.hasWorkspace, false);
+    assert.deepEqual(created, ['/srv/new-app']);
+
+    await assert.rejects(officeService.prepareFolder({ path: '/srv/busy', mode: 'new' }, dependencies), rejectsWith('OFFICE_FOLDER_NOT_EMPTY'));
+    await assert.rejects(officeService.prepareFolder({ path: '/srv/nothing', mode: 'existing' }, dependencies), rejectsWith('OFFICE_FOLDER_MISSING'));
+    await assert.rejects(
+      officeService.prepareFolder({ path: 'x', mode: 'existing' }, { ...dependencies, validatePath: async () => ({ valid: false, error: 'outside the workspace root' }) }),
+      rejectsWith('OFFICE_FOLDER_INVALID'),
+    );
+
+    // A folder that already is a project is reused, and says whether it has a workspace.
+    officeService.createOffice({ projectId, locale: 'en' });
+    const existing = await officeService.prepareFolder({ path: existingPath, mode: 'existing' }, dependencies);
+    assert.equal(existing.projectId, projectId);
+    assert.equal(existing.hasWorkspace, true);
+    assert.deepEqual(created, ['/srv/new-app'], 'no second project row');
+  });
+});
+
 test('only draft cases can be edited, and running cases cannot be deleted', async () => {
   await withProject(async (projectId) => {
     const { office } = officeService.createOffice({ projectId, locale: 'en' });

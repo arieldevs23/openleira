@@ -168,6 +168,15 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     res.json(createApiSuccessResponse({ workspaces: office.listWorkspaces() }));
   }));
 
+  router.post('/folders', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const mode = readRequiredString(body, 'mode');
+    if (mode !== 'new' && mode !== 'existing') {
+      throw badRequest('mode must be "new" or "existing".');
+    }
+    res.json(createApiSuccessResponse(await office.prepareFolder({ path: readRequiredString(body, 'path'), mode })));
+  }));
+
   router.post('/analyses', asyncHandler(async (req, res) => {
     const body = readBody(req);
     const provider = await office.requireReadyModel(readRequiredString(body, 'provider'), readRequiredString(body, 'model'));

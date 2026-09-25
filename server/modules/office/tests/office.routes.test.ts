@@ -151,6 +151,8 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     assert.equal((await request('POST', '/api/office', { projectId: 'p1', divisions: [{ rolePrompt: 'no name' }] })).status, 400);
     assert.equal((await request('GET', '/api/office/o1/cases/c1/usage')).status, 200);
     assert.equal((await request('DELETE', '/api/office/o1')).status, 200);
+    assert.equal((await request('POST', '/api/office/folders', { path: '/srv/app', mode: 'new' })).status, 200);
+    assert.equal((await request('POST', '/api/office/folders', { path: '/srv/app', mode: 'copy' })).status, 400);
   });
   assert.deepEqual(calls.map((call) => call.method), [
     'office.listWorkspaces',
@@ -164,6 +166,7 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     'office.createOffice',
     'office.getCaseUsage',
     'office.deleteOffice',
+    'office.prepareFolder',
   ]);
   assert.deepEqual((calls[3].args[2] as { position: unknown }).position, { x: 4, y: 5 });
   assert.equal((calls[4].args[2] as { position: unknown }).position, null);
