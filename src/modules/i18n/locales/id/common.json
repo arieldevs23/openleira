@@ -365,8 +365,8 @@
   },
   "mode": {
     "label": "mode",
-    "normal": "normal",
-    "workspace": "canvas",
+    "normal": "Chat",
+    "workspace": "Node Design",
     "workspaceTitle": "workspace"
   }
 }

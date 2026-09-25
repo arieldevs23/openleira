@@ -277,7 +277,10 @@ export function buildTaskPrompt(input: {
   dependencyResults: DependencyResult[];
   skills: PromptSkill[];
   resumedAfterRestart: boolean;
+  /** Teams the flow sends this team's result to; each only sees its own subsection. */
+  handsOffTo?: Array<{ name: string }>;
 }): string {
+  const handsOffTo = input.handsOffTo ?? [];
   const dependencies = input.dependencyResults.map((result) => [
     `### ${result.ref} · ${result.divisionName}: ${result.title}`,
     result.summary.trim() || '(no summary)',
@@ -304,6 +307,9 @@ export function buildTaskPrompt(input: {
     '- Your work is checked by the audit division before it counts as done.',
     `- ${languageLine(input.locale)}`,
     `- End your answer with a section headed exactly "${summaryHeading(input.locale)}" containing: what you did, files changed, how to verify, and open issues.`,
+    ...(handsOffTo.length > 0
+      ? [`- Your result is forwarded to: ${handsOffTo.map((team) => team.name).join(', ')}. Inside that final section, first write what every team needs, then one subsection per team headed "### <team name>" with only that team's part. Each team sees the shared part and its own subsection, never the others'.`]
+      : []),
   ].join('\n');
 }
 

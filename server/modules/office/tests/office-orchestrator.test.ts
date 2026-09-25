@@ -342,6 +342,42 @@ test('a third failed audit fails the task, blocks its dependants and tells the c
   });
 });
 
+test('the planner is told who gets its plan, and each team only receives its own part', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return {
+          text: json({
+            tasks: [
+              { id: 'T1', division_slug: 'planner', title: 'Plan', instruction: 'Plan it' },
+              { id: 'T2', division_slug: 'frontend', title: 'UI', instruction: 'Build it', depends_on: ['T1'] },
+              { id: 'T3', division_slug: 'backend', title: 'API', instruction: 'Build it', depends_on: ['T1'] },
+            ],
+          }),
+        };
+      }
+      if (turn.kind === 'task' && turn.ref === 'T1') {
+        return { text: '## Summary\nShared: a calculator.\n\n### Frontend\nKEYPAD-FOR-FRONTEND\n\n### Backend\nENDPOINT-FOR-BACKEND' };
+      }
+      if (turn.kind === 'task') return { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') return { text: PASS };
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+    assert.equal((await waitFor(created.id, isFinished)).status, 'done');
+
+    const promptOf = (ref: string) => turns.find((turn) => turn.kind === 'task' && turn.ref === ref)?.request.prompt ?? '';
+    assert.match(promptOf('T1'), /Your result is forwarded to: .*Frontend/);
+    assert.match(promptOf('T2'), /Shared: a calculator/);
+    assert.match(promptOf('T2'), /KEYPAD-FOR-FRONTEND/);
+    assert.doesNotMatch(promptOf('T2'), /ENDPOINT-FOR-BACKEND/);
+    assert.match(promptOf('T3'), /ENDPOINT-FOR-BACKEND/);
+    assert.doesNotMatch(promptOf('T3'), /KEYPAD-FOR-FRONTEND/);
+  });
+});
+
 const LIMIT = "You've hit your session limit · resets 6pm (UTC)";
 
 test('a provider limit parks the case without spending an audit retry, and resume redoes only that turn', async () => {

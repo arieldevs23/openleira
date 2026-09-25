@@ -4,7 +4,7 @@ import { officeCasesDb, officesDb, projectsDb } from '@/modules/database/index.j
 import { createProject } from '@/modules/projects/index.js';
 import { providerAuthService, providerModelsService, providerTokenUsageService } from '@/modules/providers/index.js';
 import { broadcastOfficeUpdate } from '@/modules/office/services/office-events.service.js';
-import { buildDefaultDivisions, buildDivisionsFromProposals, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
+import { buildDefaultDivisions, buildDefaultFlow, buildDivisionsFromProposals, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
 import type {
   LLMProvider,
   Office,
@@ -410,6 +410,12 @@ export const officeService = {
         ? buildDivisionsFromProposals(locale, proposals, input.appSummary ?? null)
         : buildDefaultDivisions(locale),
     });
+    // Coordinator → planner → teams, not everyone at once.
+    const workers = officesDb.listDivisions(office.id).filter((division) => !division.isCoordinator && !division.isAudit);
+    const bySlug = new Map(workers.map((division) => [division.slug, division.id]));
+    for (const [from, to] of buildDefaultFlow(workers.map((division) => division.slug))) {
+      officesDb.addFlowEdge(office.id, bySlug.get(from) as string, bySlug.get(to) as string);
+    }
     broadcastOfficeUpdate(office.id, { entity: 'office', office });
     return this.getSnapshot(office.id);
   },

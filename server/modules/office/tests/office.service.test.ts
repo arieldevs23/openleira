@@ -180,6 +180,16 @@ test('flow arrows join worker divisions only and never loop; node positions are 
   await withProject(async (projectId) => {
     const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });
     const bySlug = (slug: string) => divisions.find((division) => division.slug === slug)?.id as string;
+    const slugOf = (id: string) => divisions.find((division) => division.id === id)?.slug;
+
+    // A new workspace starts with coordinator → planner → teams, not everyone in parallel.
+    const seeded = officeService.getSnapshot(office.id).flow.map((edge) => `${slugOf(edge.fromDivisionId)}>${slugOf(edge.toDivisionId)}`).sort();
+    assert.deepEqual(seeded, [
+      'backend>security', 'designer>frontend', 'planner>backend', 'planner>designer', 'planner>docs', 'planner>frontend', 'planner>security',
+    ]);
+    for (const edge of officeService.getSnapshot(office.id).flow) {
+      officeService.deleteFlowEdge(office.id, edge.fromDivisionId, edge.toDivisionId);
+    }
 
     officeService.addFlowEdge(office.id, bySlug('planner'), bySlug('backend'));
     const flow = officeService.addFlowEdge(office.id, bySlug('backend'), bySlug('docs'));

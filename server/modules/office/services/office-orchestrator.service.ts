@@ -14,6 +14,7 @@ import {
   extractResultSummary,
   parseAuditVerdict,
   parseCoordinatorOutput,
+  scopeResultToDivision,
 } from '@/modules/office/services/office-plan-parser.service.js';
 import type {
   AuditVerdict,
@@ -822,8 +823,13 @@ export function createOfficeOrchestrator(dependencies: {
         divisionName: (dependency.divisionId && context.divisionsById.get(dependency.divisionId)?.name) || '?',
         ref: dependency.ref,
         title: dependency.title,
-        summary: dependency.resultSummary ?? '',
+        // A team only sees the part of a forwarded result addressed to it (or all of it when it is not split per team).
+        summary: scopeResultToDivision(dependency.resultSummary ?? '', division, [...context.divisionsById.values()]),
       }));
+    const flowTargets = officesDb.listFlowEdges(context.office.id)
+      .filter((edge) => edge.fromDivisionId === division.id)
+      .map((edge) => context.divisionsById.get(edge.toDivisionId))
+      .filter((target): target is OfficeDivision => Boolean(target && target.agent.enabled));
     const skills = await resolvePromptSkills(division.agent, context.office.projectPath);
     const isRevision = task.attempts > 0 && Boolean(task.sessionId);
     const prompt = isRevision
@@ -836,6 +842,7 @@ export function createOfficeOrchestrator(dependencies: {
         dependencyResults,
         skills,
         resumedAfterRestart: Boolean(task.sessionId),
+        handsOffTo: flowTargets,
       });
 
     const turn = await runAgentTurn(context, handle, {
