@@ -62,7 +62,7 @@ const STATUS_STYLES: Record<SubagentInfo['status'], string> = {
   running: 'text-primary',
   completed: 'text-muted-foreground',
   failed: 'text-err',
-  stopped: 'text-muted-foreground/70',
+  stopped: 'text-muted-foreground',
 };
 
 /**
@@ -127,12 +127,12 @@ export const SubagentPanel = memo(({
         <span className="flex-shrink-0 font-medium text-foreground">{label || 'Agent'}</span>
         {description && (
           <>
-            <span className="flex-shrink-0 text-[10px] text-muted-foreground/40">/</span>
+            <span className="flex-shrink-0 text-[10px] text-muted-foreground">/</span>
             <span className="min-w-0 flex-1 truncate">{description}</span>
           </>
         )}
         {nickname && (
-          <span className="flex-shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground/70">{nickname}</span>
+          <span className="flex-shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground">{nickname}</span>
         )}
         <span className={cn('ml-auto flex flex-shrink-0 items-center gap-1 text-[11px]', STATUS_STYLES[status])}>
           {status === 'running' ? (
@@ -164,12 +164,12 @@ export const SubagentPanel = memo(({
       {showTimeline && (
         <div className="mt-1.5 space-y-2 pl-[18px]">
           {subagent?.model && (
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/50">{subagent.model}</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{subagent.model}</div>
           )}
 
           {prompt && (
             <div className="rounded border border-border/40 bg-muted/40 p-2 text-xs text-muted-foreground">
-              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">Task</div>
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Task</div>
               <div className="line-clamp-6 whitespace-pre-wrap break-words">{prompt}</div>
             </div>
           )}
@@ -184,7 +184,7 @@ export const SubagentPanel = memo(({
 
           {resultText && (
             <div className="rounded border border-border/40 bg-muted/30 p-2">
-              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">Result</div>
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Result</div>
               <MarkdownContent content={resultText} className="prose prose-sm max-w-none dark:prose-invert" />
             </div>
           )}

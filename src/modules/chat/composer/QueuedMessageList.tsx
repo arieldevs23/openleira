@@ -51,7 +51,7 @@ export default function QueuedMessageList({
       <div className="flex items-center gap-1.5 px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-primary/70">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
         <span>{t('input.queue.count', { count: queuedDrafts.length, defaultValue: '{{count}} queued' })}</span>
-        <span className="truncate normal-case text-muted-foreground/60">
+        <span className="truncate normal-case text-muted-foreground">
           · {t('input.queue.willSendInOrder', { defaultValue: 'Sends in order as each turn finishes' })}
         </span>
       </div>
@@ -64,7 +64,7 @@ export default function QueuedMessageList({
               key={draft.id}
               className="group flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-foreground/[0.04]"
             >
-              <span className="w-4 shrink-0 text-center text-[11px] tabular-nums text-muted-foreground/60">
+              <span className="w-4 shrink-0 text-center text-[11px] tabular-nums text-muted-foreground">
                 {index + 1}
               </span>
               <p className="min-w-0 flex-1 truncate text-sm text-foreground/90" title={draft.content}>

@@ -125,7 +125,7 @@ function PluginCard({
               )}
               <div className="mt-1 flex items-center gap-3">
                 {plugin.author && (
-                  <span className="text-xs text-muted-foreground/60">
+                  <span className="text-xs text-muted-foreground">
                     {plugin.author}
                   </span>
                 )}
@@ -289,7 +289,7 @@ export default function PluginSettingsTab() {
 
       {/* Install from Git — compact */}
       <div className="flex items-center gap-0 overflow-hidden rounded-lg border border-border bg-card">
-        <span className="flex-shrink-0 pl-3 pr-1 text-muted-foreground/40">
+        <span className="flex-shrink-0 pl-3 pr-1 text-muted-foreground">
           <GitBranch className="h-3.5 w-3.5" />
         </span>
         <input
@@ -301,7 +301,7 @@ export default function PluginSettingsTab() {
           }}
           placeholder={t('pluginSettings.installPlaceholder')}
           aria-label={t('pluginSettings.installAriaLabel')}
-          className="flex-1 bg-transparent px-2 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+          className="flex-1 bg-transparent px-2 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           onKeyDown={(e) => {
             if (e.key === 'Enter') void handleInstall();
           }}
@@ -323,7 +323,7 @@ export default function PluginSettingsTab() {
         <p className="-mt-4 text-sm text-err">{installError}</p>
       )}
 
-      <p className="-mt-4 flex items-start gap-1.5 text-xs leading-snug text-muted-foreground/50">
+      <p className="-mt-4 flex items-start gap-1.5 text-xs leading-snug text-muted-foreground">
         <ShieldAlert className="mt-px h-3 w-3 flex-shrink-0" />
         <span>
           {t('pluginSettings.securityWarning')}

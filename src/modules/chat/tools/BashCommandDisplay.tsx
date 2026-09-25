@@ -126,10 +126,10 @@ export const BashCommandDisplay: React.FC<BashCommandDisplayProps> = ({
       {open && hasOutput && (
         <div className="settings-content-enter mb-1 ml-[1.1rem] mt-0.5 rounded-md bg-muted/40 font-mono text-[11px]">
           {description && (
-            <div className="px-2.5 pt-2 font-sans italic text-muted-foreground/80">{description}</div>
+            <div className="px-2.5 pt-2 font-sans italic text-muted-foreground">{description}</div>
           )}
           <pre className="whitespace-pre-wrap break-all px-2.5 pt-2 text-foreground/80">
-            <span className="select-none text-muted-foreground/60">$ </span>{command}
+            <span className="select-none text-muted-foreground">$ </span>{command}
           </pre>
           <pre
             className={cn(

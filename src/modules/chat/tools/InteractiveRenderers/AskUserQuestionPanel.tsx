@@ -163,14 +163,14 @@ export const AskUserQuestionPanel: React.FC<PermissionPanelProps> = ({
     >
       <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-card shadow-lg dark:shadow-2xl">
         {/* Accent line */}
-        <div className="absolute left-0 right-0 top-0 h-[2px] bg-gradient-to-r from-primary via-info to-info" />
+        <div className="absolute left-0 right-0 top-0 h-[2px] bg-primary" />
 
         {/* Header + Question — compact */}
         <div className="px-4 pb-2 pt-3.5">
           <div className="mb-1.5 flex items-center gap-2.5">
             {/* Question icon */}
             <div className="relative flex-shrink-0">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-info/10">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
                 <svg className="h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827m0 3h.01" />
                 </svg>

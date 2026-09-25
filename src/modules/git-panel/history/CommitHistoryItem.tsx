@@ -99,7 +99,7 @@ export default function CommitHistoryItem({
                 {formatDate(commit.date, i18n.language)}
               </p>
             </div>
-            <span className="flex-shrink-0 font-mono text-sm text-muted-foreground/60">
+            <span className="flex-shrink-0 font-mono text-sm text-muted-foreground">
               {commit.hash.substring(0, 7)}
             </span>
           </div>
@@ -110,19 +110,19 @@ export default function CommitHistoryItem({
         <div className="bg-muted/50">
           <div className="max-h-[32rem] overflow-y-auto p-3">
             {/* Full hash */}
-            <p className="mb-2 select-all font-mono text-xs text-muted-foreground/70">
+            <p className="mb-2 select-all font-mono text-xs text-muted-foreground">
               {commit.hash}
             </p>
 
             {/* Author + Date */}
             <div className="mb-3 flex gap-4 text-xs text-muted-foreground">
               <span>
-                <span className="text-muted-foreground/60">
+                <span className="text-muted-foreground">
                   {t('git:history.author', { author: commit.author })}
                 </span>
               </span>
               <span>
-                <span className="text-muted-foreground/60">
+                <span className="text-muted-foreground">
                   {t('git:history.date', { date: formatDate(commit.date, i18n.language) })}
                 </span>
               </span>
@@ -132,15 +132,15 @@ export default function CommitHistoryItem({
             {fileSummary && (
               <div className="mb-3 flex gap-4 rounded-md bg-muted/80 px-4 py-2 text-center text-xs">
                 <div>
-                  <div className="text-muted-foreground/60">{t('git:history.files')}</div>
+                  <div className="text-muted-foreground">{t('git:history.files')}</div>
                   <div className="font-semibold text-foreground">{fileSummary.totalFiles}</div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground/60">{t('git:history.added')}</div>
+                  <div className="text-muted-foreground">{t('git:history.added')}</div>
                   <div className="font-semibold text-ok">+{fileSummary.totalInsertions}</div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground/60">{t('git:history.removed')}</div>
+                  <div className="text-muted-foreground">{t('git:history.removed')}</div>
                   <div className="font-semibold text-err">-{fileSummary.totalDeletions}</div>
                 </div>
               </div>
@@ -149,7 +149,7 @@ export default function CommitHistoryItem({
             {/* Changed files list */}
             {fileSummary && fileSummary.files.length > 0 && (
               <div className="mb-3">
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {t('git:history.changedFiles')}
                 </p>
                 <div className="rounded-md border border-border/60">
@@ -167,11 +167,11 @@ export default function CommitHistoryItem({
                       </span>
                       <span className="min-w-0 flex-1 truncate">
                         {file.directory && (
-                          <span className="text-muted-foreground/60">{file.directory}</span>
+                          <span className="text-muted-foreground">{file.directory}</span>
                         )}
                         <span className="font-medium text-foreground">{file.filename}</span>
                       </span>
-                      <span className="flex-shrink-0 font-mono text-muted-foreground/60">
+                      <span className="flex-shrink-0 font-mono text-muted-foreground">
                         {file.insertions > 0 && (
                           <span className="text-ok">+{file.insertions}</span>
                         )}

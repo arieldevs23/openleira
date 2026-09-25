@@ -991,6 +991,18 @@ h1, h2, h3, h4 {
   font-weight: 500;
 }
 
+/* Contrast by usage (§8). In light mode --muted on --surface-2 is 4.35:1,
+   just under AA, so small muted text and placeholders sitting on a
+   --surface-2 fill (bg-muted, bg-secondary, inputs, assistant bubbles) use
+   --text-dim instead. Token values stay as specified; only the usage moves.
+   Checked by scripts/check-theme-contrast.mjs. */
+:root[data-theme="light"] :is(.bg-muted, .bg-secondary, .chat-bubble-assistant, .nav-search-input) .text-muted-foreground,
+:root[data-theme="light"] .text-muted-foreground:is(.bg-muted, .bg-secondary),
+:root[data-theme="light"] :is(.bg-muted, .bg-secondary, .nav-search-input) ::placeholder,
+:root[data-theme="light"] :is(input, textarea):is(.bg-muted, .bg-secondary)::placeholder {
+  color: var(--text-dim);
+}
+
 /* Buttons (§7). Primary: --accent fill with --on-accent text, weight 600. */
 .bg-primary:is(button, [role="button"], a) {
   font-weight: 600;

@@ -139,7 +139,7 @@ export const BackgroundTasksStrip = memo(({ messages, tasks, sessionId, sendMess
               <StatusMark kind="running" />
               <span className="flex-shrink-0 font-medium text-foreground">{kind}</span>
               {name && <span className="min-w-0 truncate">{name}</span>}
-              {progress && <span className="min-w-0 truncate text-muted-foreground/70">· {progress}</span>}
+              {progress && <span className="min-w-0 truncate text-muted-foreground">· {progress}</span>}
             </button>
             {sessionId && taskId && (
               <button
@@ -147,7 +147,7 @@ export const BackgroundTasksStrip = memo(({ messages, tasks, sessionId, sendMess
                 onClick={() => sendMessage({ type: 'chat.stop-task', sessionId, taskId })}
                 aria-label={t('workflow.stopTask', 'Stop')}
                 title={t('workflow.stopTask', 'Stop')}
-                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-destructive"
+                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-destructive"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -196,7 +196,7 @@ export const BackgroundTasksStrip = memo(({ messages, tasks, sessionId, sendMess
                 onClick={() => sendMessage({ type: 'chat.stop-task', sessionId, taskId: task.taskId })}
                 aria-label={t('workflow.stopTask', 'Stop')}
                 title={t('workflow.stopTask', 'Stop')}
-                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-destructive"
+                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-destructive"
               >
                 <X className="h-3 w-3" />
               </button>

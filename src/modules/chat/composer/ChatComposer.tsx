@@ -531,7 +531,7 @@ export default function ChatComposer({
           </div>
 
           <div
-            className={`order-last hidden basis-full px-2 text-center text-xs leading-4 text-muted-foreground/50 transition-opacity duration-200 lg:block ${
+            className={`order-last hidden basis-full px-2 text-center text-xs leading-4 text-muted-foreground transition-opacity duration-200 lg:block ${
               input.trim() && !canQueueDraft ? 'opacity-0' : 'opacity-100'
             }`}
           >

@@ -56,7 +56,7 @@ function TreeItemIcon({ item, isOpen, renderFileIcon }: TreeItemIconProps) {
       <span className="flex flex-shrink-0 items-center gap-0.5">
         <ChevronRight
           className={cn(
-            'w-3.5 h-3.5 text-muted-foreground/70 transition-transform duration-150',
+            'w-3.5 h-3.5 text-muted-foreground transition-transform duration-150',
             isOpen && 'rotate-90',
           )}
         />

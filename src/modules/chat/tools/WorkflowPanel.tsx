@@ -104,7 +104,7 @@ const STATUS_STYLES: Record<BackgroundTaskStatus, string> = {
   running: 'text-primary',
   completed: 'text-muted-foreground',
   failed: 'text-err',
-  stopped: 'text-muted-foreground/70',
+  stopped: 'text-muted-foreground',
 };
 
 const AGENT_STATUS_STYLES: Record<WorkflowAgentRow['status'], string> = {
@@ -257,17 +257,17 @@ const WorkflowAgentTimeline = memo(({ sessionId, runId, agentId, isRunning, onFi
   }, [sessionId, runId, agentId, isRunning]);
 
   if (!loaded) {
-    return <div className="text-[11px] text-muted-foreground/60">{t('workflow.agentTimelineLoading', 'Reading the agent\'s steps…')}</div>;
+    return <div className="text-[11px] text-muted-foreground">{t('workflow.agentTimelineLoading', 'Reading the agent\'s steps…')}</div>;
   }
   if ('error' in loaded) {
     return (
-      <div className="text-[11px] text-muted-foreground/60">
+      <div className="text-[11px] text-muted-foreground">
         {t('workflow.agentTimelineUnavailable', 'Steps unavailable: {{reason}}', { reason: loaded.error })}
       </div>
     );
   }
   if (loaded.activity.activity.length === 0) {
-    return <div className="text-[11px] text-muted-foreground/60">{t('workflow.agentTimelineEmpty', 'Nothing recorded yet')}</div>;
+    return <div className="text-[11px] text-muted-foreground">{t('workflow.agentTimelineEmpty', 'Nothing recorded yet')}</div>;
   }
   return (
     <SubagentTimeline
@@ -310,8 +310,8 @@ const WorkflowAgentRowView = memo(({ agent, timelineAddress, onFileOpen, createD
       <span className={cn('min-w-0 truncate', agent.status === 'failed' ? 'text-err' : 'text-foreground')}>
         {describeWorkflowAgent(agent)}
       </span>
-      {agent.phase && <span className="flex-shrink-0 text-muted-foreground/70">· {agent.phase}</span>}
-      <span className="ml-auto flex-shrink-0 text-[11px] text-muted-foreground/70">
+      {agent.phase && <span className="flex-shrink-0 text-muted-foreground">· {agent.phase}</span>}
+      <span className="ml-auto flex-shrink-0 text-[11px] text-muted-foreground">
         {t(`workflow.agentStatus.${agent.status}`, agent.status)}
       </span>
     </>
@@ -334,7 +334,7 @@ const WorkflowAgentRowView = memo(({ agent, timelineAddress, onFileOpen, createD
       )}
 
       {agent.status === 'running' && (agent.lastToolName || agent.tokens !== undefined || agent.toolCalls !== undefined) && (
-        <div className="flex flex-wrap gap-x-2 pl-[30px] text-[11px] text-muted-foreground/70">
+        <div className="flex flex-wrap gap-x-2 pl-[30px] text-[11px] text-muted-foreground">
           {agent.lastToolName && (
             <span className="min-w-0 truncate">
               {agent.lastToolName}
@@ -347,7 +347,7 @@ const WorkflowAgentRowView = memo(({ agent, timelineAddress, onFileOpen, createD
       )}
 
       {agent.status === 'completed' && agent.resultPreview && (
-        <div className="line-clamp-2 whitespace-pre-wrap break-words pl-[30px] text-[11px] text-muted-foreground/70">{agent.resultPreview}</div>
+        <div className="line-clamp-2 whitespace-pre-wrap break-words pl-[30px] text-[11px] text-muted-foreground">{agent.resultPreview}</div>
       )}
 
       {isOpen && timelineAddress && agent.agentId && (
@@ -450,7 +450,7 @@ export const WorkflowPanel = memo(({ toolInput, toolResult, workflow, taskStatus
         <span className="flex-shrink-0 font-medium text-foreground">{t('workflow.title', 'Workflow')}</span>
         {name && (
           <>
-            <span className="flex-shrink-0 text-[10px] text-muted-foreground/40">/</span>
+            <span className="flex-shrink-0 text-[10px] text-muted-foreground">/</span>
             <span className="flex-shrink-0 font-medium">{name}</span>
           </>
         )}
@@ -486,7 +486,7 @@ export const WorkflowPanel = memo(({ toolInput, toolResult, workflow, taskStatus
         <div className="mt-1.5 space-y-2 pl-[18px] text-xs">
           {meta.phases.length > 0 && (
             <div className="rounded border border-border/40 bg-muted/40 p-2 text-muted-foreground">
-              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">{t('workflow.phases', 'Phases')}</div>
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">{t('workflow.phases', 'Phases')}</div>
               <ol className="list-decimal space-y-0.5 pl-4">
                 {meta.phases.map((phase) => (
                   <li key={phase.title}>
@@ -500,7 +500,7 @@ export const WorkflowPanel = memo(({ toolInput, toolResult, workflow, taskStatus
 
           {agents.length > 0 && (
             <div className="rounded border border-border/40 bg-muted/40 p-2 text-muted-foreground">
-              <div className="mb-1 flex items-baseline justify-between gap-2 text-[10px] uppercase tracking-wide text-muted-foreground/60">
+              <div className="mb-1 flex items-baseline justify-between gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
                 <span>{t('workflow.agents', 'Agents')}</span>
                 <span className="normal-case tracking-normal">
                   {t('workflow.agentsFinished', { finished: finishedCount, count: agents.length, defaultValue_one: '{{finished}} of {{count}} agent finished', defaultValue_other: '{{finished}} of {{count}} agents finished' })}
@@ -523,7 +523,7 @@ export const WorkflowPanel = memo(({ toolInput, toolResult, workflow, taskStatus
           )}
 
           {taskStatus?.usage && (
-            <div className="text-[11px] text-muted-foreground/70">
+            <div className="text-[11px] text-muted-foreground">
               {t('workflow.usage', '{{toolUses}} tool uses · {{elapsed}}', {
                 toolUses: taskStatus.usage.toolUses,
                 elapsed: formatTaskDuration(taskStatus.usage.durationMs),
@@ -537,7 +537,7 @@ export const WorkflowPanel = memo(({ toolInput, toolResult, workflow, taskStatus
             <ToolErrorDisplay label={t('chat:messageTypes.error', 'Error')} content={content} />
           ) : resultText && (
             <details open className="rounded border border-border/40 bg-muted/30 p-2">
-              <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted-foreground/60">
+              <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted-foreground">
                 {t('workflow.result', 'Result')}
               </summary>
               <MarkdownContent content={resultText} className="prose prose-sm max-w-none dark:prose-invert" />
@@ -546,9 +546,9 @@ export const WorkflowPanel = memo(({ toolInput, toolResult, workflow, taskStatus
 
           {(script || scriptPath) && (
             <details className="rounded border border-border/40 bg-muted/30 p-2">
-              <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted-foreground/60">
+              <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted-foreground">
                 {t('workflow.script', 'Script')}
-                {scriptPath && <span className="ml-2 normal-case tracking-normal text-muted-foreground/50">{scriptPath}</span>}
+                {scriptPath && <span className="ml-2 normal-case tracking-normal text-muted-foreground">{scriptPath}</span>}
               </summary>
               {script && (
                 <pre className="mt-1 max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] text-muted-foreground">{script}</pre>

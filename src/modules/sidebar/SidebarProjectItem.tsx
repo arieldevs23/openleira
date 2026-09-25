@@ -297,7 +297,7 @@ function SidebarProjectItem({
                   <div className="text-xs text-muted-foreground">
                     {sessionCountDisplay}
                     {project.fullPath !== project.displayName && (
-                      <span className="ml-1 opacity-60" title={project.fullPath}>
+                      <span className="ml-1" title={project.fullPath}>
                         {' - '}
                         {project.fullPath.length > 25 ? `...${project.fullPath.slice(-22)}` : project.fullPath}
                       </span>

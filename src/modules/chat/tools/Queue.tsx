@@ -87,7 +87,7 @@ export const QueueItemIndicator = React.forwardRef<HTMLDivElement, React.HTMLAtt
           <StatusMark kind="running" />
         )}
         {status === 'pending' && (
-          <svg className="h-3.5 w-3.5 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-3.5 w-3.5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="9" strokeWidth={2} />
           </svg>
         )}

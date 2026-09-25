@@ -118,7 +118,7 @@ export default function ActivityIndicator({ activity, onAbort, isInputFocused = 
           {detail && (
             <span className="min-w-0 truncate text-muted-foreground" title={detail}>{detail}</span>
           )}
-          <span className="shrink-0 tabular-nums text-muted-foreground/60">{elapsedLabel}</span>
+          <span className="shrink-0 tabular-nums text-muted-foreground">{elapsedLabel}</span>
         </div>
 
         {renderedActivity.canInterrupt && onAbort && (
@@ -132,7 +132,7 @@ export default function ActivityIndicator({ activity, onAbort, isInputFocused = 
               <rect x="5" y="5" width="14" height="14" rx="2" />
             </svg>
             <span>{t('claudeStatus.stop', { defaultValue: 'Stop' })}</span>
-            <kbd className="hidden rounded border border-border/60 px-1 text-[10px] text-muted-foreground/70 sm:inline-block">
+            <kbd className="hidden rounded border border-border/60 px-1 text-[10px] text-muted-foreground sm:inline-block">
               esc
             </kbd>
           </button>

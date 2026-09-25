@@ -61,7 +61,7 @@ export default function TaskEmptyState({
   return (
     <div className={cn('text-center py-12', className)}>
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 to-primary/10 p-6 text-left">
+        <div className="mb-6 rounded-xl border border-border bg-card p-6 text-left">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <FileText className="h-5 w-5 text-primary" />

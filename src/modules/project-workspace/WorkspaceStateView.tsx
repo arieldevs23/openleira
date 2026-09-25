@@ -45,7 +45,7 @@ export default function WorkspaceStateView({ mode, isMobile, onMenuClick }: Work
         <div className="flex flex-1 items-center justify-center">
           <div className="relative mx-auto max-w-md px-6 text-center">
             {/* Empty state: one faint ogival arch behind the icon and title (DESIGN.md §5). */}
-            <OgivalArchOrnament className="-top-12 left-1/2 h-56 w-44 -translate-x-1/2" />
+            <OgivalArchOrnament className="-top-10 left-1/2 h-36 w-28 -translate-x-1/2" />
             <div className="relative mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50">
               <Folder className="h-7 w-7 text-muted-foreground" />
             </div>

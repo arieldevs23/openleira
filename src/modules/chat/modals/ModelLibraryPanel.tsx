@@ -367,7 +367,7 @@ export default function ModelLibraryPanel({
             <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/70">
               {predefinedModels.map((option) => (
                 <div key={option.recordId ?? option.value} className="flex items-center gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0">
-                  <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                  <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-foreground">{option.label}</p>
                     <p className="truncate font-mono text-[10px] text-muted-foreground">{option.value}</p>

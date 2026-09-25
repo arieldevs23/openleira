@@ -43,7 +43,7 @@ export const MemoryCitations = memo(({ citations }: { citations: MemoryCitation[
             <li key={citation.source} className="text-[11px] leading-snug">
               <span className="font-mono text-muted-foreground">{citation.source}</span>
               {citation.note && (
-                <span className="ml-1.5 text-muted-foreground/70">{citation.note}</span>
+                <span className="ml-1.5 text-muted-foreground">{citation.note}</span>
               )}
             </li>
           ))}

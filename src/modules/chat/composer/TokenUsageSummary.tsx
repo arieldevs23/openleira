@@ -58,7 +58,7 @@ function TokenUsageSummary({ usage, onClick }: TokenUsageSummaryProps) {
         <ActivityIcon className="h-3.5 w-3.5" />
       </span>
       <span className="font-medium text-foreground">{formatTokenCount(usedTokens)}</span>
-      <span className="hidden text-muted-foreground/70 sm:inline">
+      <span className="hidden text-muted-foreground sm:inline">
         {t('chat:misc.tokensLabel', { count: usedTokens })}
       </span>
     </button>

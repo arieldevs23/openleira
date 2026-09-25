@@ -102,7 +102,7 @@ export default function SidebarRecentConversations({
         <span className="text-[11px] font-medium text-muted-foreground">
           {t('recent.title', 'Recent conversations')}
         </span>
-        <span className="text-[10px] tabular-nums text-muted-foreground/70">{total}</span>
+        <span className="text-[10px] tabular-nums text-muted-foreground">{total}</span>
       </div>
 
       <div className="space-y-0.5">
@@ -203,7 +203,7 @@ export default function SidebarRecentConversations({
                     <span className="truncate">{conversation.projectDisplayName}</span>
                     {isProcessing ? (
                       <>
-                        <span className="flex-shrink-0 text-muted-foreground/40">·</span>
+                        <span className="flex-shrink-0 text-muted-foreground">·</span>
                         <Tooltip content={t('tooltips.processingSessionIndicator', 'Processing session')} position="top">
                           <Loader2 className="h-3 w-3 flex-shrink-0 animate-spin" />
                         </Tooltip>
@@ -212,7 +212,7 @@ export default function SidebarRecentConversations({
                       // No spinner: nothing is responding. The purple of the
                       // workflow and agent cards says what is still running.
                       <>
-                        <span className="flex-shrink-0 text-muted-foreground/40">·</span>
+                        <span className="flex-shrink-0 text-muted-foreground">·</span>
                         <Tooltip content={t('tooltips.backgroundWorkIndicator', 'Background work running')} position="top">
                           <span
                             role="status"
@@ -223,7 +223,7 @@ export default function SidebarRecentConversations({
                       </>
                     ) : age && (
                       <>
-                        <span className="flex-shrink-0 text-muted-foreground/40">·</span>
+                        <span className="flex-shrink-0 text-muted-foreground">·</span>
                         <time className="flex-shrink-0 tabular-nums" dateTime={conversation.lastActivity ?? undefined}>
                           {age}
                         </time>

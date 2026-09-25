@@ -171,7 +171,7 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
         {/* Empty state (DESIGN.md §7): one faint ogival arch behind the mark and
             title only, never behind the project list below. */}
         <div className="relative flex flex-col items-center">
-          <OgivalArchOrnament className="-top-16 left-1/2 h-64 w-52 -translate-x-1/2" />
+          <OgivalArchOrnament className="-top-10 left-1/2 h-40 w-32 -translate-x-1/2" />
           <RoseMark size={56} alt="" className="relative" />
           <h1 className="display-title relative mt-4 text-center text-2xl text-foreground">
             {t('welcome.title')}
@@ -247,7 +247,7 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
                       )}
                     >
                       <span className="truncate">{project.displayName || project.fullPath}</span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                     </button>
                   ))}
                 </div>

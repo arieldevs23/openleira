@@ -29,11 +29,11 @@ const SubagentNote = memo(({ activity }: { activity: SubagentActivity }) => {
 
   return (
     <div className="flex gap-2 py-1">
-      <Icon className={cn('mt-0.5 h-3 w-3 flex-shrink-0', isThinking ? 'text-muted-foreground/50' : 'text-muted-foreground/70')} />
+      <Icon className={cn('mt-0.5 h-3 w-3 flex-shrink-0', isThinking ? 'text-muted-foreground' : 'text-muted-foreground')} />
       <div
         className={cn(
           'min-w-0 flex-1 whitespace-pre-wrap break-words text-xs leading-relaxed',
-          isThinking ? 'italic text-muted-foreground/70' : 'text-muted-foreground',
+          isThinking ? 'italic text-muted-foreground' : 'text-muted-foreground',
         )}
       >
         {activity.content}
@@ -103,7 +103,7 @@ export const SubagentTimeline = memo(({ activity, activityCount, onFileOpen, cre
       )}
 
       {untransmittedCount > 0 && hiddenCount === 0 && (
-        <div className="text-[11px] text-muted-foreground/60">
+        <div className="text-[11px] text-muted-foreground">
           {untransmittedCount} earlier {untransmittedCount === 1 ? 'step is' : 'steps are'} not included
         </div>
       )}

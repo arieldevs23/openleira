@@ -11,7 +11,7 @@ const STATUS_CONFIG: Record<ToolStatus, { label: string; className: string }> = 
   },
   completed: {
     label: 'done',
-    className: 'text-muted-foreground/70',
+    className: 'text-muted-foreground',
   },
   error: {
     label: 'error',

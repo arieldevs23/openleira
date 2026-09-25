@@ -54,7 +54,7 @@ export default function GitDiffViewer({ diff, isMobile, wrapText }: GitDiffViewe
           } ${isAddition ? 'bg-ok/10 text-ok' :
             isDeletion ? 'bg-err/10 text-err' :
               isHeader ? 'bg-primary/5 text-primary' :
-                'text-muted-foreground/70'
+                'text-muted-foreground'
           }`}
       >
         {line}

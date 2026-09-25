@@ -123,7 +123,7 @@ export default function SidebarFooter({
       {/* Desktop version brand line (OSS mode only) */}
       {!IS_PLATFORM && (
         <div className="hidden px-3 py-2 text-center md:block">
-          <span className="text-[10px] text-muted-foreground/40">
+          <span className="text-[10px] text-muted-foreground">
             OpenLeira v{currentVersion}
           </span>
         </div>

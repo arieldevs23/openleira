@@ -135,13 +135,13 @@ export default function SidebarHeader({
               t={t}
             />
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={searchPlaceholder}
                 value={searchFilter}
                 onChange={(event) => onSearchFilterChange(event.target.value)}
-                className="nav-search-input h-9 rounded-lg border-0 pl-9 pr-14 text-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="nav-search-input h-9 rounded-lg border-0 pl-9 pr-14 text-sm transition-all duration-200 placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               {searchFilter ? (
                 <button
@@ -204,13 +204,13 @@ export default function SidebarHeader({
               t={t}
             />
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={searchPlaceholder}
                 value={searchFilter}
                 onChange={(event) => onSearchFilterChange(event.target.value)}
-                className="nav-search-input h-10 rounded-lg border-0 pl-10 pr-9 text-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="nav-search-input h-10 rounded-lg border-0 pl-10 pr-9 text-sm transition-all duration-200 placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               {searchFilter && (
                 <button
