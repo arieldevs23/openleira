@@ -202,3 +202,43 @@ test('clicking a node selects its division and the message chip opens the messag
     { type: 'skills' },
   ]);
 });
+
+test('the zoom controls zoom the chart and fit brings it back', () => {
+  renderTree();
+  const level = () => screen.getByTestId('office-zoom-level').textContent;
+  const zoomOf = () => Number(screen.getByTestId('office-tree').getAttribute('data-zoom'));
+
+  const start = zoomOf();
+  fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+  assert.ok(zoomOf() > start);
+  fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+  assert.ok(zoomOf() < start);
+  assert.match(level() ?? '', /^\d+%$/);
+
+  // Zoom never goes below the floor, however often it is pressed.
+  for (let press = 0; press < 20; press += 1) {
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+  }
+  assert.equal(zoomOf(), 0.3);
+
+  // jsdom has no layout, so "fit" cannot measure; it must at least leave a valid zoom.
+  fireEvent.click(screen.getByRole('button', { name: 'Fit to screen' }));
+  assert.ok(zoomOf() >= 0.3 && zoomOf() <= 2);
+});
+
+test('the selected node gets a visible outline', () => {
+  render(
+    <OfficeTree
+      projectName="shop"
+      divisions={DIVISIONS}
+      caseItem={CASE}
+      tasks={TASKS}
+      messages={MESSAGES}
+      selection={{ type: 'division', divisionId: 'div-backend' }}
+      onSelect={() => {}}
+    />,
+  );
+  assert.ok(screen.getByTestId('office-node-backend').className.includes('outline-primary'));
+  assert.ok(!screen.getByTestId('office-node-frontend').className.includes('outline-primary'));
+});

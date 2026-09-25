@@ -1,5 +1,6 @@
-import { MessageSquare, Sparkles } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Maximize2, MessageSquare, Minus, Plus, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import OfficeStatusBadge from '@/modules/office/OfficeStatusBadge';
@@ -24,11 +25,22 @@ const LAYER_DROP = 30;
 const MIN_CANVAS_WIDTH = 560;
 /** How long an edge keeps flowing after a message crossed it. */
 const MESSAGE_FLOW_MS = 2600;
-/**
- * The chart shrinks to fit its column down to this scale; below it (phones,
- * narrow windows) it keeps this size and scrolls sideways instead.
- */
-const MIN_FIT_SCALE = 0.7;
+/** Zoom limits of the chart canvas. */
+const MIN_ZOOM = 0.3;
+const MAX_ZOOM = 2;
+/** One press of the zoom buttons or keys. */
+const ZOOM_STEP = 1.2;
+/** Space kept around the chart when it is fitted to the canvas. */
+const FIT_MARGIN = 24;
+
+/** Pan offset and zoom of the chart inside its canvas. */
+type ChartView = { x: number; y: number; zoom: number };
+
+const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+
+/** Selected nodes use `outline`, which glass surfaces' own box-shadow cannot hide (a `ring` would be). */
+const SELECTED_OUTLINE = 'outline outline-primary bg-primary/[0.06]';
+const FOCUS_OUTLINE = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /** Border colour per status, set inline because glass surfaces own their border colour. */
 const STATUS_BORDER: Record<OfficeNodeStatus, string> = {
@@ -143,21 +155,6 @@ export default function OfficeTree({
     schedule(MESSAGE_FLOW_MS, (current) => new Set([...current].filter((id) => !touched.has(id))));
   }, [coordinator?.id, messages]);
 
-  // Width of the scroll container, measured so the chart can scale to fit it.
-  const [containerWidth, setContainerWidth] = useState<number | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const hasCenteredRef = useRef(false);
-
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element || typeof ResizeObserver === 'undefined') {
-      return undefined;
-    }
-    const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
   const replacedTaskIds = useMemo(
     () => new Set(tasks.map((task) => task.parentTaskId).filter((id): id is string => Boolean(id))),
     [tasks],
@@ -224,17 +221,179 @@ export default function OfficeTree({
   const barLeft = Math.min(...workerBoxes.map((box) => box.x + NODE_WIDTH / 2), skillsBox.x + NODE_WIDTH / 2);
   const barRight = Math.max(...workerBoxes.map((box) => box.x + NODE_WIDTH / 2), auditBox.x + NODE_WIDTH / 2);
   const anyInReview = tasks.some((task) => task.status === 'review');
-  const scale = containerWidth && containerWidth < width ? Math.max(MIN_FIT_SCALE, containerWidth / width) : 1;
 
-  // When the chart still overflows, start scrolled to its centre (the coordinator).
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element || containerWidth === null || hasCenteredRef.current) {
+  // ----- canvas: zoom and pan -----
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  // Where the chart sits in the canvas and how far it is zoomed.
+  const [view, setView] = useState<ChartView>({ x: 0, y: 0, zoom: 1 });
+  // Once the user zooms or pans, resizing the canvas no longer refits the chart under them.
+  const userMovedRef = useRef(false);
+  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+  // Only styles the canvas while it is being dragged.
+  const [isPanning, setIsPanning] = useState(false);
+
+  const fitToCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || canvas.clientWidth === 0 || canvas.clientHeight === 0) {
       return;
     }
-    hasCenteredRef.current = true;
-    element.scrollLeft = Math.max(0, (element.scrollWidth - element.clientWidth) / 2);
-  }, [containerWidth, scale]);
+    const zoom = clampZoom(Math.min(
+      (canvas.clientWidth - FIT_MARGIN * 2) / width,
+      (canvas.clientHeight - FIT_MARGIN * 2) / height,
+      1,
+    ));
+    setView({
+      zoom,
+      x: (canvas.clientWidth - width * zoom) / 2,
+      // Top-aligned: the case and coordinator are what the eye looks for first.
+      y: FIT_MARGIN,
+    });
+  }, [height, width]);
+
+  // The chart opens fitted, and stays fitted while the user has not moved it.
+  useLayoutEffect(() => {
+    if (!userMovedRef.current) {
+      fitToCanvas();
+    }
+  }, [fitToCanvas]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+    const observer = new ResizeObserver(() => {
+      if (!userMovedRef.current) {
+        fitToCanvas();
+      }
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [fitToCanvas]);
+
+  /** Zooms by `factor`, keeping the chart point under (px, py) in place. */
+  const zoomAt = useCallback((factor: number, px: number, py: number) => {
+    userMovedRef.current = true;
+    setView((current) => {
+      const zoom = clampZoom(current.zoom * factor);
+      const ratio = zoom / current.zoom;
+      return { zoom, x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio };
+    });
+  }, []);
+
+  const zoomAtCenter = useCallback((factor: number) => {
+    const canvas = canvasRef.current;
+    zoomAt(factor, (canvas?.clientWidth ?? 0) / 2, (canvas?.clientHeight ?? 0) / 2);
+  }, [zoomAt]);
+
+  // Wheel and trackpad pinch zoom around the cursor. Registered by hand
+  // because React's wheel listener is passive and cannot stop the page scroll.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return undefined;
+    }
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const speed = event.ctrlKey ? 0.01 : 0.0015;
+      zoomAt(Math.exp(-event.deltaY * speed), event.clientX - rect.left, event.clientY - rect.top);
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [zoomAt]);
+
+  const pinchDistance = () => {
+    const [first, second] = [...pointersRef.current.values()];
+    return Math.hypot(first.x - second.x, first.y - second.y);
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // Nodes, chips and edges keep their clicks; only empty canvas starts a pan.
+    if ((event.target as Element).closest('button, path[data-hit]')) {
+      return;
+    }
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size === 2) {
+      dragRef.current = null;
+      pinchRef.current = { distance: pinchDistance(), zoom: view.zoom };
+      return;
+    }
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: view.x,
+      originY: view.y,
+    };
+    setIsPanning(true);
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!pointersRef.current.has(event.pointerId)) {
+      return;
+    }
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const pinch = pinchRef.current;
+    if (pinch && pointersRef.current.size === 2) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const [first, second] = [...pointersRef.current.values()];
+      const target = clampZoom(pinch.zoom * (pinchDistance() / pinch.distance));
+      zoomAt(target / view.zoom, (first.x + second.x) / 2 - rect.left, (first.y + second.y) / 2 - rect.top);
+      return;
+    }
+    const drag = dragRef.current;
+    if (drag && drag.pointerId === event.pointerId) {
+      userMovedRef.current = true;
+      setView((current) => ({
+        ...current,
+        x: drag.originX + event.clientX - drag.startX,
+        y: drag.originY + event.clientY - drag.startY,
+      }));
+    }
+  };
+
+  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    pointersRef.current.delete(event.pointerId);
+    if (pointersRef.current.size < 2) {
+      pinchRef.current = null;
+    }
+    if (dragRef.current?.pointerId === event.pointerId || pointersRef.current.size === 0) {
+      dragRef.current = null;
+      setIsPanning(false);
+    }
+  };
+
+  const handleCanvasKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    const pan = 40;
+    const moves: Record<string, () => void> = {
+      '+': () => zoomAtCenter(ZOOM_STEP),
+      '=': () => zoomAtCenter(ZOOM_STEP),
+      '-': () => zoomAtCenter(1 / ZOOM_STEP),
+      '0': () => { userMovedRef.current = false; fitToCanvas(); },
+      ArrowLeft: () => setView((current) => ({ ...current, x: current.x + pan })),
+      ArrowRight: () => setView((current) => ({ ...current, x: current.x - pan })),
+      ArrowUp: () => setView((current) => ({ ...current, y: current.y + pan })),
+      ArrowDown: () => setView((current) => ({ ...current, y: current.y - pan })),
+    };
+    const move = moves[event.key];
+    if (move) {
+      event.preventDefault();
+      if (event.key.startsWith('Arrow')) {
+        userMovedRef.current = true;
+      }
+      move();
+    }
+  };
+
+  // The chart is scaled, so the outline is thickened to stay ~2.5px on screen at any zoom.
+  const selectedOutlineStyle = { outlineWidth: 2.5 / view.zoom, outlineOffset: 3 / view.zoom };
 
   const isSelectedDivision = (divisionId: string) =>
     (selection.type === 'division' || selection.type === 'messages') && selection.divisionId === divisionId;
@@ -253,12 +412,20 @@ export default function OfficeTree({
         aria-label={`${division.name} · ${agent.name} · ${statusLabel}`}
         onClick={() => onSelect({ type: 'division', divisionId: division.id })}
         className={cn(
-          'office-node-enter glass-surface absolute z-10 flex flex-col gap-1 overflow-hidden rounded-[12px] border px-2.5 py-2 text-left transition-colors hover:bg-card/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'office-node-enter glass-surface absolute z-10 flex flex-col gap-1 overflow-hidden rounded-[12px] border px-2.5 py-2 text-left transition-colors hover:bg-card/80',
+          FOCUS_OUTLINE,
           status === 'running' && 'office-node-running',
-          isSelectedDivision(division.id) && 'ring-2 ring-primary/40',
+          isSelectedDivision(division.id) && SELECTED_OUTLINE,
           !agent.enabled && 'opacity-60',
         )}
-        style={{ left: box.x, top: box.y, width: box.width, height: box.height, borderColor: STATUS_BORDER[status] }}
+        style={{
+          left: box.x,
+          top: box.y,
+          width: box.width,
+          height: box.height,
+          borderColor: STATUS_BORDER[status],
+          ...(isSelectedDivision(division.id) ? selectedOutlineStyle : {}),
+        }}
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: division.color }} />
@@ -293,14 +460,29 @@ export default function OfficeTree({
   };
 
   return (
-    <div ref={scrollRef} className="h-full w-full overflow-auto" role="region" aria-label={t('tree.label')}>
-      {/* The sizer takes the scaled footprint so scrolling matches what is drawn. */}
-      <div className="relative mx-auto" style={{ width: width * scale, height: height * scale }}>
+    <div className="relative h-full w-full overflow-hidden">
       <div
-        className="absolute left-0 top-0"
-        style={{ width, height, transform: scale === 1 ? undefined : `scale(${scale})`, transformOrigin: 'top left' }}
+        ref={canvasRef}
+        role="region"
+        aria-label={t('tree.label')}
+        aria-roledescription={t('tree.canvas')}
+        tabIndex={0}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onKeyDown={handleCanvasKeyDown}
+        className={cn(
+          'office-canvas absolute inset-0 touch-none select-none focus-visible:outline-none',
+          isPanning ? 'cursor-grabbing' : 'cursor-grab',
+        )}
+        style={{ backgroundPosition: `${view.x}px ${view.y}px`, backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px` }}
+      >
+      <div
+        className="absolute left-0 top-0 origin-top-left"
+        style={{ width, height, transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})` }}
         data-testid="office-tree"
-        data-scale={scale.toFixed(2)}
+        data-zoom={view.zoom.toFixed(2)}
       >
         <svg
           className="pointer-events-none absolute inset-0"
@@ -325,14 +507,15 @@ export default function OfficeTree({
           {workers.map((division, index) => {
             const state = divisionStates.get(division.id);
             const active = state?.status === 'running' || flowingDivisionIds.has(division.id);
+            const edgeSelected = selection.type === 'messages' && selection.divisionId === division.id;
             const path = edgePath(workerBoxes[index]);
             return (
               <g key={division.id}>
                 <path
                   d={path}
                   fill="none"
-                  stroke={active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
-                  strokeWidth={active ? 1.75 : 1.5}
+                  stroke={active || edgeSelected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
+                  strokeWidth={edgeSelected ? 3 : active ? 1.75 : 1.5}
                   className={cn(active && 'office-edge-flow')}
                   data-testid={`office-edge-${division.slug}`}
                   data-active={active ? 'true' : 'false'}
@@ -343,6 +526,7 @@ export default function OfficeTree({
                   fill="none"
                   stroke="transparent"
                   strokeWidth={14}
+                  data-hit
                   style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                   onClick={() => onSelect({ type: 'messages', divisionId: division.id })}
                 />
@@ -410,8 +594,9 @@ export default function OfficeTree({
           aria-pressed={selection.type === 'case'}
           onClick={() => onSelect({ type: 'case' })}
           className={cn(
-            'office-node-enter glass-surface absolute z-10 flex flex-col justify-center gap-1 rounded-[12px] border px-3 text-left hover:bg-card/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            selection.type === 'case' && 'ring-2 ring-primary/40',
+            'office-node-enter glass-surface absolute z-10 flex flex-col justify-center gap-1 rounded-[12px] border px-3 text-left hover:bg-card/80',
+            FOCUS_OUTLINE,
+            selection.type === 'case' && SELECTED_OUTLINE,
           )}
           style={{
             left: caseBox.x,
@@ -419,6 +604,7 @@ export default function OfficeTree({
             width: caseBox.width,
             height: caseBox.height,
             borderColor: STATUS_BORDER[caseItem ? officeCaseTone(caseItem.status) : 'idle'],
+            ...(selection.type === 'case' ? selectedOutlineStyle : {}),
           }}
         >
           <span className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -454,7 +640,7 @@ export default function OfficeTree({
               onClick={() => onSelect({ type: 'messages', divisionId: division.id })}
               aria-label={t('tree.openMessages', { name: division.name })}
               title={t('tree.messages', { count })}
-              className="glass-surface-strong absolute z-20 flex h-5 -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 rounded-full border px-1.5 text-[10px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="glass-surface-strong absolute z-20 flex h-5 -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 rounded-full border px-1.5 text-[10px] text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
               style={{ left: x, top: midY }}
             >
               <MessageSquare className="h-3 w-3" />
@@ -470,8 +656,9 @@ export default function OfficeTree({
           aria-pressed={selection.type === 'skills'}
           onClick={() => onSelect({ type: 'skills' })}
           className={cn(
-            'office-node-enter glass-surface absolute z-10 flex flex-col gap-1 rounded-[12px] border px-2.5 py-2 text-left hover:bg-card/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            selection.type === 'skills' && 'ring-2 ring-primary/40',
+            'office-node-enter glass-surface absolute z-10 flex flex-col gap-1 rounded-[12px] border px-2.5 py-2 text-left hover:bg-card/80',
+            FOCUS_OUTLINE,
+            selection.type === 'skills' && SELECTED_OUTLINE,
           )}
           style={{
             left: skillsBox.x,
@@ -479,6 +666,7 @@ export default function OfficeTree({
             width: skillsBox.width,
             height: skillsBox.height,
             borderColor: STATUS_BORDER.idle,
+            ...(selection.type === 'skills' ? selectedOutlineStyle : {}),
           }}
         >
           <span className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
@@ -491,6 +679,28 @@ export default function OfficeTree({
         {audit && renderDivisionNode(audit, auditBox, null, auditStatus)}
       </div>
       </div>
+
+      <div className="glass-surface-strong absolute bottom-3 right-3 z-30 flex items-center gap-0.5 rounded-[10px] border p-1" role="toolbar" aria-label={t('tree.controls')}>
+        <button type="button" onClick={() => zoomAtCenter(1 / ZOOM_STEP)} aria-label={t('tree.zoomOut')} title={t('tree.zoomOut')}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
+          <Minus className="h-3.5 w-3.5" />
+        </button>
+        <span className="w-10 text-center text-[11px] tabular-nums text-muted-foreground" data-testid="office-zoom-level">
+          {Math.round(view.zoom * 100)}%
+        </span>
+        <button type="button" onClick={() => zoomAtCenter(ZOOM_STEP)} aria-label={t('tree.zoomIn')} title={t('tree.zoomIn')}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+        <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
+        <button type="button" onClick={() => { userMovedRef.current = false; fitToCanvas(); }} aria-label={t('tree.fit')} title={t('tree.fit')}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
+          <Maximize2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <p className="pointer-events-none absolute bottom-4 left-3 z-30 hidden text-[10.5px] text-muted-foreground/80 min-[900px]:block">
+        {t('tree.hint')}
+      </p>
     </div>
   );
 }

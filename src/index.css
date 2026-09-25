@@ -1316,3 +1316,8 @@ h1, h2, h3, h4 {
     animation: none;
   }
 }
+
+/* Kantor AI canvas: a faint dot grid that pans and zooms with the chart. */
+.office-canvas {
+  background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.18) 1px, transparent 1.2px);
+}

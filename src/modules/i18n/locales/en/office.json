@@ -74,7 +74,13 @@
     "messages_one": "{{count}} message",
     "messages_other": "{{count}} messages",
     "openMessages": "Messages with {{name}}",
-    "disabled": "disabled"
+    "disabled": "disabled",
+    "canvas": "zoomable chart",
+    "controls": "Chart zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Fit to screen",
+    "hint": "Scroll or pinch to zoom · drag the background to move"
   },
   "case": {
     "run": "Run",

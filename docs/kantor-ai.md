@@ -58,6 +58,8 @@ Koordinator memakai **satu sesi yang sama** untuk semua gilirannya, jadi dia ing
 3. Wizard **pilih model** terbuka sekali: pilih model per agent (daftar diambil dari katalog model provider di app, termasuk model custom) atau pakai **terapkan ke semua**. Bisa dibuka lagi kapan saja lewat **model agent**. Kasus tidak bisa dijalankan selama ada agent aktif yang belum punya model — alasannya ditampilkan.
 4. Buat kasus (judul + deskripsi), lalu **jalanin**. Pantau bagan, timeline task, dan transcript; kirim pesan ke koordinator kapan saja; **jeda**, **lanjut**, atau **batal** (membatalkan menghentikan semua sesi yang sedang jalan).
 
+Bagan bisa di-zoom (scroll, pinch, atau tombol + / − di pojok kanan bawah; keyboard `+` `-` `0`) dan digeser dengan menarik latar kosong atau tombol panah. Tombol pas-layar mengembalikan tampilan awal. Node yang dipilih diberi outline biru.
+
 Klik node divisi untuk mengedit agent dan melihat transcript task-nya; klik garis atau ikon pesan untuk melihat message bus antara koordinator dan divisi itu; klik **skills** untuk melihat skill terpasang dan siapa yang memakainya.
 
 ![Panel agent](images/kantor-ai/kantor-ai-agent-panel.png)

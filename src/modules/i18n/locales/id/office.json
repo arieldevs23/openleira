@@ -71,7 +71,13 @@
     "queued": "{{count}} antri",
     "messages": "{{count}} pesan",
     "openMessages": "pesan sama {{name}}",
-    "disabled": "nonaktif"
+    "disabled": "nonaktif",
+    "canvas": "bagan yang bisa di-zoom",
+    "controls": "zoom bagan",
+    "zoomIn": "perbesar",
+    "zoomOut": "perkecil",
+    "fit": "pas ke layar",
+    "hint": "scroll atau pinch buat zoom · geser latar buat pindah"
   },
   "case": {
     "run": "jalanin",
