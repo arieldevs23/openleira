@@ -339,7 +339,8 @@
     "deleteSkill": "hapus dari bagan",
     "unlinkSkill": "lepas skill dari agent",
     "addSkillHere": "tambah skill di sini",
-    "pasteSkill": "tempel skill \"{{name}}\" (Ctrl+V)"
+    "pasteSkill": "tempel skill \"{{name}}\" (Ctrl+V)",
+    "quickTask": "Kasih task cepat"
   },
   "flow": {
     "explain": "kerjaan {{to}} nunggu sampai kerjaan {{from}} di task yang sama selesai. tim di cabang yang beda jalan barengan."
@@ -392,5 +393,15 @@
     "onCanvas": "udah ada di bagan",
     "noMatch": "ga ada skill yang cocok.",
     "useName": "pakai \"{{name}}\""
+  },
+  "quickTask": {
+    "title": "Task cepat buat {{name}}",
+    "hint": "Langsung ke agent ini: tanpa plan dari orchestrator, tanpa audit, tanpa ringkasan. Cocok buat kerjaan kecil.",
+    "titleLabel": "Task",
+    "titlePlaceholder": "misal: benerin typo di halaman login",
+    "descriptionLabel": "Detail",
+    "descriptionPlaceholder": "Detail (opsional)",
+    "submit": "Jalanin",
+    "badge": "cepat"
   }
 }

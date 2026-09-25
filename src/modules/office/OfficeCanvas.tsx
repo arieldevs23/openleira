@@ -18,6 +18,7 @@ import {
   Trash2,
   Unlink,
   Wrench,
+  Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
@@ -161,6 +162,8 @@ type OfficeCanvasProps = {
   onAnswerQuestion?: (text: string) => Promise<void>;
   /** Focuses the message box to the coordinator. */
   onMessageCoordinator?: () => void;
+  /** "Quick task": a job straight to one team, without the coordinator. */
+  onQuickTask?: (division: OfficeDivision) => void;
 };
 
 /**
@@ -193,6 +196,7 @@ export default function OfficeCanvas({
   onCopySkill,
   onAnswerQuestion,
   onMessageCoordinator,
+  onQuickTask,
 }: OfficeCanvasProps) {
   const { t } = useTranslation('office');
   const coordinator = divisions.find((division) => division.isCoordinator) ?? null;
@@ -803,6 +807,9 @@ export default function OfficeCanvas({
       { key: 'model', label: t('menu.model'), icon: Cpu, onSelect: open('model') },
       { key: 'role', label: t('menu.role'), icon: FileText, onSelect: open('role') },
       { key: 'tools', label: t('menu.tools'), icon: Wrench, onSelect: open('tools') },
+      ...(isWorker && onQuickTask ? [{
+        key: 'quick', label: t('menu.quickTask'), icon: Zap, onSelect: () => onQuickTask(division), showDividerBefore: true,
+      }] : []),
       ...(division.isCoordinator && caseIsOpen && onMessageCoordinator ? [{
         key: 'message', label: t('menu.messageCoordinator'), icon: Send, onSelect: onMessageCoordinator, showDividerBefore: true,
       }] : []),

@@ -43,6 +43,7 @@ import DivisionModal from '@/modules/office/modals/DivisionModal';
 import ModelWizardModal from '@/modules/office/modals/ModelWizardModal';
 import OfficeSettingsModal from '@/modules/office/modals/OfficeSettingsModal';
 import PermissionWarningModal from '@/modules/office/modals/PermissionWarningModal';
+import QuickTaskModal from '@/modules/office/modals/QuickTaskModal';
 import SkillPickerModal from '@/modules/office/modals/SkillPickerModal';
 import type { CanvasPoint } from '@/modules/office/utils/officeCanvasLayout';
 import { ProviderLoginModal } from '@/modules/provider-auth';
@@ -177,6 +178,8 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
   const [skillClipboard, setSkillClipboard] = useState<string | null>(null);
   // "Add skill here": where on the canvas the picked skill goes; undefined while the picker is closed.
   const [skillPickerAt, setSkillPickerAt] = useState<CanvasPoint | undefined>(undefined);
+  // The team a quick task is being written for; null while that dialog is closed.
+  const [quickTaskDivision, setQuickTaskDivision] = useState<OfficeDivision | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   // A delete waiting for confirmation.
   const [pendingDelete, setPendingDelete] = useState<
@@ -305,15 +308,29 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     }
   };
 
-  const startCase = async () => {
-    if (!office || !caseItem) {
+  const startCaseById = async (caseId: string) => {
+    if (!office) {
       return;
     }
     if (office.permissionMode === 'bypassPermissions' && !office.permissionWarningAcknowledged) {
-      setPendingStartCaseId(caseItem.id);
+      setPendingStartCaseId(caseId);
       return;
     }
-    await actions.caseAction(caseItem.id, 'start');
+    await actions.caseAction(caseId, 'start');
+  };
+
+  const startCase = async () => {
+    if (caseItem) {
+      await startCaseById(caseItem.id);
+    }
+  };
+
+  const submitQuickTask = async (division: OfficeDivision, input: { title: string; description: string }) => {
+    const created = await actions.createCase({ ...input, quickDivisionId: division.id });
+    setSelectedCaseId(created.id);
+    setSelection({ type: 'case' });
+    setQuickTaskDivision(null);
+    await startCaseById(created.id).catch(reportError);
   };
 
   const confirmPermissionAndStart = async () => {
@@ -523,7 +540,8 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
         skillClipboard={skillClipboard}
         onCopySkill={setSkillClipboard}
         onAnswerQuestion={caseItem ? async (text) => { await actions.postNote(caseItem.id, text); } : undefined}
-        onMessageCoordinator={focusComposer}
+        onMessageCoordinator={caseItem?.quickDivisionId ? undefined : focusComposer}
+        onQuickTask={(division) => setQuickTaskDivision(division)}
       />
     );
   };
@@ -692,7 +710,7 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
                   : railButton(t('panel.hidePanel'), PanelRightClose, () => setPanelCollapsed('right', true), 'office-hide-right')}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">{renderPanel()}</div>
-              {caseItem && caseItem.status !== 'done' && caseItem.status !== 'failed' && (
+              {caseItem && !caseItem.quickDivisionId && caseItem.status !== 'done' && caseItem.status !== 'failed' && (
                 <div className="border-t border-border/60 bg-background/80 px-3 py-2 backdrop-blur" data-testid="office-composer-dock">
                   <CoordinatorComposer
                     key={caseItem.id}
@@ -780,6 +798,13 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
             setSkillPickerAt(undefined);
             select({ type: 'skill', nodeId: node.id });
           }}
+        />
+      )}
+      {quickTaskDivision && (
+        <QuickTaskModal
+          agentName={quickTaskDivision.agent.name || quickTaskDivision.name}
+          onCancel={() => setQuickTaskDivision(null)}
+          onSubmit={(input) => submitQuickTask(quickTaskDivision, input)}
         />
       )}
       {pendingStartCaseId && (

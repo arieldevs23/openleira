@@ -121,6 +121,7 @@ const CASE: OfficeCase = {
   updatedAt: NOW,
   startedAt: NOW,
   finishedAt: null,
+  quickDivisionId: null,
 };
 
 const TASKS: OfficeTask[] = [
@@ -186,6 +187,7 @@ function renderTree(overrides: {
   caseItem?: OfficeCase;
   messages?: OfficeMessage[];
   onAnswerQuestion?: (text: string) => Promise<void>;
+  onQuickTask?: (division: OfficeDivision) => void;
 } = {}) {
   return render(
     <OfficeCanvas
@@ -208,6 +210,7 @@ function renderTree(overrides: {
       onCopySkill={overrides.onCopySkill}
       onAddSkillAt={overrides.onAddSkillAt}
       onAnswerQuestion={overrides.onAnswerQuestion}
+      onQuickTask={overrides.onQuickTask}
     />,
   );
 }
@@ -374,6 +377,17 @@ test('right-click on a node opens its menu; entries jump to a section or draw an
   fireEvent.click(screen.getByRole('menuitem', { name: 'Connect to…' }));
   fireEvent.click(screen.getByTestId('office-node-docs'));
   assert.deepEqual(calls, [{ method: 'addFlowEdge', args: ['div-backend', 'div-docs'] }]);
+});
+
+test('a working team menu offers a quick task; the coordinator menu does not', () => {
+  const picked: string[] = [];
+  renderTree({ onQuickTask: (division) => picked.push(division.id) });
+  fireEvent.contextMenu(screen.getByTestId('office-node-backend'), { clientX: 50, clientY: 50 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Quick task' }));
+  assert.deepEqual(picked, ['div-backend']);
+
+  fireEvent.contextMenu(screen.getByTestId('office-node-coordinator'), { clientX: 50, clientY: 50 });
+  assert.ok(!screen.getAllByRole('menuitem').some((item) => item.textContent === 'Quick task'));
 });
 
 test('the coordinator menu offers no flow or delete entries', () => {

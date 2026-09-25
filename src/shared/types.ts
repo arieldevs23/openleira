@@ -2062,7 +2062,8 @@ export type OfficeActions = {
   /** `model: null` clears the model; `provider` + `model` set it. */
   updateAgent(agentId: string, changes: Record<string, unknown>): Promise<OfficeDivision>;
   assignModels(assignments: Array<{ agentId: string; provider: string; model: string }>): Promise<void>;
-  createCase(input: { title: string; description: string }): Promise<OfficeCase>;
+  /** `quickDivisionId` makes a quick task: straight to that team, no plan, audit or summary. */
+  createCase(input: { title: string; description: string; quickDivisionId?: string }): Promise<OfficeCase>;
   deleteCase(caseId: string): Promise<void>;
   caseAction(caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel'): Promise<OfficeCase>;
   postNote(caseId: string, text: string): Promise<OfficeMessage>;

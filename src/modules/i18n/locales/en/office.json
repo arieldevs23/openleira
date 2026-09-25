@@ -349,7 +349,8 @@
     "deleteSkill": "Remove from canvas",
     "unlinkSkill": "Remove skill from agent",
     "addSkillHere": "Add skill here",
-    "pasteSkill": "Paste skill \"{{name}}\" (Ctrl+V)"
+    "pasteSkill": "Paste skill \"{{name}}\" (Ctrl+V)",
+    "quickTask": "Quick task"
   },
   "flow": {
     "explain": "Work of {{to}} waits until the work of {{from}} in the same task is done. Teams on separate branches run in parallel."
@@ -405,5 +406,15 @@
     "onCanvas": "already on the canvas",
     "noMatch": "No installed skill matches.",
     "useName": "Use \"{{name}}\""
+  },
+  "quickTask": {
+    "title": "Quick task for {{name}}",
+    "hint": "Goes straight to this agent: no plan from the orchestrator, no audit, no summary. Good for small jobs.",
+    "titleLabel": "Task",
+    "titlePlaceholder": "e.g. fix the typo on the login page",
+    "descriptionLabel": "Details",
+    "descriptionPlaceholder": "Details (optional)",
+    "submit": "Run",
+    "badge": "quick"
   }
 }

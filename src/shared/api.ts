@@ -472,7 +472,7 @@ export const api = {
       patch(`/api/office/${encodeURIComponent(officeId)}/agents/${encodeURIComponent(agentId)}`, changes),
     assignModels: (officeId: string, assignments: Array<{ agentId: string; provider: string; model: string }>) =>
       put(`/api/office/${encodeURIComponent(officeId)}/agents/models`, { assignments }),
-    createCase: (officeId: string, input: { title: string; description: string }) =>
+    createCase: (officeId: string, input: { title: string; description: string; quickDivisionId?: string }) =>
       post(`/api/office/${encodeURIComponent(officeId)}/cases`, input),
     caseDetail: (officeId: string, caseId: string) =>
       get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
