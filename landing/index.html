@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenLeira: workspace AI di server sendiri</title>
+  <meta name="description" content="OpenLeira adalah workspace open source untuk menjalankan Claude Code, Codex, dan OpenCode dari browser, di server milik sendiri.">
+  <link rel="stylesheet" href="style.css">
+  <script>document.documentElement.classList.add("has-js");if("IntersectionObserver" in window)document.documentElement.classList.add("js");</script>
+</head>
+<body>
+  <a class="skip" href="#isi">Langsung ke isi</a>
+
+  <header class="nav">
+    <div class="wrap nav__inner">
+      <a class="wordmark" href="#" aria-label="OpenLeira, kembali ke atas"><span class="wordmark__open">Open</span><span class="wordmark__leira">Leira</span></a>
+      <nav class="nav__menu" aria-label="Utama">
+        <ul class="nav__links" id="nav-links">
+          <li><a href="#fitur">Fitur</a></li>
+          <li><a href="#docs">Docs</a></li>
+          <li><a href="#tentang">Tentang</a></li>
+        </ul>
+      </nav>
+      <button class="nav__toggle" type="button" aria-controls="nav-links" aria-expanded="false" aria-label="Buka menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <a class="btn btn--primary btn--nav" href="https://app.openleira.online">Masuk</a>
+    </div>
+  </header>
+
+  <main id="isi" class="wrap">
+    <section class="hero">
+      <h1>Workspace AI yang berjalan di server sendiri</h1>
+      <p class="lead">Jalankan Claude Code, Codex, atau OpenCode dari browser, dengan server dan langganan milik sendiri.</p>
+      <div class="actions">
+        <a class="btn btn--primary" href="https://app.openleira.online">Masuk</a>
+        <a class="btn btn--secondary" href="#docs">Lihat cara pasang</a>
+      </div>
+      <p class="note">Open source. Bukan model AI baru. Bawa langganan AI sendiri.</p>
+    </section>
+
+    <section class="section split reveal" id="fitur" aria-labelledby="h-fitur">
+      <h2 id="h-fitur">Fitur</h2>
+      <dl class="features">
+        <div>
+          <dt>Workspace, bukan model</dt>
+          <dd>Menjalankan agent AI dari langganan yang sudah dimiliki.</dd>
+        </div>
+        <div>
+          <dt>Server sendiri</dt>
+          <dd>Berjalan di Ubuntu atau Debian, pada VPS maupun mesin pribadi, tanpa hosting dari OpenLeira.</dd>
+        </div>
+        <div>
+          <dt>Akses dari mana saja</dt>
+          <dd>Buka dari browser desktop atau ponsel, sementara sesi tetap berjalan di server.</dd>
+        </div>
+        <div>
+          <dt>Provider bebas</dt>
+          <dd>Mendukung Claude, Codex, dan OpenCode, dengan OpenRouter menyusul.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="section office reveal" aria-labelledby="h-kantor">
+      <div class="office__head">
+        <h2 id="h-kantor">Kantor AI <span class="badge">Sedang dibangun</span></h2>
+        <p>Satu proyek dikerjakan beberapa agent dengan peran berbeda. Koordinator membagi tugas ke tiap divisi dan menyatukan hasilnya.</p>
+      </div>
+      <div class="org" role="img" aria-label="Bagan Kantor AI: Proyek, lalu Koordinator, lalu lima divisi: Planner, Desain UI/UX, Backend, Security, dan QA/Audit">
+        <span class="org__node">Proyek</span>
+        <span class="org__stem"></span>
+        <span class="org__node org__node--lead">Koordinator</span>
+        <span class="org__stem"></span>
+        <ul class="org__divs">
+          <li><span class="org__node">Planner</span></li>
+          <li><span class="org__node">Desain UI/UX</span></li>
+          <li><span class="org__node">Backend</span></li>
+          <li><span class="org__node">Security</span></li>
+          <li><span class="org__node">QA/Audit</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section split reveal" id="docs" aria-labelledby="h-docs">
+      <div>
+        <h2 id="h-docs">Cara pasang</h2>
+        <p class="muted">Ubuntu&nbsp;22.04+ atau Debian&nbsp;12, 2&nbsp;vCPU, 4&nbsp;GB RAM, Node&nbsp;20.</p>
+      </div>
+      <div>
+        <ol class="steps">
+          <li>Siapkan server Ubuntu atau Debian dengan akses SSH.</li>
+          <li>
+            Jalankan installer di server.
+            <pre class="cmd"><code>curl -fsSL https://openleira.online/install.sh | bash</code></pre>
+            <p class="note">Installer sedang disiapkan.</p>
+          </li>
+          <li>Buka alamat server di browser.</li>
+          <li>Hubungkan akun Claude, Codex, atau OpenCode yang sudah dimiliki.</li>
+        </ol>
+        <p>Masuk dengan Google, GitHub, atau email.</p>
+      </div>
+    </section>
+
+    <section class="section split reveal" id="tentang" aria-labelledby="h-tentang">
+      <h2 id="h-tentang">Tentang</h2>
+      <div>
+        <p>OpenLeira dibuat di Indonesia dan dirilis sebagai open source dengan lisensi <span class="nowrap">GPL-3.0</span>. OpenLeira tidak menjual token dan tidak menyimpan kunci API di luar server pengguna.</p>
+        <!-- TODO: ganti href dengan URL repo begitu publik, lalu hapus data-placeholder dan label Segera -->
+        <p><a class="link" href="#" data-placeholder aria-disabled="true">Kode sumber</a> <span class="badge">Segera</span></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p class="wrap">OpenLeira <span aria-hidden="true">·</span> GPL-3.0 <span aria-hidden="true">·</span> 2026</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
