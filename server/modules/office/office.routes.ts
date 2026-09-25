@@ -228,6 +228,40 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     res.json(createApiSuccessResponse({ flow }));
   }));
 
+  router.post('/:officeId/skills', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const node = office.addSkillNode(readParam(req, 'officeId'), {
+      skillName: readRequiredString(body, 'skillName'),
+      position: readOptionalPosition(body),
+    });
+    res.status(201).json(createApiSuccessResponse(node));
+  }));
+
+  router.patch('/:officeId/skills/:nodeId', asyncHandler(async (req, res) => {
+    const position = readOptionalPosition(readBody(req));
+    if (position === undefined) {
+      throw badRequest('position is required.');
+    }
+    res.json(createApiSuccessResponse({ skillNodes: office.moveSkillNode(readParam(req, 'officeId'), readParam(req, 'nodeId'), position) }));
+  }));
+
+  router.delete('/:officeId/skills/:nodeId', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse({ skillNodes: office.deleteSkillNode(readParam(req, 'officeId'), readParam(req, 'nodeId')) }));
+  }));
+
+  router.post('/:officeId/skills/:nodeId/links', asyncHandler(async (req, res) => {
+    const divisionId = readRequiredString(readBody(req), 'divisionId');
+    res.status(201).json(createApiSuccessResponse({
+      skillNodes: office.linkSkill(readParam(req, 'officeId'), readParam(req, 'nodeId'), divisionId),
+    }));
+  }));
+
+  router.delete('/:officeId/skills/:nodeId/links/:divisionId', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse({
+      skillNodes: office.unlinkSkill(readParam(req, 'officeId'), readParam(req, 'nodeId'), readParam(req, 'divisionId')),
+    }));
+  }));
+
   router.patch('/:officeId', asyncHandler(async (req, res) => {
     const body = readBody(req);
     const updated = office.updateOffice(readParam(req, 'officeId'), {

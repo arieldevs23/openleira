@@ -156,6 +156,13 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     assert.equal((await request('DELETE', '/api/office/o1')).status, 200);
     assert.equal((await request('POST', '/api/office/folders', { path: '/srv/app', mode: 'new' })).status, 200);
     assert.equal((await request('POST', '/api/office/folders', { path: '/srv/app', mode: 'copy' })).status, 400);
+    assert.equal((await request('POST', '/api/office/o1/skills', { skillName: 'review', position: { x: 1, y: 2 } })).status, 201);
+    assert.equal((await request('POST', '/api/office/o1/skills', {})).status, 400);
+    assert.equal((await request('PATCH', '/api/office/o1/skills/n1', { position: { x: 3, y: 4 } })).status, 200);
+    assert.equal((await request('PATCH', '/api/office/o1/skills/n1', {})).status, 400);
+    assert.equal((await request('POST', '/api/office/o1/skills/n1/links', { divisionId: 'd1' })).status, 201);
+    assert.equal((await request('DELETE', '/api/office/o1/skills/n1/links/d1')).status, 200);
+    assert.equal((await request('DELETE', '/api/office/o1/skills/n1')).status, 200);
   });
   assert.deepEqual(calls.map((call) => call.method), [
     'office.listWorkspaces',
@@ -173,6 +180,11 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     'office.getCaseUsage',
     'office.deleteOffice',
     'office.prepareFolder',
+    'office.addSkillNode',
+    'office.moveSkillNode',
+    'office.linkSkill',
+    'office.unlinkSkill',
+    'office.deleteSkillNode',
   ]);
   assert.deepEqual((calls[3].args[2] as { position: unknown }).position, { x: 4, y: 5 });
   assert.equal((calls[4].args[2] as { position: unknown }).position, null);

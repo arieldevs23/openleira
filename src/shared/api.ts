@@ -442,6 +442,16 @@ export const api = {
       post(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
     deleteFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
       del(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
+    addSkillNode: (officeId: string, input: { skillName: string; position?: { x: number; y: number } | null }) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/skills`, input),
+    moveSkillNode: (officeId: string, nodeId: string, position: { x: number; y: number } | null) =>
+      patch(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}`, { position }),
+    deleteSkillNode: (officeId: string, nodeId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}`),
+    linkSkill: (officeId: string, nodeId: string, divisionId: string) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}/links`, { divisionId }),
+    unlinkSkill: (officeId: string, nodeId: string, divisionId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}/links/${encodeURIComponent(divisionId)}`),
     caseUsage: (officeId: string, caseId: string) =>
       get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/usage`),
     update: (

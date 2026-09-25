@@ -1817,6 +1817,19 @@ export type OfficeDivision = {
 /** One flow arrow: work of `toDivisionId` waits for the work of `fromDivisionId`. */
 export type OfficeFlowEdge = { fromDivisionId: string; toDivisionId: string; createdAt: string };
 
+/**
+ * A skill placed on the workspace canvas. Divisions linked to it have the
+ * skill; the same skill may be placed more than once to keep lines short.
+ */
+export type OfficeSkillNode = {
+  id: string;
+  skillName: string;
+  /** Null means automatic layout. */
+  position: { x: number; y: number } | null;
+  divisionIds: string[];
+  createdAt: string;
+};
+
 /** One workspace in the workspace sidebar: the office, its project folder and case counts. */
 export type OfficeWorkspaceSummary = {
   office: Office;
@@ -1953,6 +1966,7 @@ export type OfficeSnapshot = {
   office: Office;
   divisions: OfficeDivision[];
   flow: OfficeFlowEdge[];
+  skillNodes: OfficeSkillNode[];
   cases: OfficeCase[];
 };
 
@@ -1972,6 +1986,7 @@ export type OfficeUpdateEvent = {
     | { entity: 'office'; office: Office }
     | { entity: 'division'; id: string; division: OfficeDivision | null }
     | { entity: 'flow'; flow: OfficeFlowEdge[] }
+    | { entity: 'skills'; skillNodes: OfficeSkillNode[] }
     | { entity: 'deleted' }
     | { entity: 'case'; id: string; case: OfficeCase | null }
     | { entity: 'task'; task: OfficeTask }
@@ -2034,6 +2049,11 @@ export type OfficeActions = {
     },
   ): Promise<OfficeDivision>;
   addFlowEdge(fromDivisionId: string, toDivisionId: string): Promise<void>;
+  addSkillNode(input: { skillName: string; position?: { x: number; y: number } | null }): Promise<OfficeSkillNode>;
+  moveSkillNode(nodeId: string, position: { x: number; y: number } | null): Promise<void>;
+  deleteSkillNode(nodeId: string): Promise<void>;
+  linkSkill(nodeId: string, divisionId: string): Promise<void>;
+  unlinkSkill(nodeId: string, divisionId: string): Promise<void>;
   deleteFlowEdge(fromDivisionId: string, toDivisionId: string): Promise<void>;
   deleteOffice(): Promise<void>;
   deleteDivision(divisionId: string): Promise<void>;
@@ -2064,4 +2084,4 @@ export type OfficeSelection =
   | { type: 'division'; divisionId: string; taskId?: string; focus?: OfficeAgentSection }
   | { type: 'edge'; fromDivisionId: string; toDivisionId: string }
   | { type: 'messages'; divisionId: string }
-  | { type: 'skills' };
+  | { type: 'skill'; nodeId: string };

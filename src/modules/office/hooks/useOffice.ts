@@ -106,6 +106,8 @@ export function useOffice(projectId: string | null) {
         }
         case 'flow':
           return { ...current, flow: change.flow };
+        case 'skills':
+          return { ...current, skillNodes: change.skillNodes };
         case 'case': {
           const others = current.cases.filter((caseItem) => caseItem.id !== change.id);
           return { ...current, cases: sortCases(change.case ? [...others, change.case] : others) };
@@ -148,6 +150,19 @@ export function useOffice(projectId: string | null) {
     },
     deleteFlowEdge: async (fromDivisionId, toDivisionId) => {
       await call((id) => api.office.deleteFlowEdge(id, fromDivisionId, toDivisionId));
+    },
+    addSkillNode: (input) => call((id) => api.office.addSkillNode(id, input)),
+    moveSkillNode: async (nodeId, position) => {
+      await call((id) => api.office.moveSkillNode(id, nodeId, position));
+    },
+    deleteSkillNode: async (nodeId) => {
+      await call((id) => api.office.deleteSkillNode(id, nodeId));
+    },
+    linkSkill: async (nodeId, divisionId) => {
+      await call((id) => api.office.linkSkill(id, nodeId, divisionId));
+    },
+    unlinkSkill: async (nodeId, divisionId) => {
+      await call((id) => api.office.unlinkSkill(id, nodeId, divisionId));
     },
     deleteOffice: async () => {
       await call((id) => api.office.remove(id));

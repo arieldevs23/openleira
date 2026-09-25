@@ -400,6 +400,31 @@ CREATE TABLE IF NOT EXISTS office_flow_edges (
 );
 `;
 
+export const OFFICE_SKILL_NODES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_skill_nodes (
+    id TEXT PRIMARY KEY NOT NULL,
+    office_id TEXT NOT NULL,
+    -- The installed skill this node stands for; several nodes may show the same skill.
+    skill_name TEXT NOT NULL,
+    pos_x REAL,
+    pos_y REAL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE
+);
+`;
+
+export const OFFICE_SKILL_LINKS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_skill_links (
+    -- A division linked to a skill node on the canvas has that skill.
+    skill_node_id TEXT NOT NULL,
+    division_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (skill_node_id, division_id),
+    FOREIGN KEY (skill_node_id) REFERENCES office_skill_nodes(id) ON DELETE CASCADE,
+    FOREIGN KEY (division_id) REFERENCES office_divisions(id) ON DELETE CASCADE
+);
+`;
+
 export const OFFICE_MESSAGES_TABLE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS office_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

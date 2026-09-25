@@ -17,6 +17,7 @@ import type {
   OfficePermissionMode,
   OfficeWorkspaceSummary,
   OfficeSessionUsage,
+  OfficeSkillNode,
   OfficeSnapshot,
   ProviderAuthStatus,
 } from '@/shared/types.js';
@@ -217,6 +218,71 @@ const defaultFolderDependencies: FolderDependencies = {
   },
 };
 
+const MAX_SKILL_NAME_LENGTH = 120;
+
+/**
+ * Makes the canvas the source of an agent's skills: every skill an agent has
+ * is linked to a skill node (one is placed when missing, which also carries
+ * skills from before skill nodes existed onto the canvas), and every link a
+ * division has that its skill list no longer names is removed.
+ */
+function reconcileSkillNodes(officeId: string, onlyDivisionId?: string): void {
+  let nodes = officesDb.listSkillNodes(officeId);
+  for (const division of officesDb.listDivisions(officeId)) {
+    if (onlyDivisionId && division.id !== onlyDivisionId) {
+      continue;
+    }
+    const wanted = new Set(division.agent.skills);
+    for (const node of nodes) {
+      if (node.divisionIds.includes(division.id) && !wanted.has(node.skillName)) {
+        officesDb.unlinkSkill(node.id, division.id);
+      }
+    }
+    for (const skillName of wanted) {
+      const linked = nodes.some((node) => node.skillName === skillName && node.divisionIds.includes(division.id));
+      if (!linked) {
+        const nodeId = nodes.find((node) => node.skillName === skillName)?.id
+          ?? officesDb.createSkillNode(officeId, skillName, null);
+        officesDb.linkSkill(nodeId, division.id);
+      }
+    }
+    nodes = officesDb.listSkillNodes(officeId);
+  }
+}
+
+/** Rewrites the skill list of each given division from the skill nodes it is linked to. */
+function syncAgentSkills(officeId: string, divisionIds: Iterable<string>): void {
+  const nodes = officesDb.listSkillNodes(officeId);
+  for (const divisionId of new Set(divisionIds)) {
+    const division = officesDb.getDivision(divisionId);
+    if (!division || division.officeId !== officeId) {
+      continue;
+    }
+    const skills = [...new Set(nodes.filter((node) => node.divisionIds.includes(divisionId)).map((node) => node.skillName))];
+    if (skills.join('|') === division.agent.skills.join('|')) {
+      continue;
+    }
+    const updated = officesDb.updateAgent(division.agent.id, { skills });
+    if (updated) {
+      broadcastOfficeUpdate(officeId, { entity: 'division', id: updated.id, division: updated });
+    }
+  }
+}
+
+function requireSkillNode(officeId: string, nodeId: string): OfficeSkillNode {
+  const node = officesDb.listSkillNodes(officeId).find((candidate) => candidate.id === nodeId);
+  if (!node) {
+    throw notFound('Skill node not found.', 'OFFICE_SKILL_NODE_NOT_FOUND');
+  }
+  return node;
+}
+
+const broadcastSkillNodes = (officeId: string): OfficeSkillNode[] => {
+  const skillNodes = officesDb.listSkillNodes(officeId);
+  broadcastOfficeUpdate(officeId, { entity: 'skills', skillNodes });
+  return skillNodes;
+};
+
 /** Agent fields the UI may change; each is optional. */
 type AgentUpdateInput = {
   name?: string;
@@ -239,10 +305,12 @@ export const officeService = {
 
   getSnapshot(officeId: string): OfficeSnapshot {
     const office = requireOffice(officeId);
+    reconcileSkillNodes(office.id);
     return {
       office,
       divisions: officesDb.listDivisions(office.id),
       flow: officesDb.listFlowEdges(office.id),
+      skillNodes: officesDb.listSkillNodes(office.id),
       cases: officeCasesDb.listCases(office.id),
     };
   },
@@ -523,7 +591,54 @@ export const officeService = {
       throw notFound('Agent not found.', 'OFFICE_AGENT_NOT_FOUND');
     }
     broadcastOfficeUpdate(officeId, { entity: 'division', id: division.id, division });
+    if (input.skills !== undefined) {
+      reconcileSkillNodes(officeId, division.id);
+      broadcastSkillNodes(officeId);
+    }
     return division;
+  },
+
+  /** Places a skill on the canvas; divisions get it by being linked to the node. */
+  addSkillNode(officeId: string, input: { skillName: string; position?: { x: number; y: number } | null }): OfficeSkillNode {
+    requireOffice(officeId);
+    const skillName = input.skillName.trim();
+    if (!skillName || skillName.length > MAX_SKILL_NAME_LENGTH) {
+      throw badRequest(`skillName must be 1 to ${MAX_SKILL_NAME_LENGTH} characters.`);
+    }
+    const nodeId = officesDb.createSkillNode(officeId, skillName, readPosition(input.position ?? null));
+    return broadcastSkillNodes(officeId).find((node) => node.id === nodeId) as OfficeSkillNode;
+  },
+
+  moveSkillNode(officeId: string, nodeId: string, position: { x: number; y: number } | null): OfficeSkillNode[] {
+    requireSkillNode(officeId, nodeId);
+    officesDb.moveSkillNode(nodeId, readPosition(position));
+    return broadcastSkillNodes(officeId);
+  },
+
+  /** Removes a skill node; divisions linked only through it lose the skill. */
+  deleteSkillNode(officeId: string, nodeId: string): OfficeSkillNode[] {
+    const node = requireSkillNode(officeId, nodeId);
+    officesDb.deleteSkillNode(nodeId);
+    const skillNodes = broadcastSkillNodes(officeId);
+    syncAgentSkills(officeId, node.divisionIds);
+    return skillNodes;
+  },
+
+  linkSkill(officeId: string, nodeId: string, divisionId: string): OfficeSkillNode[] {
+    requireSkillNode(officeId, nodeId);
+    requireDivision(officeId, divisionId);
+    officesDb.linkSkill(nodeId, divisionId);
+    const skillNodes = broadcastSkillNodes(officeId);
+    syncAgentSkills(officeId, [divisionId]);
+    return skillNodes;
+  },
+
+  unlinkSkill(officeId: string, nodeId: string, divisionId: string): OfficeSkillNode[] {
+    requireSkillNode(officeId, nodeId);
+    officesDb.unlinkSkill(nodeId, divisionId);
+    const skillNodes = broadcastSkillNodes(officeId);
+    syncAgentSkills(officeId, [divisionId]);
+    return skillNodes;
   },
 
   /**

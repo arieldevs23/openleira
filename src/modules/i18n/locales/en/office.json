@@ -27,7 +27,11 @@
     "caseViews": "Case views",
     "result": "Result",
     "files": "Files",
-    "usage": "Tokens"
+    "usage": "Tokens",
+    "showSidebar": "Show sidebar",
+    "hideSidebar": "Hide sidebar",
+    "showPanel": "Show panel",
+    "hidePanel": "Hide panel"
   },
   "cases": {
     "title": "Cases",
@@ -72,10 +76,6 @@
     "label": "Workspace canvas",
     "caseNode": "Case",
     "noCase": "Pick or create a case",
-    "layer": "Cross-division layer",
-    "skills": "Skills",
-    "skillsCount_one": "{{count}} skill in use",
-    "skillsCount_other": "{{count}} skills in use",
     "noModel": "no model",
     "queued": "{{count}} queued",
     "messages_one": "{{count}} message",
@@ -87,9 +87,17 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fit": "Fit to screen",
-    "hint": "Drag agents to move them · drag the dot under an agent onto another to draw the flow · right-click for more",
+    "hint": "Drag to move · drag the dot of an agent onto another agent (flow) or onto a skill · right-click for more · Ctrl+C / Ctrl+V copies a skill",
     "dragToConnect": "Drag onto another agent to add a flow arrow",
-    "connectHint": "Click the agent that comes after {{name}}"
+    "connectHint": "Click the agent that comes after {{name}}",
+    "dragToSkill": "Drag onto a skill to give this agent that skill",
+    "dragSkillToAgent": "Drag onto an agent to give it this skill",
+    "skillNode_one": "Skill {{name}} · {{count}} agent",
+    "skillNode_other": "Skill {{name}} · {{count}} agents",
+    "skillAgents_one": "{{count}} agent",
+    "skillAgents_other": "{{count}} agents",
+    "skillMissing": "not installed",
+    "connectSkillHint": "Click the agent that should get {{name}}"
   },
   "case": {
     "run": "Run",
@@ -107,7 +115,7 @@
     },
     "waiting": {
       "paused": "Paused. Running work finishes, nothing new starts.",
-      "question": "The coordinator has a question. Answer it below to continue.",
+      "question": "The coordinator has a question. Answer it on the canvas or in the message box below to continue.",
       "interrupted": "The server restarted while this ran. Resume to continue where it left off."
     },
     "modelsMissing": "Can't run yet: pick a model for {{names}}.",
@@ -173,23 +181,14 @@
     "roleEmpty": "No role written yet.",
     "roleLines_one": "{{count}} line",
     "roleLines_other": "{{count}} lines",
-    "toolsAllShort": "all"
+    "toolsAllShort": "all",
+    "noLinkedSkills": "No skill connected.",
+    "skillsFromCanvas": "Skills come from the canvas: connect this agent to a skill node there."
   },
   "messages": {
     "title": "Messages with {{name}}",
     "subtitle": "Everything goes through the coordinator and the message bus.",
     "empty": "No messages with this division in the selected case."
-  },
-  "skills": {
-    "title": "Skills",
-    "subtitle": "Skills installed for Claude and the agents that use them. Assign skills in each agent's panel.",
-    "none": "No skills installed yet.",
-    "unused": "not used by any agent",
-    "missing": "Assigned to an agent but no longer installed.",
-    "scope": {
-      "user": "user",
-      "project": "project"
-    }
   },
   "wizard": {
     "title": "Pick a model for every agent",
@@ -332,7 +331,6 @@
     "model": "Model",
     "role": "Role (markdown)",
     "tools": "Tools",
-    "skills": "Skills",
     "connectTo": "Connect to…",
     "messages": "Messages with the coordinator",
     "enable": "Enable",
@@ -341,9 +339,17 @@
     "deleteDivision": "Delete division",
     "arrowDetails": "Details",
     "deleteArrow": "Delete arrow",
-    "viewSkills": "View skills",
     "addAgentHere": "Add agent here",
-    "autoLayout": "Tidy up (automatic layout)"
+    "autoLayout": "Tidy up (automatic layout)",
+    "messageCoordinator": "Message the coordinator",
+    "connectSkill": "Connect to a skill…",
+    "viewSkill": "Open skill",
+    "connectAgent": "Connect to an agent…",
+    "copySkill": "Copy (Ctrl+C)",
+    "deleteSkill": "Remove from canvas",
+    "unlinkSkill": "Remove skill from agent",
+    "addSkillHere": "Add skill here",
+    "pasteSkill": "Paste skill \"{{name}}\" (Ctrl+V)"
   },
   "flow": {
     "explain": "Work of {{to}} waits until the work of {{from}} in the same case is done. Divisions on separate branches run in parallel."
@@ -377,5 +383,27 @@
     },
     "nodeTitle": "{{count}} tokens used in this case",
     "note": "From each provider's own transcript. Cache tokens are usually much cheaper than input tokens."
+  },
+  "question": {
+    "label": "Question from the coordinator",
+    "title": "{{name}} asks",
+    "placeholder": "Answer the coordinator",
+    "send": "Send answer",
+    "chip": "Question from the coordinator",
+    "fold": "Minimize"
+  },
+  "skills": {
+    "noDescription": "No description.",
+    "notInstalled": "This skill is not installed (in ~/.claude/skills or the project's .claude/skills). Agents are told its name but cannot load it.",
+    "linkedAgents_one": "{{count}} agent has it",
+    "linkedAgents_other": "{{count}} agents have it",
+    "noLinks": "No agent is connected yet.",
+    "unlink": "Remove from {{name}}",
+    "howToLink": "To give an agent this skill, drag the dot above the skill onto the agent (or the dot below the agent onto the skill), or right-click → connect.",
+    "pickTitle": "Add a skill to the canvas",
+    "search": "Search installed skills",
+    "onCanvas": "already on the canvas",
+    "noMatch": "No installed skill matches.",
+    "useName": "Use \"{{name}}\""
   }
 }

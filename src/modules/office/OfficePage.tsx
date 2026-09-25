@@ -1,13 +1,32 @@
-import { ArrowRight, Building2, Cpu, FolderPlus, Loader2, Menu, PanelRight, Plug, Plus, Settings2, Trash2, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Building2,
+  Cpu,
+  FolderPlus,
+  Loader2,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRight,
+  PanelRightClose,
+  PanelRightOpen,
+  Plug,
+  Plus,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AgentPanel from '@/modules/office/AgentPanel';
 import CasePanel from '@/modules/office/CasePanel';
+import CoordinatorComposer from '@/modules/office/CoordinatorComposer';
 import MessagesPanel from '@/modules/office/MessagesPanel';
 import OfficeCanvas from '@/modules/office/OfficeCanvas';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
-import SkillsPanel from '@/modules/office/SkillsPanel';
+import SkillNodePanel from '@/modules/office/SkillNodePanel';
 import UsagePanel from '@/modules/office/UsagePanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
 import { useAnalyses } from '@/modules/office/hooks/useAnalyses';
@@ -24,6 +43,7 @@ import DivisionModal from '@/modules/office/modals/DivisionModal';
 import ModelWizardModal from '@/modules/office/modals/ModelWizardModal';
 import OfficeSettingsModal from '@/modules/office/modals/OfficeSettingsModal';
 import PermissionWarningModal from '@/modules/office/modals/PermissionWarningModal';
+import SkillPickerModal from '@/modules/office/modals/SkillPickerModal';
 import type { CanvasPoint } from '@/modules/office/utils/officeCanvasLayout';
 import { ProviderLoginModal } from '@/modules/provider-auth';
 import { api, readApiJson } from '@/shared/api';
@@ -34,6 +54,18 @@ import { cn } from '@/shared/utils';
 /** Below this width the sidebar and the right panel turn into drawers. */
 const NARROW_LAYOUT_QUERY = '(max-width: 899px)';
 const SELECTED_WORKSPACE_KEY = 'office-selected-project';
+const COLLAPSED_PANELS_KEY = 'office-collapsed-panels';
+
+type CollapsedPanels = { left: boolean; right: boolean };
+
+const readCollapsedPanels = (): CollapsedPanels => {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(COLLAPSED_PANELS_KEY) ?? '{}') as Partial<CollapsedPanels>;
+    return { left: stored.left === true, right: stored.right === true };
+  } catch {
+    return { left: false, right: false };
+  }
+};
 
 type CaseTab = 'result' | 'files' | 'usage';
 
@@ -139,6 +171,13 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
   const [resumeAnalysisId, setResumeAnalysisId] = useState<string | null>(null);
   // The case waiting on the one-time bypass-permissions warning before it starts.
   const [pendingStartCaseId, setPendingStartCaseId] = useState<string | null>(null);
+  // Which side columns are folded away to give the canvas room (desktop only); remembered per browser.
+  const [collapsed, setCollapsed] = useState<CollapsedPanels>(readCollapsedPanels);
+  // The skill copied with Ctrl+C on the canvas; kept here so it can be pasted into another workspace.
+  const [skillClipboard, setSkillClipboard] = useState<string | null>(null);
+  // "Add skill here": where on the canvas the picked skill goes; undefined while the picker is closed.
+  const [skillPickerAt, setSkillPickerAt] = useState<CanvasPoint | undefined>(undefined);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   // A delete waiting for confirmation.
   const [pendingDelete, setPendingDelete] = useState<
     { kind: 'workspace'; workspace: OfficeWorkspaceSummary } | { kind: 'division'; division: OfficeDivision } | null
@@ -214,9 +253,34 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     openWizard('providers');
   };
 
+  const setPanelCollapsed = (side: 'left' | 'right', value: boolean) => {
+    setCollapsed((current) => {
+      const next = { ...current, [side]: value };
+      try {
+        window.localStorage.setItem(COLLAPSED_PANELS_KEY, JSON.stringify(next));
+      } catch {
+        // Not remembered in private windows.
+      }
+      return next;
+    });
+  };
+
+  // Picking something on the canvas brings the right panel back if it was folded away.
   const select = (next: OfficeSelection) => {
     setSelection(next);
     setIsPanelOpen(true);
+    if (collapsed.right) {
+      setPanelCollapsed('right', false);
+    }
+  };
+
+  /** "Message the coordinator": shows the right panel and puts the cursor in its message box. */
+  const focusComposer = () => {
+    setIsPanelOpen(true);
+    if (collapsed.right) {
+      setPanelCollapsed('right', false);
+    }
+    window.setTimeout(() => composerRef.current?.focus(), 60);
   };
 
   const selectTask = (task: OfficeTask) => {
@@ -275,14 +339,23 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     if (!office) {
       return null;
     }
-    if (selection.type === 'skills') {
-      return (
-        <SkillsPanel
-          divisions={divisions}
-          skills={installedSkills}
-          onSelectDivision={(divisionId) => select({ type: 'division', divisionId, focus: 'skills' })}
-        />
-      );
+    if (selection.type === 'skill') {
+      const node = snapshot?.skillNodes.find((candidate) => candidate.id === selection.nodeId);
+      if (node) {
+        return (
+          <SkillNodePanel
+            node={node}
+            divisions={divisions}
+            installedSkills={installedSkills}
+            onSelectDivision={(divisionId) => select({ type: 'division', divisionId, focus: 'skills' })}
+            onUnlink={(divisionId) => { actions.unlinkSkill(node.id, divisionId).catch(reportError); }}
+            onCopy={() => setSkillClipboard(node.skillName)}
+            onDelete={() => {
+              actions.deleteSkillNode(node.id).then(() => setSelection({ type: 'case' })).catch(reportError);
+            }}
+          />
+        );
+      }
     }
     if (selection.type === 'messages' && selectedDivision) {
       return <MessagesPanel division={selectedDivision} divisions={divisions} messages={messages} />;
@@ -444,6 +517,13 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
         actions={actions}
         onAddDivisionAt={(position) => setNewDivisionAt(position)}
         onDeleteDivision={(division) => setPendingDelete({ kind: 'division', division })}
+        skillNodes={snapshot?.skillNodes ?? []}
+        installedSkills={installedSkills}
+        onAddSkillAt={(position) => setSkillPickerAt(position)}
+        skillClipboard={skillClipboard}
+        onCopySkill={setSkillClipboard}
+        onAnswerQuestion={caseItem ? async (text) => { await actions.postNote(caseItem.id, text); } : undefined}
+        onMessageCoordinator={focusComposer}
       />
     );
   };
@@ -499,13 +579,29 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     </Button>
   );
 
+  const railButton = (label: string, Icon: typeof Plug, onClick: () => void, testId?: string): ReactNode => (
+    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onClick} title={label} aria-label={label} data-testid={testId}>
+      <Icon className="h-4 w-4" />
+    </Button>
+  );
+
   const bannerClass = 'flex flex-wrap items-center gap-2 border-b border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200';
 
   return (
     <div className="flex h-full min-h-0" data-testid="office-page">
-      {!isNarrow && (
-        <aside className="w-[248px] shrink-0 border-r border-border/60">{sidebar}</aside>
-      )}
+      {!isNarrow && (collapsed.left ? (
+        <aside className="flex w-10 shrink-0 flex-col items-center gap-1 border-r border-border/60 py-2" aria-label={t('sidebar.label')} data-testid="office-left-rail">
+          {railButton(t('panel.showSidebar'), PanelLeftOpen, () => setPanelCollapsed('left', false), 'office-show-left')}
+          {railButton(t('sidebar.addWorkspace'), FolderPlus, () => { setResumeAnalysisId(null); setIsAddOpen(true); })}
+        </aside>
+      ) : (
+        <aside className="relative flex w-[248px] shrink-0 flex-col border-r border-border/60">
+          <div className="flex justify-end px-1.5 pt-1">
+            {railButton(t('panel.hideSidebar'), PanelLeftClose, () => setPanelCollapsed('left', true), 'office-hide-left')}
+          </div>
+          <div className="min-h-0 flex-1">{sidebar}</div>
+        </aside>
+      ))}
       {isNarrow && isSidebarOpen && (
         <>
           <button type="button" aria-label={t('common.close')} className="fixed inset-0 z-30 bg-black/30" onClick={() => setIsSidebarOpen(false)} />
@@ -565,10 +661,15 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
           {office && isNarrow && isPanelOpen && (
             <button type="button" aria-label={t('common.close')} className="fixed inset-0 z-30 bg-black/30 backdrop-blur-[1px]" onClick={() => setIsPanelOpen(false)} />
           )}
-          {office && (
+          {office && !isNarrow && collapsed.right && (
+            <aside className="flex w-10 shrink-0 flex-col items-center gap-1 border-l border-border/60 py-2" aria-label={t('panel.label')} data-testid="office-right-rail">
+              {railButton(t('panel.showPanel'), PanelRightOpen, () => setPanelCollapsed('right', false), 'office-show-right')}
+            </aside>
+          )}
+          {office && (isNarrow || !collapsed.right) && (
             <aside
               className={cn(
-                'overflow-y-auto p-4',
+                'flex min-h-0 flex-col',
                 isNarrow
                   ? cn(
                     'glass-surface-strong fixed inset-y-0 right-0 z-40 w-[min(420px,92vw)] border-l transition-transform duration-200 ease-out',
@@ -579,19 +680,28 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
               aria-label={t('panel.label')}
               aria-hidden={isNarrow && !isPanelOpen ? true : undefined}
             >
-              {isNarrow && (
-                <div className="mb-2 flex justify-end">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsPanelOpen(false)} aria-label={t('common.close')}>
-                    <X className="h-4 w-4" />
-                  </Button>
+              <div className="flex items-center gap-1 px-2 pt-1.5">
+                {selection.type !== 'case' && caseItem && (
+                  <button type="button" onClick={() => setSelection({ type: 'case' })} className="px-2 text-[11px] text-primary hover:underline">
+                    {t('panel.backToCase')}
+                  </button>
+                )}
+                <span className="flex-1" />
+                {isNarrow
+                  ? railButton(t('common.close'), X, () => setIsPanelOpen(false))
+                  : railButton(t('panel.hidePanel'), PanelRightClose, () => setPanelCollapsed('right', true), 'office-hide-right')}
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">{renderPanel()}</div>
+              {caseItem && caseItem.status !== 'done' && caseItem.status !== 'failed' && (
+                <div className="border-t border-border/60 bg-background/80 px-3 py-2 backdrop-blur" data-testid="office-composer-dock">
+                  <CoordinatorComposer
+                    key={caseItem.id}
+                    ref={composerRef}
+                    isAnswering={caseItem.waitingReason === 'question'}
+                    onSend={async (text) => { await actions.postNote(caseItem.id, text); }}
+                  />
                 </div>
               )}
-              {selection.type !== 'case' && caseItem && (
-                <button type="button" onClick={() => setSelection({ type: 'case' })} className="mb-3 text-[11px] text-primary hover:underline">
-                  {t('panel.backToCase')}
-                </button>
-              )}
-              {renderPanel()}
             </aside>
           )}
         </div>
@@ -654,6 +764,21 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
             if (projectId === selectedProjectId) {
               void reload();
             }
+          }}
+        />
+      )}
+      {skillPickerAt !== undefined && (
+        <SkillPickerModal
+          skills={installedSkills}
+          placedNames={(snapshot?.skillNodes ?? []).map((node) => node.skillName)}
+          onCancel={() => setSkillPickerAt(undefined)}
+          onPick={async (skillName) => {
+            const node = await actions.addSkillNode({
+              skillName,
+              position: { x: Math.round(skillPickerAt.x), y: Math.round(skillPickerAt.y) },
+            });
+            setSkillPickerAt(undefined);
+            select({ type: 'skill', nodeId: node.id });
           }}
         />
       )}

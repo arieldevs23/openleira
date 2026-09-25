@@ -9,6 +9,7 @@ import type {
   OfficeDivisionInput,
   OfficeFlowEdge,
   OfficePermissionMode,
+  OfficeSkillNode,
   OfficeWorkspaceSummary,
 } from '@/shared/types.js';
 import { buildSqlAssignments, readJsonStringArray } from '@/shared/utils.js';
@@ -186,6 +187,15 @@ const toFlowEdge = (row: FlowEdgeRow): OfficeFlowEdge => ({
   createdAt: row.created_at,
 });
 
+type SkillNodeRow = {
+  id: string;
+  skill_name: string;
+  pos_x: number | null;
+  pos_y: number | null;
+  created_at: string;
+  division_ids: string | null;
+};
+
 type WorkspaceSummaryRow = OfficeRow & {
   project_id: string;
   custom_project_name: string | null;
@@ -268,6 +278,52 @@ export const officesDb = {
     return getConnection()
       .prepare('DELETE FROM office_flow_edges WHERE office_id = ? AND from_division_id = ? AND to_division_id = ?')
       .run(officeId, fromDivisionId, toDivisionId).changes > 0;
+  },
+
+  /** Skill nodes of the canvas with the divisions linked to each, oldest first. */
+  listSkillNodes(officeId: string): OfficeSkillNode[] {
+    const rows = getConnection().prepare(`
+      SELECT n.id, n.skill_name, n.pos_x, n.pos_y, n.created_at,
+        (SELECT json_group_array(l.division_id) FROM office_skill_links l WHERE l.skill_node_id = n.id) AS division_ids
+      FROM office_skill_nodes n
+      WHERE n.office_id = ?
+      ORDER BY n.created_at ASC, n.rowid ASC
+    `).all(officeId) as SkillNodeRow[];
+    return rows.map((row) => ({
+      id: row.id,
+      skillName: row.skill_name,
+      position: row.pos_x === null || row.pos_y === null ? null : { x: row.pos_x, y: row.pos_y },
+      divisionIds: readJsonStringArray(row.division_ids ?? '[]'),
+      createdAt: row.created_at,
+    }));
+  },
+
+  createSkillNode(officeId: string, skillName: string, position: { x: number; y: number } | null): string {
+    const id = randomUUID();
+    getConnection()
+      .prepare('INSERT INTO office_skill_nodes (id, office_id, skill_name, pos_x, pos_y, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(id, officeId, skillName, position?.x ?? null, position?.y ?? null, new Date().toISOString());
+    return id;
+  },
+
+  moveSkillNode(nodeId: string, position: { x: number; y: number } | null): void {
+    getConnection()
+      .prepare('UPDATE office_skill_nodes SET pos_x = ?, pos_y = ? WHERE id = ?')
+      .run(position?.x ?? null, position?.y ?? null, nodeId);
+  },
+
+  deleteSkillNode(nodeId: string): void {
+    getConnection().prepare('DELETE FROM office_skill_nodes WHERE id = ?').run(nodeId);
+  },
+
+  linkSkill(nodeId: string, divisionId: string): void {
+    getConnection()
+      .prepare('INSERT OR IGNORE INTO office_skill_links (skill_node_id, division_id, created_at) VALUES (?, ?, ?)')
+      .run(nodeId, divisionId, new Date().toISOString());
+  },
+
+  unlinkSkill(nodeId: string, divisionId: string): void {
+    getConnection().prepare('DELETE FROM office_skill_links WHERE skill_node_id = ? AND division_id = ?').run(nodeId, divisionId);
   },
 
   getOfficeByProjectPath(projectPath: string): Office | null {

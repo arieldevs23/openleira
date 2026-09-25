@@ -1,5 +1,5 @@
-import { AlertTriangle, ExternalLink, Pause, Play, Send, Square, Trash2 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { AlertTriangle, ExternalLink, Pause, Play, Square, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -46,8 +46,6 @@ export default function CasePanel({
   onOpenSession,
 }: CasePanelProps) {
   const { t } = useTranslation('office');
-  // Text of the message to the coordinator being typed.
-  const [note, setNote] = useState('');
   // The control currently waiting on the in-flight request, to disable the buttons meanwhile.
   const [busyAction, setBusyAction] = useState<string | null>(null);
   // Which destructive action asked "are you sure?" and waits for the second click.
@@ -71,17 +69,6 @@ export default function CasePanel({
       setBusyAction(null);
       setConfirming(null);
     }
-  };
-
-  const sendNote = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!note.trim()) {
-      return;
-    }
-    await run('note', async () => {
-      await actions.postNote(caseItem.id, note.trim());
-      setNote('');
-    });
   };
 
   // The thread between the user and the coordinator: user notes, replies, questions, the final report.
@@ -273,26 +260,6 @@ export default function CasePanel({
             );
           })}
         </ul>
-        {caseItem.status !== 'done' && caseItem.status !== 'failed' && (
-          <form onSubmit={(event) => void sendNote(event)} className="flex items-end gap-1.5">
-            <textarea
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                  void sendNote(event);
-                }
-              }}
-              rows={2}
-              placeholder={t('case.notePlaceholder')}
-              aria-label={t('case.notePlaceholder')}
-              className="min-h-10 flex-1 resize-y rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <Button type="submit" size="icon" className="h-9 w-9" disabled={!note.trim() || busyAction === 'note'} aria-label={t('case.send')}>
-              <Send className="h-3.5 w-3.5" />
-            </Button>
-          </form>
-        )}
       </section>
     </div>
   );

@@ -26,7 +26,11 @@
     "caseViews": "tampilan kasus",
     "result": "hasil",
     "files": "file",
-    "usage": "token"
+    "usage": "token",
+    "showSidebar": "tampilin sidebar",
+    "hideSidebar": "sembunyiin sidebar",
+    "showPanel": "tampilin panel",
+    "hidePanel": "sembunyiin panel"
   },
   "cases": {
     "title": "kasus",
@@ -71,9 +75,6 @@
     "label": "kanvas workspace",
     "caseNode": "kasus",
     "noCase": "pilih atau bikin kasus",
-    "layer": "lapisan lintas divisi",
-    "skills": "skills",
-    "skillsCount": "{{count}} skill dipakai",
     "noModel": "belum ada model",
     "queued": "{{count}} antri",
     "messages": "{{count}} pesan",
@@ -84,9 +85,15 @@
     "zoomIn": "perbesar",
     "zoomOut": "perkecil",
     "fit": "pas ke layar",
-    "hint": "seret agent buat mindahin · tarik titik di bawah agent ke agent lain buat bikin flow · klik kanan buat opsi lain",
+    "hint": "seret buat mindahin · tarik titik agent ke agent lain (flow) atau ke skill · klik kanan buat opsi lain · Ctrl+C / Ctrl+V buat salin skill",
     "dragToConnect": "tarik ke agent lain buat nambah panah flow",
-    "connectHint": "klik agent yang jalan setelah {{name}}"
+    "connectHint": "klik agent yang jalan setelah {{name}}",
+    "dragToSkill": "tarik ke skill biar agent ini punya skill itu",
+    "dragSkillToAgent": "tarik ke agent biar dia punya skill ini",
+    "skillNode": "skill {{name}} · {{count}} agent",
+    "skillAgents": "{{count}} agent",
+    "skillMissing": "belum ke-install",
+    "connectSkillHint": "klik agent yang mau dikasih {{name}}"
   },
   "case": {
     "run": "jalanin",
@@ -104,7 +111,7 @@
     },
     "waiting": {
       "paused": "lagi dijeda. kerjaan yang jalan tetap diselesaiin, yang baru ga dimulai.",
-      "question": "koordinator punya pertanyaan. jawab di bawah biar lanjut.",
+      "question": "koordinator punya pertanyaan. jawab di bagan atau di kotak pesan bawah biar lanjut.",
       "interrupted": "server sempet restart pas ini jalan. klik lanjut buat nerusin dari posisi terakhir."
     },
     "modelsMissing": "belum bisa jalan: pilih model dulu buat {{names}}.",
@@ -168,23 +175,14 @@
     "rolePreview": "pratinjau",
     "roleEmpty": "perannya belum ditulis.",
     "roleLines": "{{count}} baris",
-    "toolsAllShort": "semua"
+    "toolsAllShort": "semua",
+    "noLinkedSkills": "belum ada skill yang dihubungin.",
+    "skillsFromCanvas": "skill diatur dari bagan: hubungin agent ini ke node skill di sana."
   },
   "messages": {
     "title": "pesan sama {{name}}",
     "subtitle": "semua lewat koordinator dan message bus.",
     "empty": "belum ada pesan sama divisi ini di kasus yang dipilih."
-  },
-  "skills": {
-    "title": "skills",
-    "subtitle": "skill yang kepasang buat Claude dan agent yang make. atur skill di panel tiap agent.",
-    "none": "belum ada skill yang kepasang.",
-    "unused": "belum dipake agent mana pun",
-    "missing": "dipasang di agent tapi skill-nya udah ga ada.",
-    "scope": {
-      "user": "user",
-      "project": "proyek"
-    }
   },
   "wizard": {
     "title": "pilih model buat tiap agent",
@@ -323,7 +321,6 @@
     "model": "model",
     "role": "peran (markdown)",
     "tools": "tools",
-    "skills": "skills",
     "connectTo": "hubungkan ke…",
     "messages": "pesan sama koordinator",
     "enable": "aktifin",
@@ -332,9 +329,17 @@
     "deleteDivision": "hapus divisi",
     "arrowDetails": "detail",
     "deleteArrow": "hapus panah",
-    "viewSkills": "liat skills",
     "addAgentHere": "tambah agent di sini",
-    "autoLayout": "rapiin otomatis"
+    "autoLayout": "rapiin otomatis",
+    "messageCoordinator": "kirim pesan ke koordinator",
+    "connectSkill": "hubungkan ke skill…",
+    "viewSkill": "buka skill",
+    "connectAgent": "hubungkan ke agent…",
+    "copySkill": "salin (Ctrl+C)",
+    "deleteSkill": "hapus dari bagan",
+    "unlinkSkill": "lepas skill dari agent",
+    "addSkillHere": "tambah skill di sini",
+    "pasteSkill": "tempel skill \"{{name}}\" (Ctrl+V)"
   },
   "flow": {
     "explain": "kerjaan {{to}} nunggu sampai kerjaan {{from}} di kasus yang sama selesai. divisi di cabang yang beda jalan barengan."
@@ -366,5 +371,26 @@
     },
     "nodeTitle": "{{count}} token kepakai di kasus ini",
     "note": "diambil dari transcript tiap provider. token cache biasanya jauh lebih murah dari token input."
+  },
+  "question": {
+    "label": "pertanyaan dari koordinator",
+    "title": "{{name}} nanya",
+    "placeholder": "jawab koordinator",
+    "send": "kirim jawaban",
+    "chip": "ada pertanyaan dari koordinator",
+    "fold": "kecilin"
+  },
+  "skills": {
+    "noDescription": "ga ada deskripsi.",
+    "notInstalled": "skill ini belum ke-install (di ~/.claude/skills atau .claude/skills proyek). agent cuma dikasih tau namanya, ga bisa make.",
+    "linkedAgents": "{{count}} agent punya skill ini",
+    "noLinks": "belum ada agent yang dihubungin.",
+    "unlink": "lepas dari {{name}}",
+    "howToLink": "biar agent punya skill ini, tarik titik di atas skill ke agent-nya (atau titik di bawah agent ke skill), atau klik kanan → hubungkan.",
+    "pickTitle": "tambah skill ke bagan",
+    "search": "cari skill yang ke-install",
+    "onCanvas": "udah ada di bagan",
+    "noMatch": "ga ada skill yang cocok.",
+    "useName": "pakai \"{{name}}\""
   }
 }

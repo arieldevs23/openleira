@@ -69,6 +69,8 @@ Tiga grup yang bisa dilipat (diingat per browser):
 - **Kasus:** kasus workspace yang dipilih, plus **kasus baru**.
 - **Agent:** tiap agent bisa dibuka (panah) untuk melihat model dan **peran markdown**-nya; klik namanya untuk membuka panel agent.
 
+Sidebar kiri dan panel kanan bisa **disembunyikan ke samping** (tombol panel di pojoknya) supaya kanvas lebih luas; yang tersisa hanya rail tipis dengan tombol untuk membukanya lagi. Pilihan ini diingat per browser. Mengklik node saat panel kanan tersembunyi membukanya lagi.
+
 ## Menambah workspace
 
 Workspace selalu terikat ke folder, jadi foldernya dipilih dulu:
@@ -101,10 +103,27 @@ Kasus tidak bisa dijalankan selama ada agent aktif tanpa model atau yang provide
 - **Klik kanan (atau tahan di layar sentuh)** jadi tempat utama aksi, supaya toolbar tidak penuh teks:
   - node: buka agent, model, peran (markdown), tools, skills (masing-masing langsung membuka bagian itu di panel kanan), hubungkan ke…, pesan sama koordinator, aktifin/matiin, balikin posisi, hapus divisi;
   - panah: detail, hapus panah;
-  - kanvas kosong: **tambah agent di sini** (agent custom dengan nama, peran, dan warna sendiri, muncul di titik yang diklik), rapiin otomatis, pas layar.
+  - kanvas kosong: **tambah agent di sini** (agent custom dengan nama, peran, dan warna sendiri, muncul di titik yang diklik), **tambah skill di sini**, **tempel skill**, **kirim pesan ke koordinator**, rapiin otomatis, pas layar;
+  - node skill: buka skill, hubungkan ke agent…, salin, balikin posisi, hapus dari bagan;
+  - garis skill: lepas skill dari agent.
 - Tiap node menampilkan model, status live, dan **token** yang dipakai divisi itu di kasus yang dipilih.
 
 ![Menu klik kanan](images/kantor-ai/workspace-context-menu.png)
+
+### Skill di bagan
+
+Skill tidak lagi diatur di sidebar atau panel agent, tapi di bagan:
+
+- Klik kanan kanvas kosong → **tambah skill di sini**, lalu pilih salah satu skill yang ter-install (atau ketik namanya). Skill jadi node ungu di titik itu.
+- **Agent punya skill kalau terhubung ke node skill itu.** Tarik titik di bawah agent ke node skill, atau titik di atas node skill ke agent, atau klik kanan → hubungkan. Garis ungu putus-putus menunjukkan hubungannya; klik kanan garisnya untuk melepas.
+- **Ctrl+C / Ctrl+V:** pilih node skill, salin, lalu tempel. Salinannya muncul di posisi kursor, supaya garisnya tidak perlu melintasi seluruh bagan. Salinan node dengan nama sama tetap skill yang sama. Skill yang disalin bisa ditempel juga di workspace lain.
+- Server menyimpan node skill (`office_skill_nodes`) dan hubungannya (`office_skill_links`), lalu menulis ulang daftar skill agent dari hubungan itu, jadi orkestrator tetap memakai `agent.skills`. Skill yang sudah dipasang ke agent sebelum fitur ini otomatis ditaruh di bagan dan dihubungkan.
+- Panel agent menampilkan skill yang terhubung (hanya baca). Klik node skill untuk melihat deskripsinya, agent mana saja yang punya, melepasnya, menyalin, atau menghapus node. Node skill yang tidak ter-install ditandai.
+
+### Pertanyaan koordinator dan pesan
+
+- Kalau koordinator bertanya (kasus `waiting_user`, alasan `question`), pertanyaannya muncul sebagai **gelembung di sebelah node koordinator**, lengkap dengan kotak jawab. Jawaban dikirim sebagai pesan ke koordinator, dan itu yang melanjutkan kasusnya. Gelembung bisa dikecilkan jadi chip supaya tidak menutupi node.
+- Kotak **pesan ke koordinator** menempel di bawah panel kanan dan tetap terlihat walau panelnya di-scroll atau sedang menampilkan agent/skill. Klik kanan → **kirim pesan ke koordinator** membuka panel dan langsung menaruh kursor di kotak itu.
 
 ### Flow sebagai aturan
 
@@ -146,6 +165,8 @@ Semua di bawah `/api/office` (butuh login):
 | POST / DELETE | `/analyses/:id/cancel`, `/analyses/:id` | Batalkan analisis yang jalan / buang analisis yang selesai |
 | POST / DELETE | `/:officeId/flow` | Tambah / hapus panah `{ fromDivisionId, toDivisionId }` |
 | GET | `/:officeId/cases/:caseId/usage` | Pemakaian token kasus |
+| POST / PATCH / DELETE | `/:officeId/skills[/:nodeId]` | Tambah node skill `{ skillName, position }`, pindah `{ position }`, hapus |
+| POST / DELETE | `/:officeId/skills/:nodeId/links[/:divisionId]` | Hubungkan / lepas skill dari divisi `{ divisionId }` |
 | PATCH | `/:officeId` | `name`, `maxParallel`, `permissionMode`, `permissionWarningAcknowledged` |
 | POST/PATCH/DELETE | `/:officeId/divisions[/:divisionId]` | Kelola divisi (termasuk `agentName`, `rolePrompt`, `position`) |
 | PATCH | `/:officeId/agents/:agentId` | Edit agent (`model: null` menghapus model) |

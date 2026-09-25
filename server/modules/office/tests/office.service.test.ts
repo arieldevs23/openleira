@@ -7,7 +7,7 @@ import test from 'node:test';
 import { closeConnection, initializeDatabase, officeCasesDb, projectsDb } from '@/modules/database/index.js';
 import { officeService } from '@/modules/office/services/office.service.js';
 import { providerModelsService } from '@/modules/providers/index.js';
-import type { LLMProvider, ProviderAuthStatus } from '@/shared/types.js';
+import type { LLMProvider, OfficeDivision, ProviderAuthStatus } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
 async function withProject(run: (projectId: string) => Promise<void>): Promise<void> {
@@ -302,6 +302,42 @@ test('a workspace folder is either a fresh empty folder or an existing one, regi
     assert.equal(existing.projectId, projectId);
     assert.equal(existing.hasWorkspace, true);
     assert.deepEqual(created, ['/srv/new-app'], 'no second project row');
+  });
+});
+
+test('an agent has a skill exactly when it is linked to that skill on the canvas', async () => {
+  await withProject(async (projectId) => {
+    const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });
+    const backend = divisions.find((division) => division.slug === 'backend') as OfficeDivision;
+    const docs = divisions.find((division) => division.slug === 'docs') as OfficeDivision;
+    const agentSkills = (divisionId: string) => officeService.getSnapshot(office.id).divisions
+      .find((division) => division.id === divisionId)?.agent.skills;
+
+    const review = officeService.addSkillNode(office.id, { skillName: 'review', position: { x: 10, y: 20 } });
+    assert.deepEqual(review.position, { x: 10, y: 20 });
+    officeService.linkSkill(office.id, review.id, backend.id);
+    officeService.linkSkill(office.id, review.id, docs.id);
+    assert.deepEqual(agentSkills(backend.id), ['review']);
+
+    // A copy of the same skill elsewhere on the canvas is still the same skill.
+    const copy = officeService.addSkillNode(office.id, { skillName: 'review' });
+    officeService.linkSkill(office.id, copy.id, backend.id);
+    officeService.unlinkSkill(office.id, review.id, backend.id);
+    assert.deepEqual(agentSkills(backend.id), ['review'], 'still linked through the copy');
+
+    officeService.deleteSkillNode(office.id, copy.id);
+    assert.deepEqual(agentSkills(backend.id), []);
+    assert.deepEqual(agentSkills(docs.id), ['review']);
+
+    // Skills set the old way (agent PATCH) are placed on the canvas and linked.
+    await officeService.updateAgent(office.id, backend.agent.id, { skills: ['deploy'] });
+    const nodes = officeService.getSnapshot(office.id).skillNodes;
+    const deploy = nodes.find((node) => node.skillName === 'deploy');
+    assert.ok(deploy);
+    assert.deepEqual(deploy.divisionIds, [backend.id]);
+
+    assert.throws(() => officeService.addSkillNode(office.id, { skillName: '  ' }), rejectsWith('INVALID_OFFICE_INPUT'));
+    assert.throws(() => officeService.linkSkill(office.id, 'missing', backend.id), rejectsWith('OFFICE_SKILL_NODE_NOT_FOUND'));
   });
 });
 

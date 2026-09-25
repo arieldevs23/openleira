@@ -12,6 +12,7 @@ import type {
   OfficeFlowEdge,
   OfficeMessage,
   OfficeSelection,
+  OfficeSkillNode,
   OfficeTask,
   OfficeTaskStatus,
 } from '@/shared/types';
@@ -151,15 +152,24 @@ type Recorded = { method: string; args: unknown[] };
 function recordingActions(calls: Recorded[]) {
   const record = (method: string) => async (...args: unknown[]) => {
     calls.push({ method, args });
-    return {} as never;
+    return { id: 'new-node' } as never;
   };
   return {
     addFlowEdge: record('addFlowEdge'),
     deleteFlowEdge: record('deleteFlowEdge'),
     updateDivision: record('updateDivision'),
     updateAgent: record('updateAgent'),
-  } as unknown as Pick<OfficeActions, 'addFlowEdge' | 'deleteFlowEdge' | 'updateDivision' | 'updateAgent'>;
+    addSkillNode: record('addSkillNode'),
+    moveSkillNode: record('moveSkillNode'),
+    deleteSkillNode: record('deleteSkillNode'),
+    linkSkill: record('linkSkill'),
+    unlinkSkill: record('unlinkSkill'),
+  } as unknown as OfficeActions;
 }
+
+const SKILL_NODES: OfficeSkillNode[] = [
+  { id: 'n-review', skillName: 'review', position: null, divisionIds: ['div-backend'], createdAt: NOW },
+];
 
 function renderTree(overrides: {
   tasks?: OfficeTask[];
@@ -169,6 +179,13 @@ function renderTree(overrides: {
   calls?: Recorded[];
   onAddDivisionAt?: (point: { x: number; y: number }) => void;
   usageByDivision?: Map<string, number>;
+  skillNodes?: OfficeSkillNode[];
+  skillClipboard?: string | null;
+  onCopySkill?: (name: string) => void;
+  onAddSkillAt?: (point: { x: number; y: number }) => void;
+  caseItem?: OfficeCase;
+  messages?: OfficeMessage[];
+  onAnswerQuestion?: (text: string) => Promise<void>;
 } = {}) {
   return render(
     <OfficeCanvas
@@ -176,24 +193,32 @@ function renderTree(overrides: {
       projectName="shop"
       divisions={DIVISIONS}
       flow={overrides.flow ?? []}
-      caseItem={CASE}
+      caseItem={overrides.caseItem ?? CASE}
       tasks={overrides.tasks ?? TASKS}
-      messages={MESSAGES}
+      messages={overrides.messages ?? MESSAGES}
       selection={overrides.selection ?? { type: 'case' }}
       onSelect={overrides.onSelect ?? (() => {})}
       usageByDivision={overrides.usageByDivision}
       actions={recordingActions(overrides.calls ?? [])}
       onAddDivisionAt={overrides.onAddDivisionAt ?? (() => {})}
       onDeleteDivision={() => {}}
+      skillNodes={overrides.skillNodes ?? SKILL_NODES}
+      installedSkills={[{ name: 'review', description: 'Reviews code', scope: 'user' }]}
+      skillClipboard={overrides.skillClipboard ?? null}
+      onCopySkill={overrides.onCopySkill}
+      onAddSkillAt={overrides.onAddSkillAt}
+      onAnswerQuestion={overrides.onAnswerQuestion}
     />,
   );
 }
 
 const arrow = (from: string, to: string): OfficeFlowEdge => ({ fromDivisionId: `div-${from}`, toDivisionId: `div-${to}`, createdAt: NOW });
 
-test('renders the case, the coordinator, one node per division and the skills/audit layer', () => {
+test('renders the case, the coordinator, one node per division, the audit layer and the skill nodes', () => {
   renderTree();
-  for (const slug of ['case', 'coordinator', 'planner', 'designer', 'backend', 'frontend', 'security', 'docs', 'skills', 'audit']) {
+  assert.ok(screen.getByTestId('office-skill-node-review'));
+  assert.ok(screen.getByTestId('office-skill-link-review-backend'), 'the linked agent is drawn to its skill');
+  for (const slug of ['case', 'coordinator', 'planner', 'designer', 'backend', 'frontend', 'security', 'docs', 'audit']) {
     assert.ok(screen.getByTestId(`office-node-${slug}`), `node ${slug}`);
   }
   assert.ok(screen.getByText('Add login'));
@@ -250,12 +275,12 @@ test('clicking a node selects its division and the message chip opens the messag
 
   fireEvent.click(screen.getByTestId('office-node-frontend'));
   fireEvent.click(screen.getByRole('button', { name: 'Messages with Backend' }));
-  fireEvent.click(screen.getByTestId('office-node-skills'));
+  fireEvent.click(screen.getByTestId('office-skill-node-review'));
 
   assert.deepEqual(selections, [
     { type: 'division', divisionId: 'div-frontend' },
     { type: 'messages', divisionId: 'div-backend' },
-    { type: 'skills' },
+    { type: 'skill', nodeId: 'n-review' },
   ]);
 });
 
@@ -391,4 +416,69 @@ test('a drag whose trailing click never comes does not swallow the next click', 
   fireEvent.pointerUp(docs, { pointerId: 2, pointerType: 'mouse', clientX: 10, clientY: 10 });
   fireEvent.click(docs);
   assert.deepEqual(selections, [{ type: 'division', divisionId: 'div-docs' }]);
+});
+
+test('an agent gets a skill by being connected to the skill node', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  fireEvent.contextMenu(screen.getByTestId('office-skill-node-review'), { clientX: 40, clientY: 40 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Connect to an agent…' }));
+  fireEvent.click(screen.getByTestId('office-node-docs'));
+  assert.deepEqual(calls, [{ method: 'linkSkill', args: ['n-review', 'div-docs'] }]);
+
+  // A link can be cut from its line.
+  fireEvent.contextMenu(screen.getByTestId('office-skill-link-review-backend').nextElementSibling as Element, { clientX: 40, clientY: 40 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove skill from agent' }));
+  assert.deepEqual(calls[1], { method: 'unlinkSkill', args: ['n-review', 'div-backend'] });
+});
+
+test('skills are added from the canvas menu and copied with Ctrl+C / Ctrl+V', async () => {
+  const calls: Recorded[] = [];
+  const copied: string[] = [];
+  const addAt: Array<{ x: number; y: number }> = [];
+  const view = renderTree({ calls, onCopySkill: (name) => copied.push(name), onAddSkillAt: (point) => addAt.push(point), selection: { type: 'skill', nodeId: 'n-review' } });
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+
+  fireEvent.contextMenu(canvas, { clientX: 200, clientY: 200 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Add skill here' }));
+  assert.equal(addAt.length, 1);
+
+  fireEvent.keyDown(canvas, { key: 'c', ctrlKey: true });
+  assert.deepEqual(copied, ['review']);
+
+  view.unmount();
+  renderTree({ calls, skillClipboard: 'review' });
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'v', ctrlKey: true });
+  await Promise.resolve();
+  assert.equal(calls[0].method, 'addSkillNode');
+  assert.equal((calls[0].args[0] as { skillName: string }).skillName, 'review');
+});
+
+test('an open question from the coordinator shows on the canvas and can be answered there', async () => {
+  const answers: string[] = [];
+  renderTree({
+    caseItem: { ...CASE, status: 'waiting_user', waitingReason: 'question', coordinatorBusy: false },
+    messages: [...MESSAGES, {
+      id: 2, caseId: 'case-1', taskId: null, fromDivisionId: 'div-coordinator', toDivisionId: null,
+      kind: 'question', payload: { text: 'Which app, HR or payroll?' }, readAt: null, createdAt: NOW,
+    }],
+    onAnswerQuestion: async (text) => { answers.push(text); },
+  });
+  const bubble = screen.getByTestId('office-question-bubble');
+  assert.ok(bubble.textContent?.includes('Which app, HR or payroll?'));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Answer the coordinator' }), { target: { value: 'payroll' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send answer' }));
+  await Promise.resolve();
+  assert.deepEqual(answers, ['payroll']);
+
+  // The bubble folds into a chip so it does not cover the nodes behind it, and unfolds again.
+  fireEvent.click(screen.getByRole('button', { name: 'Minimize' }));
+  assert.equal(screen.queryByTestId('office-question-bubble'), null);
+  fireEvent.click(screen.getByTestId('office-question-chip'));
+  assert.ok(screen.getByTestId('office-question-bubble'));
+});
+
+test('no question, no bubble', () => {
+  renderTree();
+  assert.equal(screen.queryByTestId('office-question-bubble'), null);
 });

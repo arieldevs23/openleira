@@ -1645,6 +1645,19 @@ export type OfficeFlowEdge = {
 };
 
 /**
+ * A skill placed on the workspace canvas. Divisions linked to it have the
+ * skill; the same skill may be placed more than once to keep lines short.
+ */
+export type OfficeSkillNode = {
+  id: string;
+  skillName: string;
+  /** Null means automatic layout. */
+  position: { x: number; y: number } | null;
+  divisionIds: string[];
+  createdAt: string;
+};
+
+/**
  * One workspace in the workspace switcher: the office plus the project folder
  * it works in and how many of its cases are live.
  */
@@ -1817,6 +1830,7 @@ export type OfficeSnapshot = {
   office: Office;
   divisions: OfficeDivision[];
   flow: OfficeFlowEdge[];
+  skillNodes: OfficeSkillNode[];
   cases: OfficeCase[];
 };
 
@@ -1835,6 +1849,7 @@ export type OfficeUpdateChange =
   | { entity: 'office'; office: Office }
   | { entity: 'division'; id: string; division: OfficeDivision | null }
   | { entity: 'flow'; flow: OfficeFlowEdge[] }
+  | { entity: 'skills'; skillNodes: OfficeSkillNode[] }
   | { entity: 'deleted' }
   | { entity: 'case'; id: string; case: OfficeCase | null }
   | { entity: 'task'; task: OfficeTask }
