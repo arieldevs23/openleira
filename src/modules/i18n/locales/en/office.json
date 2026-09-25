@@ -116,7 +116,8 @@
     "waiting": {
       "paused": "Paused. Running work finishes, nothing new starts.",
       "question": "The orchestrator has a question. Answer it on the canvas or in the message box below to continue.",
-      "interrupted": "The server restarted while this ran. Resume to continue where it left off."
+      "interrupted": "The server restarted while this ran. Resume to continue where it left off.",
+      "provider_limit": "The AI provider ran out of quota. Nothing was counted as failed: wait until it resets, then press Resume to continue from the same step."
     },
     "modelsMissing": "Can't run yet: pick a model for {{names}}.",
     "providersMissing": "Can't run yet: log in to {{providers}} first.",
@@ -134,7 +135,9 @@
     "coordinator": "Orchestrator",
     "notePlaceholder": "Message the orchestrator (Ctrl+Enter to send)",
     "send": "Send",
-    "noCaseSelected": "Pick a task on the left, or create a new one."
+    "noCaseSelected": "Pick a task on the left, or create a new one.",
+    "retry": "Retry failed",
+    "retrying": "Retrying…"
   },
   "division": {
     "section": "Team",

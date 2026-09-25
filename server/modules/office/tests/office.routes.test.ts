@@ -109,7 +109,7 @@ test('case routes record the author and route controls to the orchestrator', asy
   await withServer(calls, async (request) => {
     assert.equal((await request('POST', '/api/office/o1/cases', { title: 'Login', description: 'd' })).status, 201);
     assert.equal((await request('POST', '/api/office/o1/cases', { description: 'no title' })).status, 400);
-    for (const action of ['start', 'pause', 'resume', 'cancel']) {
+    for (const action of ['start', 'pause', 'resume', 'retry', 'cancel']) {
       assert.equal((await request('POST', `/api/office/o1/cases/c1/${action}`)).status, 200);
     }
     assert.equal((await request('POST', '/api/office/o1/cases/c1/notes', { text: 'hi' })).status, 201);
@@ -125,11 +125,14 @@ test('case routes record the author and route controls to the orchestrator', asy
     'office.requireCase',
     'office.requireConnectedProviders',
     'orchestrator.resumeCase',
+    'office.requireCase',
+    'office.requireConnectedProviders',
+    'orchestrator.retryCase',
     'orchestrator.cancelCase',
     'orchestrator.postNote',
   ]);
   assert.deepEqual(calls[0].args, ['o1', { title: 'Login', description: 'd', createdBy: '42', quickDivisionId: null }]);
-  assert.deepEqual(calls[9].args, ['o1', 'c1', 'hi']);
+  assert.deepEqual(calls[12].args, ['o1', 'c1', 'hi']);
 });
 
 test('workspace, flow, position and analysis routes parse their input', async () => {

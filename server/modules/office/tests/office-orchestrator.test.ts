@@ -342,6 +342,114 @@ test('a third failed audit fails the task, blocks its dependants and tells the c
   });
 });
 
+const LIMIT = "You've hit your session limit · resets 6pm (UTC)";
+
+test('a provider limit parks the case without spending an audit retry, and resume redoes only that turn', async () => {
+  await withOffice(async ({ office }) => {
+    let limitHit = true;
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return { text: json({ tasks: [{ division_slug: 'backend', title: 'API', instruction: 'Add it' }] }) };
+      }
+      if (turn.kind === 'task' || turn.kind === 'revision') return { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') {
+        if (limitHit) return { text: LIMIT };
+        return { text: PASS };
+      }
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+
+    const parked = await waitFor(created.id, (caseItem) => caseItem.status === 'waiting_user');
+    assert.equal(parked.waitingReason, 'provider_limit');
+    assert.match(parked.error ?? '', /session limit/);
+    const [waiting] = officeCasesDb.listTasks(created.id);
+    assert.equal(waiting.status, 'review', 'the audit is redone, not counted as failed');
+    assert.equal(waiting.attempts, 0);
+    assert.ok(!officeCasesDb.listMessages(created.id).some((message) => message.kind === 'audit_fail'));
+
+    limitHit = false;
+    orchestrator.resumeCase(office.id, created.id);
+    const finished = await waitFor(created.id, isFinished);
+    assert.equal(finished.status, 'done');
+    assert.equal(finished.error, null);
+    assert.equal(finished.finalSummary, 'final report for the user');
+    assert.deepEqual(turns.filter((turn) => turn.kind === 'task').length, 1, 'the finished work is not redone');
+  });
+});
+
+test('a provider limit during a task puts the task back in the queue', async () => {
+  await withOffice(async ({ office }) => {
+    let limitHit = true;
+    const { runner } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return { text: json({ tasks: [{ division_slug: 'backend', title: 'API', instruction: 'Add it' }] }) };
+      }
+      if (turn.kind === 'task') return limitHit ? { text: '', failed: true, error: LIMIT } : { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') return { text: PASS };
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+
+    await waitFor(created.id, (caseItem) => caseItem.waitingReason === 'provider_limit');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const [task] = officeCasesDb.listTasks(created.id);
+    assert.equal(task.status, 'queued');
+    assert.equal(task.error, null);
+
+    limitHit = false;
+    orchestrator.resumeCase(office.id, created.id);
+    assert.equal((await waitFor(created.id, isFinished)).status, 'done');
+  });
+});
+
+test('retrying a failed case re-queues its failed and blocked subtasks with fresh audits and keeps finished ones', async () => {
+  await withOffice(async ({ office }) => {
+    let apiFails = true;
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return {
+          text: json({
+            tasks: [
+              { id: 'T1', division_slug: 'docs', title: 'Docs', instruction: 'Write' },
+              { id: 'T2', division_slug: 'backend', title: 'API', instruction: 'Add it' },
+              { id: 'T3', division_slug: 'frontend', title: 'UI', instruction: 'Use it', depends_on: ['T2'] },
+            ],
+          }),
+        };
+      }
+      if (turn.kind === 'task' || turn.kind === 'revision') return { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') return { text: apiFails && turn.ref === 'T2' ? FAIL : PASS };
+      if (turn.kind === 'checkpoint') return { text: json({ reply: 'noted', tasks: [] }) };
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+    assert.equal((await waitFor(created.id, isFinished)).status, 'failed');
+    assert.throws(() => orchestrator.resumeCase(office.id, created.id), AppError);
+
+    apiFails = false;
+    const docsTurns = turns.filter((turn) => turn.kind === 'task' && turn.ref === 'T1').length;
+    const retried = orchestrator.retryCase(office.id, created.id);
+    assert.equal(retried.status, 'running');
+    assert.equal(retried.finalSummary, null);
+    const finished = await waitFor(created.id, isFinished);
+
+    assert.equal(finished.status, 'done');
+    const byRef = new Map(officeCasesDb.listTasks(created.id).map((task) => [task.ref, task]));
+    assert.equal(byRef.get('T2')?.status, 'done');
+    assert.equal(byRef.get('T2')?.attempts, 0, 'a fresh set of audit retries');
+    assert.equal(byRef.get('T3')?.status, 'done');
+    assert.equal(turns.filter((turn) => turn.kind === 'task' && turn.ref === 'T1').length, docsTurns, 'finished work is kept');
+    assert.throws(() => orchestrator.retryCase(office.id, created.id), AppError);
+  });
+});
+
 test('the coordinator can replace a failed task and unblock its dependants', async () => {
   await withOffice(async ({ office }) => {
     const { runner } = createScriptedRunner((turn) => {

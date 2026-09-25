@@ -1759,7 +1759,7 @@ type TaskPriority = 'high' | 'medium' | 'low' | string;
 export type OfficeCaseStatus = 'draft' | 'running' | 'waiting_user' | 'done' | 'failed';
 
 /** Why a case waits for the user: paused by them, a coordinator question, or a server restart. */
-export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted';
+export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted' | 'provider_limit';
 
 /** Lifecycle of one sub-task handed to a division. */
 export type OfficeTaskStatus = 'queued' | 'running' | 'review' | 'done' | 'failed' | 'blocked';
@@ -2065,7 +2065,7 @@ export type OfficeActions = {
   /** `quickDivisionId` makes a quick task: straight to that team, no plan, audit or summary. */
   createCase(input: { title: string; description: string; quickDivisionId?: string }): Promise<OfficeCase>;
   deleteCase(caseId: string): Promise<void>;
-  caseAction(caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel'): Promise<OfficeCase>;
+  caseAction(caseId: string, action: 'start' | 'pause' | 'resume' | 'retry' | 'cancel'): Promise<OfficeCase>;
   postNote(caseId: string, text: string): Promise<OfficeMessage>;
 };
 

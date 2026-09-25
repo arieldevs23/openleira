@@ -112,7 +112,8 @@
     "waiting": {
       "paused": "lagi dijeda. kerjaan yang jalan tetap diselesaiin, yang baru ga dimulai.",
       "question": "orchestrator punya pertanyaan. jawab di bagan atau di kotak pesan bawah biar lanjut.",
-      "interrupted": "server sempet restart pas ini jalan. klik lanjut buat nerusin dari posisi terakhir."
+      "interrupted": "server sempet restart pas ini jalan. klik lanjut buat nerusin dari posisi terakhir.",
+      "provider_limit": "kuota provider AI lagi abis. ga ada yang dihitung gagal: tunggu sampai reset, terus klik lanjut buat nerusin dari langkah yang sama."
     },
     "modelsMissing": "belum bisa jalan: pilih model dulu buat {{names}}.",
     "providersMissing": "belum bisa jalan: login ke {{providers}} dulu.",
@@ -129,7 +130,9 @@
     "coordinator": "orchestrator",
     "notePlaceholder": "kirim pesan ke orchestrator (ctrl+enter buat kirim)",
     "send": "kirim",
-    "noCaseSelected": "pilih task di kiri, atau bikin yang baru."
+    "noCaseSelected": "pilih task di kiri, atau bikin yang baru.",
+    "retry": "ulangi yang gagal",
+    "retrying": "ngulang…"
   },
   "division": {
     "section": "tim",

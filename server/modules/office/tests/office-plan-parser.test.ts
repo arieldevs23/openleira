@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  detectProviderLimit,
   extractJsonValue,
   extractResultSummary,
   parseAuditVerdict,
@@ -162,4 +163,15 @@ test('result summaries come from the last summary heading, or the tail of the an
 test('braces inside strings do not confuse JSON extraction', () => {
   const value = extractJsonValue('Note: {not json}\n{"notes": "use {curly} braces", "pass": true}');
   assert.deepEqual(value, { notes: 'use {curly} braces', pass: true });
+});
+
+test('detectProviderLimit recognises out-of-quota replies but not real reports about limits', () => {
+  assert.equal(detectProviderLimit("You've hit your session limit · resets 6pm (UTC)"), "You've hit your session limit · resets 6pm (UTC)");
+  assert.ok(detectProviderLimit('Claude usage limit reached. Your limit will reset at 3pm.'));
+  assert.ok(detectProviderLimit('ERROR: You exceeded your current quota (insufficient_quota).'));
+  assert.equal(detectProviderLimit('## Summary\nDone.'), null);
+  assert.equal(detectProviderLimit(''), null);
+  assert.equal(detectProviderLimit(null), null);
+  const report = `## Summary\nAdded a rate limiter: requests over the usage limit reached state get a 429 and the limit resets every minute.\n${'details '.repeat(80)}`;
+  assert.equal(detectProviderLimit(report), null);
 });

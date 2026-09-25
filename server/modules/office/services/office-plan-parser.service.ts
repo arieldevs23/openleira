@@ -422,3 +422,31 @@ export function parseAppAnalysis(text: string): ParseResult<ParsedAppAnalysis> {
   }
   return { ok: true, value: { summary: readText(value.summary), divisions: divisions.slice(0, 12) } };
 }
+
+/** Longer answers are real work that may merely mention limits (e.g. an agent building rate limiting). */
+const MAX_PROVIDER_LIMIT_TEXT_LENGTH = 400;
+const PROVIDER_LIMIT_PATTERNS = [
+  /\bhit your (?:session|usage|weekly|daily|monthly|\d+-hour) limit\b/i,
+  /\b(?:session|usage|weekly|daily|monthly|\d+-hour) limit (?:reached|exceeded|hit)\b/i,
+  /\b(?:usage|rate) limit(?:s)? (?:reached|exceeded)\b/i,
+  /\bquota (?:exceeded|reached|exhausted)\b/i,
+  /\binsufficient[_ ]quota\b/i,
+  /\bout of (?:credits|usage)\b/i,
+  /\blimit\b[^\n]{0,80}\bresets?\b/i,
+];
+
+/**
+ * Recognises a provider's "you are out of quota" reply, which CLIs print as
+ * an ordinary assistant answer (Claude Code: "You've hit your session limit ·
+ * resets 6pm (UTC)"). Returns the message, or null for a normal answer. Only
+ * short answers qualify, so a real report that talks about limits is never
+ * mistaken for one. Used by the orchestrator to park a case instead of
+ * counting the reply as a failed task or audit.
+ */
+export function detectProviderLimit(text: string | null | undefined): string | null {
+  const trimmed = (text ?? '').trim();
+  if (!trimmed || trimmed.length > MAX_PROVIDER_LIMIT_TEXT_LENGTH) {
+    return null;
+  }
+  return PROVIDER_LIMIT_PATTERNS.some((pattern) => pattern.test(trimmed)) ? trimmed : null;
+}

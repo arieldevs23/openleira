@@ -386,6 +386,14 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     res.json(createApiSuccessResponse(orchestrator.resumeCase(officeId, caseId)));
   }));
 
+  router.post('/:officeId/cases/:caseId/retry', asyncHandler(async (req, res) => {
+    const officeId = readParam(req, 'officeId');
+    const caseId = readParam(req, 'caseId');
+    const quickDivisionId = office.requireCase(officeId, caseId).quickDivisionId;
+    await office.requireConnectedProviders(officeId, undefined, quickDivisionId ? [quickDivisionId] : undefined);
+    res.json(createApiSuccessResponse(orchestrator.retryCase(officeId, caseId)));
+  }));
+
   router.post('/:officeId/cases/:caseId/cancel', asyncHandler(async (req, res) => {
     const cancelled = await orchestrator.cancelCase(readParam(req, 'officeId'), readParam(req, 'caseId'));
     res.json(createApiSuccessResponse(cancelled));

@@ -141,6 +141,11 @@ Skill tidak lagi diatur di sidebar atau panel agent, tapi di bagan:
 - Kalau orchestrator bertanya (task `waiting_user`, alasan `question`), pertanyaannya muncul sebagai **gelembung di sebelah node orchestrator**, lengkap dengan kotak jawab. Jawaban dikirim sebagai pesan ke orchestrator, dan itu yang melanjutkan task-nya. Gelembung bisa dikecilkan jadi chip supaya tidak menutupi node.
 - Kotak **pesan ke orchestrator** menempel di bawah panel kanan dan tetap terlihat walau panelnya di-scroll atau sedang menampilkan agent/skill. Klik kanan → **kirim pesan ke orchestrator** membuka panel dan langsung menaruh kursor di kotak itu.
 
+### Kalau ada yang gagal
+
+- **Limit provider (kuota abis).** Kalau agent cuma bales pesan limit (misalnya Claude: `You've hit your session limit · resets 6pm (UTC)`), task-nya ga dihitung gagal. Task diparkir dengan status **nunggu (limit provider)**, pesannya ditampilin, dan jatah audit ga kepake. Kerjaan yang kepotong balik ke tempatnya: subtask balik ke antrian, audit diulang, langkah orchestrator diulang. Tunggu reset, terus klik **lanjut**. Deteksinya cuma buat jawaban pendek (maks. 400 karakter), jadi laporan agent yang kebetulan ngebahas "rate limit" ga ikut kena.
+- **Task yang udah `gagal`** punya tombol **ulangi yang gagal**. Subtask yang gagal atau ke-block balik ke antrian dengan jatah audit baru, dan sesinya tetap sama jadi agent nerusin dari situ. Subtask yang udah selesai ga diulang. Terus orchestrator bikin ringkasan baru. Kalau yang gagal rencananya (belum ada subtask), orchestrator bikin rencana ulang.
+
 ### Flow sebagai aturan
 
 Flow adalah aturan, bukan pengganti orchestrator. Orchestrator tetap merencanakan subtask, dan prompt-nya menyebutkan flow. Setelah subtask dibuat, server menambahkan dependensi sesuai flow:
@@ -188,7 +193,7 @@ Semua di bawah `/api/office` (butuh login):
 | PATCH | `/:officeId/agents/:agentId` | Edit agent (`model: null` menghapus model) |
 | PUT | `/:officeId/agents/models` | Wizard: `{ assignments: [{ agentId, provider, model }] }` |
 | POST/GET/PATCH/DELETE | `/:officeId/cases[/:caseId]` | Kelola task (`quickDivisionId` di POST bikin task cepat untuk satu tim) |
-| POST | `/:officeId/cases/:caseId/{start,pause,resume,cancel}` | Kontrol task (`start`/`resume` ditolak 409 `OFFICE_PROVIDERS_NOT_CONNECTED` kalau provider agent aktif belum login) |
+| POST | `/:officeId/cases/:caseId/{start,pause,resume,retry,cancel}` | Kontrol task (`start`/`resume` ditolak 409 `OFFICE_PROVIDERS_NOT_CONNECTED` kalau provider agent aktif belum login) |
 | POST | `/:officeId/cases/:caseId/notes` | Pesan ke orchestrator `{ text }` |
 
 Kode backend ada di `server/modules/office` (orchestrator, parser rencana, scheduler, prompt, runner), repository di `server/modules/database/repositories/office*.db.ts`, frontend di `src/modules/office`.

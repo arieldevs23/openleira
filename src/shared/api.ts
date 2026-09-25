@@ -478,7 +478,7 @@ export const api = {
       get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
     deleteCase: (officeId: string, caseId: string) =>
       del(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
-    caseAction: (officeId: string, caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel') =>
+    caseAction: (officeId: string, caseId: string, action: 'start' | 'pause' | 'resume' | 'retry' | 'cancel') =>
       post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/${action}`),
     postNote: (officeId: string, caseId: string, text: string) =>
       post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/notes`, { text }),

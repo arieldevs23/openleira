@@ -1,4 +1,4 @@
-import { AlertTriangle, ExternalLink, Pause, Play, Square, Trash2 } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Pause, Play, RotateCcw, Square, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -100,6 +100,9 @@ export default function CasePanel({
         <div className="rounded-[10px] border border-navy/20 bg-navy/5 p-2.5 text-xs text-foreground dark:border-blue-300/20 dark:bg-blue-400/5">
           <p className="font-medium">{t(`case.waiting.${caseItem.waitingReason}`)}</p>
           {pendingQuestion && <p className="mt-1 whitespace-pre-wrap">{messageText(pendingQuestion)}</p>}
+          {caseItem.waitingReason === 'provider_limit' && caseItem.error && (
+            <p className="mt-1 whitespace-pre-wrap text-muted-foreground" data-testid="office-provider-limit">{caseItem.error}</p>
+          )}
         </div>
       )}
 
@@ -149,6 +152,13 @@ export default function CasePanel({
             onClick={() => void run('resume', () => actions.caseAction(caseItem.id, 'resume'))}>
             <Play className="h-3.5 w-3.5" />
             {t('case.resume')}
+          </Button>
+        )}
+        {caseItem.status === 'failed' && (
+          <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={busyAction !== null}
+            onClick={() => void run('retry', () => actions.caseAction(caseItem.id, 'retry'))}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            {busyAction === 'retry' ? t('case.retrying') : t('case.retry')}
           </Button>
         )}
         {isActive && (

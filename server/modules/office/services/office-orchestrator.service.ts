@@ -10,6 +10,7 @@ import {
   toOfficeLogEntry,
 } from '@/modules/office/services/office-events.service.js';
 import {
+  detectProviderLimit,
   extractResultSummary,
   parseAuditVerdict,
   parseCoordinatorOutput,
@@ -72,6 +73,7 @@ const TEXTS = {
     cancelled: 'dibatalkan oleh user',
     someTasksFailed: 'selesai, tapi ada task yang gagal',
     auditSkipped: 'audit dimatikan, hasil langsung diterima',
+    providerLimit: 'limit provider {provider} habis: {message}',
   },
   en: {
     coordinatorFailed: 'the coordinator failed to run: {error}',
@@ -88,6 +90,7 @@ const TEXTS = {
     cancelled: 'cancelled by the user',
     someTasksFailed: 'finished, but some tasks failed',
     auditSkipped: 'audit is disabled, the result was accepted as is',
+    providerLimit: 'the {provider} provider limit was reached: {message}',
   },
 } as const;
 
@@ -129,6 +132,8 @@ export type OfficeOrchestrator = {
   startCase(officeId: string, caseId: string): OfficeCase;
   pauseCase(officeId: string, caseId: string): OfficeCase;
   resumeCase(officeId: string, caseId: string): OfficeCase;
+  /** Runs a failed case again: its failed and blocked subtasks go back to the queue, finished ones stay. */
+  retryCase(officeId: string, caseId: string): OfficeCase;
   cancelCase(officeId: string, caseId: string): Promise<OfficeCase>;
   postNote(officeId: string, caseId: string, noteText: string): OfficeMessage;
   recoverInterruptedCases(): number;
@@ -330,7 +335,7 @@ export function createOfficeOrchestrator(dependencies: {
     }
 
     let logSessionId = input.sessionId ?? '';
-    return dependencies.runner.runTurn({
+    const result = await dependencies.runner.runTurn({
       sessionId: input.sessionId,
       sessionTitle: clipTitle(input.sessionTitle),
       projectPath: context.office.projectPath,
@@ -371,6 +376,35 @@ export function createOfficeOrchestrator(dependencies: {
         }
       },
     });
+
+    // Out of quota is not a bad answer: the turn is dropped like a cancelled one
+    // (every caller stops on `handle.cancelled`) and the case waits for the user.
+    const limitMessage = detectProviderLimit(result.text) ?? (result.failed ? detectProviderLimit(result.error) : null);
+    if (limitMessage && !handle.cancelled) {
+      handle.cancelled = true;
+      parkForProviderLimit(context, handle, model.provider, limitMessage);
+    }
+    return result;
+  };
+
+  /**
+   * Parks a case whose provider ran out of quota. The interrupted work goes
+   * back to where it was (a task to the queue, an audit stays in review, a
+   * coordinator step stays in its phase), so "resume" after the reset redoes
+   * only that turn and no audit retry is spent.
+   */
+  const parkForProviderLimit = (context: CaseContext, handle: RunHandle, provider: LLMProvider, message: string): void => {
+    if (handle.kind === 'task' && handle.taskId) {
+      saveTask(context.office.id, handle.taskId, { status: 'queued', error: null, startedAt: null });
+    }
+    const current = officeCasesDb.getCase(context.caseItem.id);
+    if (current && (current.status === 'running' || current.status === 'waiting_user')) {
+      saveCase(context.caseItem.id, {
+        status: 'waiting_user',
+        waitingReason: 'provider_limit',
+        error: text(context.office.locale, 'providerLimit', { provider, message }),
+      });
+    }
   };
 
   const resolvePromptSkills = async (agent: OfficeAgent, projectPath: string): Promise<PromptSkill[]> => {
@@ -1175,9 +1209,48 @@ export function createOfficeOrchestrator(dependencies: {
         throw conflict('Only a waiting case can be resumed.', 'OFFICE_CASE_NOT_WAITING');
       }
       requireRunnableModels(officeId);
-      const resumed = saveCase(caseId, { status: 'running', waitingReason: null }) as OfficeCase;
+      const resumed = saveCase(caseId, { status: 'running', waitingReason: null, error: null }) as OfficeCase;
       scheduleTick(caseId);
       return resumed;
+    },
+
+    retryCase(officeId, caseId) {
+      const caseItem = officeService.requireCase(officeId, caseId);
+      if (caseItem.status !== 'failed') {
+        throw conflict('Only a failed case can be retried.', 'OFFICE_CASE_NOT_FAILED');
+      }
+      if (hasCoordinatorRun(caseId) || (handlesByCase.get(caseId)?.size ?? 0) > 0) {
+        throw conflict('This case still has a turn in flight; try again in a moment.', 'OFFICE_CASE_BUSY');
+      }
+      if (!caseItem.quickDivisionId) {
+        requireRunnableModels(officeId);
+      }
+      const tasks = officeCasesDb.listTasks(caseId);
+      for (const task of tasks) {
+        if (task.status === 'failed' || task.status === 'blocked') {
+          // A fresh set of audit retries; the session is kept, so the agent continues where it stopped.
+          saveTask(officeId, task.id, {
+            status: 'queued',
+            attempts: 0,
+            error: null,
+            auditNotes: null,
+            startedAt: null,
+            finishedAt: null,
+          });
+        }
+      }
+      const retried = saveCase(caseId, {
+        status: 'running',
+        // No subtasks yet means the plan itself failed: plan again.
+        phase: tasks.length === 0 ? 'planning' : 'executing',
+        waitingReason: null,
+        error: null,
+        finalSummary: null,
+        coordinatorBusy: false,
+        finishedAt: null,
+      }) as OfficeCase;
+      scheduleTick(caseId);
+      return retried;
     },
 
     async cancelCase(officeId, caseId) {

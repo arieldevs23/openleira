@@ -1553,7 +1553,7 @@ export type OfficeCaseStatus = 'draft' | 'running' | 'waiting_user' | 'done' | '
  * Why a case sits in `waiting_user`: the user paused it, the coordinator asked
  * the user a question, or the server restarted while it ran. Resuming clears it.
  */
-export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted';
+export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted' | 'provider_limit';
 
 /**
  * Which orchestration step a case is in. Recovery uses it to know what to
