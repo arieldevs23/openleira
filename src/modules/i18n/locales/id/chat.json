@@ -138,7 +138,13 @@
       "label": "diantriin",
       "willSend": "bakal dikirim abis proses ini kelar",
       "edit": "edit pesan antrean",
-      "delete": "hapus pesan antrean"
+      "delete": "hapus pesan antrean",
+      "interruptSend": "stop turn sekarang & langsung kirim ini",
+      "sendNow": "kirim sekarang",
+      "moveUp": "naikin",
+      "moveDown": "turunin",
+      "count": "{{count}} antrean",
+      "willSendInOrder": "dikirim urut tiap turn kelar"
     }
   },
   "composer": {

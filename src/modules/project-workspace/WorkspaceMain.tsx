@@ -13,6 +13,7 @@ import { useFileOpenResolver } from '@/modules/project-workspace/hooks/useFileOp
 import { EditorSidebar, useEditorSidebar } from '@/modules/code-editor';
 import WorkspaceHeader from '@/modules/project-workspace/WorkspaceHeader';
 import WorkspaceStateView from '@/modules/project-workspace/WorkspaceStateView';
+import WorkspaceWelcome from '@/modules/project-workspace/WorkspaceWelcome';
 import WorkspaceErrorBoundary from '@/modules/project-workspace/WorkspaceErrorBoundary';
 
 type WorkspaceMainProps = {
@@ -126,7 +127,7 @@ function WorkspaceMain({
   }
 
   if (!selectedProject) {
-    return <WorkspaceStateView mode="empty" isMobile={isMobile} onMenuClick={onMenuClick} />;
+    return <WorkspaceWelcome isMobile={isMobile} onMenuClick={onMenuClick} onShowSettings={onShowSettings} />;
   }
 
   return (

@@ -16,7 +16,11 @@ import { readUserPreference, writeUserPreference } from '@/shared/userSettings';
  * choice both reaches every reader at once and follows the user between devices.
  */
 
-const PROVIDERS: LLMProvider[] = ['claude', 'cursor', 'codex', 'opencode'];
+/** Every provider the UI can send under; used by the chat hook and the welcome screen's picker. */
+export const PROVIDERS: LLMProvider[] = ['claude', 'cursor', 'codex', 'opencode'];
+
+/** localStorage key holding the user's default model for one provider (read by chat and the welcome screen). */
+export const providerModelStorageKey = (provider: LLMProvider): string => `${provider}-model`;
 
 const DEFAULT_PROVIDER: LLMProvider = 'claude';
 

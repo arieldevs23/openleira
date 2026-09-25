@@ -19,7 +19,7 @@ type CreateProjectResponse = {
 };
 
 /**
- * Resolves the two hidden projects the sidebar builds on — the obrolan chat
+ * Resolves the two hidden projects the sidebar builds on (used by the sidebar and the project-workspace welcome screen) — the obrolan chat
  * workspace and the home-directory file browser — registering either one on
  * first use so the user never has to add them as projects by hand.
  */

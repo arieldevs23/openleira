@@ -26,6 +26,9 @@ type ProjectMainState = Pick<
   | 'registerOptimisticSession'
   | 'handleProjectSelect'
   | 'refreshProjectsSilently'
+  | 'projects'
+  | 'handleNewSession'
+  | 'requestNewProject'
 >;
 
 type ProjectCommandState = Pick<
@@ -97,9 +100,15 @@ export function ProjectsStateProvider({
       registerOptimisticSession: state.registerOptimisticSession,
       handleProjectSelect: state.handleProjectSelect,
       refreshProjectsSilently: state.refreshProjectsSilently,
+      projects: state.projects,
+      handleNewSession: state.handleNewSession,
+      requestNewProject: state.requestNewProject,
     }),
     [
       state.activeTab,
+      state.handleNewSession,
+      state.projects,
+      state.requestNewProject,
       state.externalMessageUpdate,
       state.handleProjectSelect,
       state.isLoadingProjects,

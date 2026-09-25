@@ -103,7 +103,8 @@ export default function FileTreeNode({
   const { t } = useTranslation();
   const isDirectory = item.type === 'directory';
   const isOpen = isDirectory && expandedDirs.has(item.path);
-  const hasChildren = Boolean(isDirectory && item.children && item.children.length > 0);
+  // A truncated directory shows its chevron before its children are fetched.
+  const hasChildren = Boolean(isDirectory && ((item.children && item.children.length > 0) || item.truncated));
   const isRenaming = renamingItem?.path === item.path;
   const dragTargetPath = isDirectory ? item.path : getParentDirectoryPath(item.path);
   const isDropTarget = isDirectory && dropTarget === item.path;

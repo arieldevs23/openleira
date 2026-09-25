@@ -9,9 +9,9 @@ import type { PendingPermissionRequest, PermissionMode,
   ProviderModelActions,
   ProviderModelOption,
   ProviderModelsDefinition } from '@/shared/types';
-import { DEFAULT_EFFORT_VALUE, OBROLAN_DEFAULT_CLAUDE_MODEL } from '@/shared/constants';
+import { DEFAULT_EFFORT_VALUE, OBROLAN_DEFAULT_CLAUDE_MODEL, OBROLAN_MODEL_STORAGE_KEY } from '@/shared/constants';
 import { isObrolanProject } from '@/shared/utils';
-import { readSelectedProvider, writeSelectedProvider } from '@/shared/selectedProvider';
+import { PROVIDERS, providerModelStorageKey, readSelectedProvider, writeSelectedProvider } from '@/shared/selectedProvider';
 
 const FALLBACK_PROVIDER_EFFORT_VALUES: Partial<Record<LLMProvider, readonly string[]>> = {
   // Superset used only before the model catalog loads; `ultracode` belongs to the
@@ -35,14 +35,6 @@ const FALLBACK_DEFAULT_MODEL: Record<LLMProvider, string> = {
   codex: 'gpt-5.4',
   opencode: 'anthropic/claude-sonnet-4-5',
 };
-
-const PROVIDERS: LLMProvider[] = ['claude', 'cursor', 'codex', 'opencode'];
-
-/** localStorage key holding the user's default model for one provider. */
-const providerModelStorageKey = (provider: LLMProvider): string => `${provider}-model`;
-
-/** localStorage key holding the Claude model new obrolan chats start with. */
-const OBROLAN_MODEL_STORAGE_KEY = 'claude-model-obrolan';
 
 /**
  * Fallback permission-mode matrix used only until the backend capability
@@ -439,14 +431,6 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     setProvider(selectedSession.__provider);
     writeSelectedProvider(selectedSession.__provider);
   }, [provider, selectedSession]);
-
-  // A fresh obrolan chat is a Claude chat. Only the in-memory pick changes, so
-  // the provider the user chose for project work is still there afterwards.
-  useEffect(() => {
-    if (isObrolan && !selectedSession && provider !== 'claude') {
-      setProvider('claude');
-    }
-  }, [isObrolan, provider, selectedSession]);
 
   // Permission prompts belong to a session, not to the transient provider
   // selection that is synchronized after navigation.

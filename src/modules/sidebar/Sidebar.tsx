@@ -5,7 +5,7 @@ import { useDeviceSettings } from '@/shared/hooks/useDeviceSettings';
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck';
 import { useUiPreferences, useSetUiPreference } from '@/shared/context/UiPreferencesContext';
 import { useSidebarController } from '@/modules/sidebar/hooks/useSidebarController';
-import { useBuiltInWorkspaces } from '@/modules/sidebar/hooks/useBuiltInWorkspaces';
+import { useBuiltInWorkspaces } from '@/shared/hooks/useBuiltInWorkspaces';
 import { useTaskMaster, useTasksSettings } from '@/modules/task-master';
 import { usePaletteOps } from '@/modules/command-palette';
 import { useBackgroundSessionIdSet, useBusySessionIdSet } from '@/shared/context/SessionProtectionContext';
@@ -37,6 +37,8 @@ type SidebarProps = {
   settingsInitialTab: string;
   onCloseSettings: () => void;
   isMobile: boolean;
+  /** Bumped by the welcome screen to open the project-creation wizard from outside the sidebar. */
+  newProjectRequest?: number;
 };
 
 type TaskMasterSidebarContext = {
@@ -65,6 +67,7 @@ function Sidebar({
   settingsInitialTab,
   onCloseSettings,
   isMobile,
+  newProjectRequest = 0,
 }: SidebarProps) {
   const { t } = useTranslation(['sidebar', 'common']);
   const { isPWA } = useDeviceSettings({ trackMobile: false });
@@ -170,6 +173,12 @@ function Sidebar({
   }, [isPWA]);
 
   const { obrolanProject, pendingWorkspace, ensureWorkspace } = useBuiltInWorkspaces(projects, refreshProjects);
+
+  useEffect(() => {
+    if (newProjectRequest > 0) {
+      setShowNewProject(true);
+    }
+  }, [newProjectRequest, setShowNewProject]);
 
   const handleNewObrolan = useCallback(async () => {
     const project = await ensureWorkspace('obrolan');

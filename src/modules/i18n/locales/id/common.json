@@ -347,7 +347,18 @@
     "unknownProvider": "ga dikenal",
     "browseFolders": "browse folder",
     "closeLoginModal": "tutup modal login",
-    "pluginLoadFailed": "plugin gagal di-load: {{error}}"
+    "pluginLoadFailed": "plugin gagal di-load: {{error}}",
+    "settings": "pengaturan"
   },
-  "cancel": "batal"
+  "cancel": "batal",
+  "welcome": {
+    "title": "mau ngapain hari ini?",
+    "modeObrolan": "obrolan biasa",
+    "modeProject": "project",
+    "placeholder": "tanya OpenLeira",
+    "send": "kirim",
+    "pickModel": "pilih model",
+    "addWorkspace": "tambah workspace",
+    "activeProvider": "provider aktif"
+  }
 }

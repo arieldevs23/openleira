@@ -138,7 +138,13 @@
       "label": "Queued",
       "willSend": "Will send when this finishes",
       "edit": "Edit queued message",
-      "delete": "Delete queued message"
+      "delete": "Delete queued message",
+      "interruptSend": "Stop current turn & send this now",
+      "sendNow": "Send this now",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "count": "{{count}} queued",
+      "willSendInOrder": "Sends in order as each turn finishes"
     }
   },
   "composer": {

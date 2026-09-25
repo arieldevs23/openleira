@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 
 import { api } from '@/shared/api';
+import { markWorkspaceReady } from '@/shared/appReadiness';
 import type { ServerEvent,
   AppTab,
   LLMProvider,
@@ -673,6 +674,19 @@ export function useProjectsState({
     }
   }, []);
 
+  // The project-creation wizard is owned by the sidebar; the welcome screen
+  // asks for it by bumping this counter, which the sidebar watches.
+  const [newProjectRequest, setNewProjectRequest] = useState(0);
+  const requestNewProject = useCallback(() => {
+    setNewProjectRequest((previous) => previous + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoadingProjects) {
+      markWorkspaceReady();
+    }
+  }, [isLoadingProjects]);
+
   const openSettings = useCallback((tab = 'tools') => {
     setSettingsInitialTab(tab);
     setShowSettings(true);
@@ -1218,8 +1232,10 @@ export function useProjectsState({
       settingsInitialTab,
       onCloseSettings: () => setShowSettings(false),
       isMobile,
+      newProjectRequest,
     }),
     [
+      newProjectRequest,
       attentionSessionIds,
       handleNewSession,
       handleOpenFileBrowser,
@@ -1263,6 +1279,7 @@ export function useProjectsState({
     handleProjectSelect,
     handleSessionSelect,
     handleNewSession,
+    requestNewProject,
     handleSessionDelete,
     loadMoreProjectSessions,
     handleProjectDelete,

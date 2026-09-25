@@ -270,8 +270,10 @@ export const api = {
     get(fileContentPath(projectId, filePath), options),
   saveFile: (projectId: string, filePath: string, content: string) =>
     put(`/api/file-tree/projects/${projectId}/file`, { filePath, content }),
-  getFiles: (projectId: string, options: ApiRequestOptions = {}) =>
-    get(`/api/file-tree/projects/${projectId}/files${query({ respectGitignore: true })}`, options),
+  // `path` lists one directory inside the project; used to expand a node the
+  // server returned as `truncated` because the tree hit its entry budget.
+  getFiles: (projectId: string, options: ApiRequestOptions & { path?: string } = {}) =>
+    get(`/api/file-tree/projects/${projectId}/files${query({ respectGitignore: true, path: options.path })}`, options),
 
   // File operations
   createFile: (

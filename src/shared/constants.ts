@@ -28,6 +28,9 @@ export const OBROLAN_WORKSPACE_PATH: string = import.meta.env?.VITE_OBROLAN_DIR 
 /** Claude model new obrolan chats start with; the composer can still switch it. */
 export const OBROLAN_DEFAULT_CLAUDE_MODEL = 'sonnet';
 
+/** localStorage key of the Claude model obrolan chats last used; read by the chat composer and the welcome screen. */
+export const OBROLAN_MODEL_STORAGE_KEY = 'claude-model-obrolan';
+
 // ---------------------------
 
 //----------------- BRANDING ------------

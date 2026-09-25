@@ -52,11 +52,24 @@ function readQueuedMessage(value: unknown): StoredQueuedMessage | null {
   return { content, options, attachments };
 }
 
+/**
+ * A scope's queue as stored: an ordered array, or a lone object written before
+ * the queue held more than one message. Entries are kept raw so a restored
+ * head goes back byte-for-byte, client-side id included.
+ */
+function readQueueEntries(value: unknown): unknown[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value && typeof value === 'object' ? [value] : [];
+}
+
 async function sendClaimedQueuedMessage(
   candidate: QueuedSessionMessageRecord,
+  head: unknown,
   runtime: ProviderRuntimeGateway,
 ): Promise<void> {
-  const message = readQueuedMessage(candidate.queuedMessage);
+  const message = readQueuedMessage(head);
   if (!message) {
     sessionDraftsDb.deleteEmptyDraft(candidate.userId, candidate.sessionId);
     return;
@@ -75,13 +88,16 @@ async function sendClaimedQueuedMessage(
   // The registry check and run reservation are separate operations. If a run
   // wins that tiny race, put the turn back so the next poll tries again.
   if (!result.started && result.error === 'A run was already in progress for this session.') {
-    sessionDraftsDb.restoreQueuedMessage(candidate);
+    sessionDraftsDb.restoreQueuedMessage(candidate, head);
     return;
   }
   sessionDraftsDb.deleteEmptyDraft(candidate.userId, candidate.sessionId);
 }
 
-/** Sends every persisted queued turn whose session is currently idle. */
+/**
+ * Sends the head of every persisted queue whose session is currently idle.
+ * One turn per session per pass: the rest wait for that turn to finish.
+ */
 export async function dispatchQueuedMessages(runtime: ProviderRuntimeGateway): Promise<number> {
   const candidates = sessionDraftsDb.listQueuedMessages();
   let claimed = 0;
@@ -90,11 +106,13 @@ export async function dispatchQueuedMessages(runtime: ProviderRuntimeGateway): P
     if (chatRunRegistry.isProcessing(candidate.sessionId)) {
       return;
     }
-    if (!sessionDraftsDb.claimQueuedMessage(candidate)) {
+    const [head, ...rest] = readQueueEntries(candidate.queuedMessage);
+    const remaining = rest.length > 0 ? JSON.stringify(rest) : null;
+    if (!sessionDraftsDb.claimQueuedMessage(candidate, remaining)) {
       return;
     }
     claimed += 1;
-    await sendClaimedQueuedMessage(candidate, runtime);
+    await sendClaimedQueuedMessage(candidate, head, runtime);
   }));
 
   return claimed;

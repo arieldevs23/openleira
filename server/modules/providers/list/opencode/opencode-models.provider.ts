@@ -357,6 +357,111 @@ const readConnectedOpenCodeProviderIds = async (): Promise<Set<string> | null> =
   return providerIds.size > 0 ? providerIds : null;
 };
 
+/** OpenCode Zen's OpenAI-compatible model listing; only ids come back, no labels. */
+const OPENCODE_ZEN_MODELS_URL = 'https://opencode.ai/zen/v1/models';
+const OPENCODE_ZEN_FETCH_TIMEOUT_MS = 5_000;
+const OPENCODE_ZEN_CACHE_TTL_MS = 10 * 60 * 1_000;
+
+let zenModelIdsCache: { ids: Set<string>; expiresAt: number } | null = null;
+
+/** The Zen API key OpenCode itself would use: its auth store first, then the env. */
+const readOpenCodeZenApiKey = async (): Promise<string | null> => {
+  const auth = await readOpenCodeJsonFile(
+    path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json'),
+  );
+  const zenAuth = readObjectRecord(auth?.opencode);
+  return readOptionalString(zenAuth?.key) ?? readOptionalString(process.env.OPENCODE_API_KEY) ?? null;
+};
+
+/**
+ * Lists the model ids Zen serves right now.
+ *
+ * Zen retires and renames models (the free tier churns weekly), so the curated
+ * catalog goes stale and a run on a retired id fails with an opaque
+ * "Unexpected server error". Returns null when the key is missing or the
+ * request fails, so the caller keeps the curated list instead of an empty one.
+ */
+const fetchOpenCodeZenModelIds = async (fetchImpl: typeof fetch): Promise<Set<string> | null> => {
+  if (zenModelIdsCache && zenModelIdsCache.expiresAt > Date.now()) {
+    return zenModelIdsCache.ids;
+  }
+
+  const apiKey = await readOpenCodeZenApiKey();
+  if (!apiKey) {
+    return null;
+  }
+
+  try {
+    const response = await fetchImpl(OPENCODE_ZEN_MODELS_URL, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(OPENCODE_ZEN_FETCH_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const body = readObjectRecord(await response.json());
+    const ids = new Set<string>();
+    for (const entry of Array.isArray(body?.data) ? body.data : []) {
+      const id = readOptionalString(readObjectRecord(entry)?.id);
+      if (id) {
+        ids.add(id);
+      }
+    }
+    if (ids.size === 0) {
+      return null;
+    }
+    zenModelIdsCache = { ids, expiresAt: Date.now() + OPENCODE_ZEN_CACHE_TTL_MS };
+    return ids;
+  } catch {
+    return null;
+  }
+};
+
+/** "nemotron-3.5-lightning-free" -> "Nemotron 3.5 Lightning Free". */
+const labelFromZenModelId = (modelId: string): string => modelId
+  .split('-')
+  .filter(Boolean)
+  .map((word) => (/^[a-z]/.test(word) ? word[0].toUpperCase() + word.slice(1) : word))
+  .join(' ');
+
+/**
+ * Replaces the curated Zen entries with what Zen actually serves: curated
+ * labels are kept for ids that still exist, retired ids are dropped, and new
+ * ids are appended with a label derived from the id. Non-Zen providers are
+ * untouched.
+ */
+const reconcileOpenCodeZenModels = (
+  definition: ProviderModelsDefinition,
+  liveZenIds: Set<string> | null,
+): ProviderModelsDefinition => {
+  if (!liveZenIds) {
+    return definition;
+  }
+
+  const isZen = (value: string): boolean => value.startsWith('opencode/');
+  const options = definition.OPTIONS.filter(
+    (option) => !isZen(option.value) || liveZenIds.has(option.value.slice('opencode/'.length)),
+  );
+  const curatedZenIds = new Set(options.filter((option) => isZen(option.value)).map((option) => option.value));
+  for (const id of liveZenIds) {
+    const value = `opencode/${id}`;
+    if (!curatedZenIds.has(value)) {
+      options.push({ value, label: labelFromZenModelId(id), description: 'OpenCode Zen' });
+    }
+  }
+  if (options.length === 0) {
+    return definition;
+  }
+
+  return {
+    ...definition,
+    OPTIONS: options,
+    DEFAULT: options.some((option) => option.value === definition.DEFAULT)
+      ? definition.DEFAULT
+      : options[0].value,
+  };
+};
+
 /**
  * Narrows the curated catalog to the providers OpenCode can route to.
  *
@@ -430,11 +535,16 @@ const parseOpenCodeSessionModelValue = (rawModel: unknown): string | null => {
 
 /** Provider registry model adapter for OpenCode predefined models and session metadata. */
 export class OpenCodeProviderModels implements IProviderModels {
+  // Injectable so tests can answer the Zen listing without the network.
+  constructor(private readonly fetchImpl: typeof fetch = globalThis.fetch) {}
+
   async getSupportedModels(): Promise<ProviderModelsDefinition> {
-    return filterOpenCodeModelsByProvider(
-      OPENCODE_PREDEFINED_MODELS,
-      await readConnectedOpenCodeProviderIds(),
-    );
+    const connectedProviderIds = await readConnectedOpenCodeProviderIds();
+    const catalog = filterOpenCodeModelsByProvider(OPENCODE_PREDEFINED_MODELS, connectedProviderIds);
+    if (connectedProviderIds && !connectedProviderIds.has('opencode')) {
+      return catalog;
+    }
+    return reconcileOpenCodeZenModels(catalog, await fetchOpenCodeZenModelIds(this.fetchImpl));
   }
 
   async getCurrentActiveModel(sessionId?: string): Promise<ProviderCurrentActiveModel> {

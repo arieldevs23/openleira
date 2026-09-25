@@ -739,6 +739,8 @@ export type CommandModalPayload = {
 
 /** A composer message queued while its session is still busy, holding the text, the in-memory and already-uploaded attachments and the send options snapshotted at queue time so it can be auto-sent unchanged once the session goes idle. */
 export type QueuedDraft = {
+  /** Stable per-entry id, persisted, so reorder/delete/interrupt target one entry. */
+  id: string;
   content: string;
   /** Browser files retained while this composer stays mounted, for editing. */
   attachments: File[];
@@ -923,6 +925,8 @@ export type FileTreeNode = {
   modified?: string;
   permissionsRwx?: string;
   children?: FileTreeNode[];
+  /** Directory the server did not walk (entry budget); children arrive on demand when expanded. */
+  truncated?: boolean;
   [key: string]: unknown;
 };
 

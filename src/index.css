@@ -1211,3 +1211,68 @@ h1, h2, h3, h4 {
     transform: none;
   }
 }
+
+/* Nebula canvas, shared by the splash and the welcome screen so the hand-off
+   between them reads as one surface. Two oversized radial-gradient sheets
+   rotate slowly in opposite directions; transforms only, no blur filter,
+   because iOS drops frames on animated blur over a large area. */
+.nebula {
+  background: hsl(var(--background));
+}
+.dark .nebula {
+  background: linear-gradient(180deg, #0b0b0e 0%, #0e1020 55%, #14225a 100%);
+}
+.nebula-layers {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.nebula-layer {
+  position: absolute;
+  inset: -45%;
+  opacity: 0.55;
+  will-change: transform;
+  background:
+    radial-gradient(38% 34% at 22% 32%, rgb(99 102 241 / 0.6), transparent 72%),
+    radial-gradient(34% 34% at 80% 42%, rgb(168 85 247 / 0.5), transparent 72%),
+    radial-gradient(44% 40% at 52% 84%, rgb(37 99 235 / 0.55), transparent 72%);
+  animation: nebula-spin 42s linear infinite;
+}
+.nebula-layer-2 {
+  opacity: 0.4;
+  background:
+    radial-gradient(30% 30% at 70% 22%, rgb(56 189 248 / 0.45), transparent 72%),
+    radial-gradient(36% 36% at 28% 76%, rgb(129 140 248 / 0.5), transparent 72%);
+  animation: nebula-spin 58s linear infinite reverse;
+}
+.dark .nebula-layer { opacity: 0.75; }
+.dark .nebula-layer-2 { opacity: 0.55; }
+@keyframes nebula-spin {
+  to { transform: rotate(360deg); }
+}
+/* The splash starts on the plain canvas; the nebula rises into it. */
+.nebula-layers-enter {
+  animation: nebula-rise 1.8s ease-out 0.7s both;
+}
+@keyframes nebula-rise {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Auth loading splash: logo settles in and breathes; on exit the whole
+   screen fades over the app already rendered beneath it. */
+@keyframes splash-enter {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes splash-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+@keyframes splash-exit {
+  to { opacity: 0; }
+}
+.splash-enter { animation: splash-enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.splash-logo { animation: splash-breathe 2.4s ease-in-out 0.6s infinite; }
+.splash-exit { animation: splash-exit 0.5s ease-in both; pointer-events: none; }

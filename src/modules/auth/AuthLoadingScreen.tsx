@@ -1,41 +1,40 @@
 import { useTranslation } from 'react-i18next';
 
 import { CLOUDCLI_WORDMARK_FONT_FAMILY } from '@/shared/constants';
+import { cn } from '@/shared/utils';
 
-const loadingDotAnimationDelays = ['0s', '0.15s', '0.3s'];
+type AuthLoadingScreenProps = {
+  /** Set while the app is already rendered underneath: the splash fades out over it. */
+  exiting?: boolean;
+};
 
 /** Rendered by the auth module's ProtectedRoute while the initial auth status check is in flight. */
-export default function AuthLoadingScreen() {
+export default function AuthLoadingScreen({ exiting = false }: AuthLoadingScreenProps) {
   const { t } = useTranslation('auth');
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+    <div
+      className={cn('nebula fixed inset-0 z-[10000] flex items-center justify-center p-4', exiting && 'splash-exit')}
+      role="status"
+      aria-live="polite"
+    >
+      <div aria-hidden className="nebula-layers nebula-layers-enter">
+        <div className="nebula-layer" />
+        <div className="nebula-layer nebula-layer-2" />
       </div>
 
-      <div className="relative text-center" role="status" aria-live="polite">
-        <div className="mb-5 flex justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25 ring-1 ring-inset ring-white/20">
-            <img src="/logo-64.png" alt="OpenLeira" className="h-9 w-9" />
-          </div>
-        </div>
-
+      <div className="splash-enter relative flex flex-col items-center">
+        <img
+          src="/logo-256.png"
+          alt="OpenLeira"
+          className="splash-logo h-20 w-20 rounded-[1.4rem] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
+        />
         <h1
-          className="mb-4 text-2xl font-bold tracking-tight text-foreground"
+          className="mt-5 text-xl font-semibold tracking-tight text-foreground"
           style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
         >
           OpenLeira
         </h1>
         <p className="sr-only">{t('misc.loadingState')}</p>
-        <div aria-hidden className="flex items-center justify-center gap-2">
-          {loadingDotAnimationDelays.map((delay) => (
-            <div
-              key={delay}
-              className="h-2 w-2 animate-bounce rounded-full bg-primary"
-              style={{ animationDelay: delay }}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );

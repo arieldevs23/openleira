@@ -96,27 +96,43 @@ export const sessionDraftsDb = {
     }));
   },
 
-  /** Atomically removes a queued turn only if it has not been edited since listing. */
-  claimQueuedMessage(candidate: QueuedSessionMessageRecord): boolean {
+  /**
+   * Atomically takes the head of a scope's queue, leaving `remaining` (the
+   * serialized rest of the queue, or null when it was the last entry) behind.
+   * Succeeds only if the queue has not been edited since listing.
+   */
+  claimQueuedMessage(candidate: QueuedSessionMessageRecord, remaining: string | null): boolean {
     const result = getConnection()
       .prepare(
         `UPDATE session_drafts
-         SET queued_message = NULL, updated_at = CURRENT_TIMESTAMP
+         SET queued_message = ?, updated_at = CURRENT_TIMESTAMP
          WHERE user_id = ? AND draft_scope = ? AND queued_message = ?`
       )
-      .run(candidate.userId, candidate.sessionId, candidate.claimToken);
+      .run(remaining, candidate.userId, candidate.sessionId, candidate.claimToken);
     return result.changes > 0;
   },
 
-  /** Restores a claim lost to the narrow race where another run starts first. */
-  restoreQueuedMessage(candidate: QueuedSessionMessageRecord): void {
-    getConnection()
-      .prepare(
-        `UPDATE session_drafts
-         SET queued_message = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE user_id = ? AND draft_scope = ? AND queued_message IS NULL`
-      )
-      .run(candidate.claimToken, candidate.userId, candidate.sessionId);
+  /**
+   * Puts a claimed head back at the front of the queue after losing the narrow
+   * race where another run starts first. Whatever the queue holds now (the
+   * rest, possibly edited by the client since) stays behind it.
+   */
+  restoreQueuedMessage(candidate: QueuedSessionMessageRecord, head: unknown): void {
+    const db = getConnection();
+    db.transaction(() => {
+      const row = db
+        .prepare('SELECT queued_message FROM session_drafts WHERE user_id = ? AND draft_scope = ?')
+        .get(candidate.userId, candidate.sessionId) as { queued_message: string | null } | undefined;
+      const current = parseQueuedMessage(row?.queued_message ?? null);
+      const rest = Array.isArray(current) ? current : current ? [current] : [];
+      db.prepare(
+        `INSERT INTO session_drafts (user_id, draft_scope, draft_text, queued_message, updated_at)
+         VALUES (?, ?, '', ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(user_id, draft_scope) DO UPDATE SET
+           queued_message = excluded.queued_message,
+           updated_at = CURRENT_TIMESTAMP`
+      ).run(candidate.userId, candidate.sessionId, JSON.stringify([head, ...rest]));
+    })();
   },
 
   /** Removes the placeholder row left after its last queued turn is claimed. */

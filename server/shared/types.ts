@@ -1201,6 +1201,11 @@ export type FileTreeNode = {
   permissionsRwx: string;
   isSymlink?: boolean;
   children?: FileTreeNode[];
+  /**
+   * True when this directory's children were not walked because the tree's
+   * entry budget ran out. Clients list it on demand via `?path=` instead.
+   */
+  truncated?: boolean;
 };
 
 /**
@@ -1344,7 +1349,11 @@ export type FileTreeServices = {
   }>;
   listProjectFiles(
     projectId: string,
-    options?: { respectGitignore: boolean },
+    options?: {
+      respectGitignore: boolean;
+      /** Directory inside the project to list instead of the root; used to expand a `truncated` node. */
+      path?: string | null;
+    },
   ): Promise<FileTreeNode[]>;
   createEntry(input: {
     projectId: string;

@@ -18,6 +18,8 @@ import type { QueuedSendOptions } from '@/shared/types';
 
 /** A queued message as it is stored: text plus the send options it was composed under. */
 export type StoredQueuedMessage = {
+  /** Client-assigned, stable across reloads; absent on entries queued before the queue held several. */
+  id?: string;
   content: string;
   options?: QueuedSendOptions;
   /** Legacy image-only descriptors retained for queued draft compatibility. */
@@ -29,9 +31,13 @@ export type StoredQueuedMessage = {
   attachments?: unknown[];
 };
 
+/**
+ * `queuedMessage` keeps its historical name but holds the scope's ordered
+ * queue; the server dispatcher sends the head once the session is idle.
+ */
 type DraftRecord = {
   text: string;
-  queuedMessage: StoredQueuedMessage | null;
+  queuedMessage: StoredQueuedMessage[] | null;
 };
 
 /** Fired after any draft changes, from a local write or from a hydrate. */
@@ -58,6 +64,18 @@ const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 );
 
+/**
+ * Accepts the stored queue in either shape: the current array, or the lone
+ * object written before a scope could queue more than one message.
+ */
+function toQueue(value: unknown): StoredQueuedMessage[] | null {
+  const entries = Array.isArray(value) ? value : isRecord(value) ? [value] : [];
+  const queue = entries.filter(
+    (entry): entry is StoredQueuedMessage => isRecord(entry) && typeof entry.content === 'string',
+  );
+  return queue.length > 0 ? queue : null;
+}
+
 const isEmptyDraft = (draft: DraftRecord): boolean => (
   draft.text === '' && draft.queuedMessage === null
 );
@@ -81,9 +99,7 @@ function readMirror(): Map<string, DraftRecord> {
       }
       restored.set(scope, {
         text: typeof value.text === 'string' ? value.text : '',
-        queuedMessage: isRecord(value.queuedMessage)
-          ? (value.queuedMessage as StoredQueuedMessage)
-          : null,
+        queuedMessage: toQueue(value.queuedMessage),
       });
     }
     return restored;
@@ -110,10 +126,11 @@ function notifyListeners(): void {
   }
 }
 
-function flushServerWrites(): void {
+function flushServerWrites(): Promise<void> {
   serverWriteTimer = null;
   const scopes = [...pendingScopes];
   pendingScopes.clear();
+  const requests: Promise<unknown>[] = [];
 
   for (const scope of scopes) {
     const draft = drafts.get(scope);
@@ -123,22 +140,23 @@ function flushServerWrites(): void {
     // keystroke re-sends it.
     try {
       if (!draft || isEmptyDraft(draft)) {
-        void api.user.deleteDraft(scope).catch((error: unknown) => {
+        requests.push(api.user.deleteDraft(scope).catch((error: unknown) => {
           console.error('Failed to delete chat draft:', error);
-        });
+        }));
         continue;
       }
 
-      void api.user.saveDraft(scope, {
+      requests.push(api.user.saveDraft(scope, {
         text: draft.text,
         queuedMessage: draft.queuedMessage,
       }).catch((error: unknown) => {
         console.error('Failed to save chat draft:', error);
-      });
+      }));
     } catch (error) {
       console.error('Failed to save chat draft:', error);
     }
   }
+  return Promise.all(requests).then(() => undefined);
 }
 
 function queueServerWrite(scope: string): void {
@@ -147,15 +165,15 @@ function queueServerWrite(scope: string): void {
   if (serverWriteTimer !== null) {
     clearTimeout(serverWriteTimer);
   }
-  serverWriteTimer = setTimeout(flushServerWrites, SERVER_WRITE_DEBOUNCE_MS);
+  serverWriteTimer = setTimeout(() => void flushServerWrites(), SERVER_WRITE_DEBOUNCE_MS);
 }
 
-function flushServerWritesNow(): void {
+function flushServerWritesNow(): Promise<void> {
   if (serverWriteTimer !== null) {
     clearTimeout(serverWriteTimer);
     serverWriteTimer = null;
   }
-  flushServerWrites();
+  return flushServerWrites();
 }
 
 function updateDraft(scope: string, update: Partial<DraftRecord>): void {
@@ -188,34 +206,33 @@ export function writeDraftText(scope: string, text: string): void {
   updateDraft(scope, { text });
 }
 
-export function readQueuedMessage(scope: string): StoredQueuedMessage | null {
-  const queued = drafts.get(scope)?.queuedMessage ?? null;
-  if (!queued) {
-    return null;
-  }
-
-  const attachments = Array.isArray(queued.attachments)
-    ? queued.attachments
-    : Array.isArray(queued.images)
-      ? queued.images
+/**
+ * Reads one scope's queue in send order, dropping entries with nothing to
+ * send. Entries from before the queue held several get a positional id.
+ */
+export function readQueuedMessages(scope: string): StoredQueuedMessage[] {
+  const queue = drafts.get(scope)?.queuedMessage ?? [];
+  return queue.flatMap((queued, index) => {
+    const attachments = Array.isArray(queued.attachments)
+      ? queued.attachments
+      : Array.isArray(queued.images)
+        ? queued.images
+        : [];
+    return queued.content.trim() || attachments.length > 0
+      ? [{ ...queued, id: queued.id ?? `legacy-${index}`, attachments }]
       : [];
-
-  // A queued message with neither text nor attachments has nothing to send.
-  return queued.content.trim() || attachments.length > 0
-    ? { ...queued, attachments }
-    : null;
+  });
 }
 
-export function writeQueuedMessage(scope: string, message: StoredQueuedMessage): void {
-  updateDraft(scope, { queuedMessage: message });
-  // Queueing is a send-like action, so persist it before the tab can close.
-  flushServerWritesNow();
-}
-
-export function clearQueuedMessage(scope: string): void {
-  updateDraft(scope, { queuedMessage: null });
-  // Editing or cancelling must beat the server's next dispatcher poll.
-  flushServerWritesNow();
+/**
+ * Replaces one scope's whole queue; an empty list clears it. Resolves once the
+ * server has the write, so a caller can order a later read after it.
+ */
+export function writeQueuedMessages(scope: string, queue: StoredQueuedMessage[]): Promise<void> {
+  updateDraft(scope, { queuedMessage: queue.length > 0 ? queue : null });
+  // Queueing is a send-like action, and editing or cancelling must beat the
+  // server's next dispatcher poll, so persist before the tab can close.
+  return flushServerWritesNow();
 }
 
 /** Subscribes to any draft change; returns the unsubscribe function. */
@@ -262,9 +279,7 @@ export async function hydrateChatDrafts(): Promise<void> {
 
     merged.set(scope, {
       text: typeof draft.text === 'string' ? draft.text : '',
-      queuedMessage: isRecord(draft.queuedMessage)
-        ? (draft.queuedMessage as StoredQueuedMessage)
-        : null,
+      queuedMessage: toQueue(draft.queuedMessage),
     });
   }
 

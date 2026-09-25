@@ -101,6 +101,11 @@
       "openPanel": "buka panel shortcut"
     }
   },
+  "mobileGroups": {
+    "general": "umum",
+    "agents": "agent & integrasi",
+    "info": "info"
+  },
   "mainTabs": {
     "label": "pengaturan",
     "agents": "agent",
@@ -112,7 +117,7 @@
     "browser": "browser",
     "notifications": "notifikasi",
     "plugins": "plugin",
-    "about": "tentang"
+    "about": "tentang aplikasi"
   },
   "notifications": {
     "title": "notifikasi",
@@ -764,7 +769,20 @@
     "unknownError": "ada yang error, ga jelas apa"
   },
   "about": {
-    "tagline": "UI asisten coding AI open source",
-    "licensed": "lisensi AGPL-3.0"
+    "tagline": "workspace coding AI: ngobrol sama agent coding, urus project, file, git sama terminal dari satu tempat.",
+    "licensed": "lisensi AGPL-3.0",
+    "version": "versi {{version}}",
+    "featuresTitle": "fitur",
+    "founderRole": "ceo & founder",
+    "features": {
+      "chat": "chat ai",
+      "queue": "antrean pesan",
+      "schedule": "pesan terjadwal",
+      "files": "file & editor",
+      "git": "panel git",
+      "shell": "terminal",
+      "extensions": "mcp, skill & plugin",
+      "voice": "input suara"
+    }
   }
 }

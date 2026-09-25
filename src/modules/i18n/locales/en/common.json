@@ -348,7 +348,8 @@
     "unknownProvider": "Unknown",
     "browseFolders": "Browse folders",
     "closeLoginModal": "Close login modal",
-    "pluginLoadFailed": "Plugin failed to load: {{error}}"
+    "pluginLoadFailed": "Plugin failed to load: {{error}}",
+    "settings": "Settings"
   },
   "workflow": {
     "title": "Workflow",
@@ -390,5 +391,15 @@
     "taskRowNotLoaded": "Launched earlier in this conversation; click to load it",
     "taskOfAgent": "Launched by one of this session's agents"
   },
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "welcome": {
+    "title": "What are we doing today?",
+    "modeObrolan": "Plain chat",
+    "modeProject": "Project",
+    "placeholder": "Ask OpenLeira",
+    "send": "Send",
+    "pickModel": "Choose model",
+    "addWorkspace": "Add workspace",
+    "activeProvider": "Active provider"
+  }
 }

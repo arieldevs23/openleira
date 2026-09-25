@@ -292,13 +292,28 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
       const isForbiddenSystemDir = FORBIDDEN_WORKSPACE_PATHS.includes(normalizeProjectPath(itemPath));
 
       if (entry.isDirectory() && currentDepth < maximumDepth && !isForbiddenSystemDir) {
-        item.children = await buildFileTree(
-          itemPath,
-          maximumDepth,
-          currentDepth + 1,
-          includeEntry,
-          remainingEntries,
-        );
+        // Once the shared budget is spent, deeper directories are handed back
+        // unexpanded rather than failing the whole tree; the client lists them
+        // on demand through `?path=`. Only the listed directory itself can
+        // still fail, when it alone holds more entries than the budget.
+        if (remainingEntries.value <= 0) {
+          item.truncated = true;
+          return item;
+        }
+        try {
+          item.children = await buildFileTree(
+            itemPath,
+            maximumDepth,
+            currentDepth + 1,
+            includeEntry,
+            remainingEntries,
+          );
+        } catch (error) {
+          if (!(error instanceof AppError) || error.code !== 'FILE_TREE_TOO_LARGE') {
+            throw error;
+          }
+          item.truncated = true;
+        }
       }
 
       return item;
@@ -513,7 +528,10 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
         }
       }
 
-      return buildFileTree(projectRoot, 10, 0, includeEntry);
+      const listedDirectory = options?.path?.trim()
+        ? resolvePathInsideProject(projectRoot, options.path)
+        : projectRoot;
+      return buildFileTree(listedDirectory, 10, 0, includeEntry);
     },
 
     async createEntry(input) {

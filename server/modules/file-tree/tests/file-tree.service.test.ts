@@ -297,7 +297,7 @@ test('listProjectFiles abandons a directory stream as soon as the entry limit is
   assert.equal(streamedEntries, 10_001);
 });
 
-test('listProjectFiles shares the entry limit across nested directories', async () => {
+test('listProjectFiles hands back over-budget nested directories as truncated', async () => {
   const projectRoot = path.resolve('file-tree-test-project');
   const firstDirectory = path.join(projectRoot, 'first');
   const secondDirectory = path.join(projectRoot, 'second');
@@ -323,12 +323,28 @@ test('listProjectFiles shares the entry limit across nested directories', async 
   });
   const service = createFileTreeService(createDependencies(fileSystem, projectRoot));
 
-  await assert.rejects(
-    service.listProjectFiles('project-1'),
-    (error: unknown) => error instanceof AppError
-      && error.code === 'FILE_TREE_TOO_LARGE'
-      && error.statusCode === 413,
-  );
+  // Together the two directories exceed the budget; the root stays listable
+  // and whichever directories ran out of budget are marked instead of
+  // failing. Sibling walks share the budget concurrently, so either one or
+  // both end up truncated depending on interleaving.
+  const tree = await service.listProjectFiles('project-1');
+  assert.deepEqual(tree.map((node) => node.name).sort(), ['first', 'second']);
+  const truncated = tree.filter((node) => node.truncated === true);
+  assert.ok(truncated.length >= 1);
+  for (const node of tree) {
+    if (node.truncated) {
+      assert.equal(node.children, undefined);
+    } else {
+      assert.equal(node.children?.length, 5_000);
+    }
+  }
+
+  // The truncated directory can then be listed on its own through `path`.
+  const subtree = await service.listProjectFiles('project-1', {
+    respectGitignore: false,
+    path: truncated[0].name,
+  });
+  assert.equal(subtree.length, 5_000);
 });
 
 test('readTextFile rejects traversal before invoking the filesystem adapter', async () => {

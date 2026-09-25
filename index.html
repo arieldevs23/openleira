@@ -25,6 +25,12 @@
     
     <!-- Prevent zoom on iOS -->
     <meta name="format-detection" content="telephone=no" />
+
+    <!-- Painted before any stylesheet loads, so the PWA never opens on a black frame. -->
+    <style>
+      html { background: #f8f8f6; }
+      html.dark { background: #141414; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

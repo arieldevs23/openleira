@@ -8,7 +8,22 @@ type UseFileTreeDataResult = {
   loading: boolean;
   error: string | null;
   refreshFiles: () => void;
+  /** Fetches the children of a `truncated` directory and splices them into the tree. */
+  loadDirectory: (directoryPath: string) => Promise<void>;
 };
+
+/** Returns a copy of `nodes` with the node at `directoryPath` given `children`. */
+function withDirectoryChildren(nodes: FileTreeNode[], directoryPath: string, children: FileTreeNode[]): FileTreeNode[] {
+  return nodes.map((node) => {
+    if (node.path === directoryPath) {
+      return { ...node, children, truncated: false };
+    }
+    if (node.type === 'directory' && node.children && directoryPath.startsWith(`${node.path}/`)) {
+      return { ...node, children: withDirectoryChildren(node.children, directoryPath, children) };
+    }
+    return node;
+  });
+}
 
 const DEFAULT_LOAD_ERROR = 'Unable to load the file tree for this project.';
 
@@ -37,6 +52,22 @@ export function useFileTreeData(selectedProject: Project | null): UseFileTreeDat
   const refreshFiles = useCallback(() => {
     setRefreshKey((prev) => prev + 1);
   }, []);
+
+  const loadDirectory = useCallback(async (directoryPath: string) => {
+    const projectId = selectedProject?.projectId;
+    if (!projectId) return;
+    try {
+      const response = await api.getFiles(projectId, { path: directoryPath });
+      if (!response.ok) {
+        console.error('Directory fetch failed:', response.status, await response.text());
+        return;
+      }
+      const children = (await response.json()) as FileTreeNode[];
+      setFiles((current) => withDirectoryChildren(current, directoryPath, children));
+    } catch (error) {
+      console.error('Error fetching directory:', error);
+    }
+  }, [selectedProject?.projectId]);
 
   useEffect(() => {
     // File-tree requests use the DB projectId; the backend resolves it to the
@@ -111,5 +142,6 @@ export function useFileTreeData(selectedProject: Project | null): UseFileTreeDat
     loading,
     error,
     refreshFiles,
+    loadDirectory,
   };
 }

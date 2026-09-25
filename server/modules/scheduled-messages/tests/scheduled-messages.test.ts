@@ -94,6 +94,28 @@ test('a queued message is sent by the server without a browser connection', asyn
   });
 });
 
+test('a multi-message queue sends only its head and keeps the rest in order', async () => {
+  await withIsolatedDatabase(async (userId) => {
+    sessionDraftsDb.saveDraft(userId, SESSION_ID, {
+      text: '',
+      queuedMessage: [
+        { id: 'a', content: 'first' },
+        { id: 'b', content: 'second' },
+        { id: 'c', content: 'third' },
+      ],
+    });
+
+    const runs: RunCall[] = [];
+    assert.equal(await dispatchQueuedMessages(createRuntime(runs)), 1);
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].command, 'first');
+    assert.deepEqual(sessionDraftsDb.getDrafts(userId)[0]?.queuedMessage, [
+      { id: 'b', content: 'second' },
+      { id: 'c', content: 'third' },
+    ]);
+  });
+});
+
 test('a queued message stays pending while its session is busy', async () => {
   await withIsolatedDatabase(async (userId) => {
     sessionDraftsDb.saveDraft(userId, SESSION_ID, {

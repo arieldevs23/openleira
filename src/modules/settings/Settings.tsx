@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ProviderLoginModal } from '@/modules/provider-auth';
 import { Button } from '@/shared/ui';
-import SettingsSidebar from '@/modules/settings/SettingsSidebar';
+import SettingsSidebar, { SettingsMobileMenu, getSettingsTabLabelKey } from '@/modules/settings/SettingsSidebar';
 import AgentsSettingsTab from '@/modules/settings/tabs/agents-settings/AgentsSettingsTab';
 import AppearanceSettingsTab from '@/modules/settings/tabs/AppearanceSettingsTab';
 import CredentialsSettingsTab from '@/modules/settings/tabs/api-settings/CredentialsSettingsTab';
@@ -18,6 +18,7 @@ import AboutTab from '@/modules/settings/tabs/AboutTab';
 import { useSettingsController } from '@/modules/settings/hooks/useSettingsController';
 import { useWebPush } from '@/modules/settings/hooks/useWebPush';
 import type { AgentSettingsProject } from '@/shared/types';
+import { cn } from '@/shared/utils';
 
 type SettingsProps = {
   isOpen: boolean;
@@ -69,6 +70,16 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
     isOpen,
     initialTab
   });
+
+  // Mobile only: the grouped menu is its own screen and a section is pushed on
+  // top of it. A generic open lands on the menu; a deep link (e.g. from the
+  // browser panel) goes straight to its section.
+  const [isMobileMenuShown, setIsMobileMenuShown] = useState(true);
+  useEffect(() => {
+    if (isOpen) {
+      setIsMobileMenuShown(initialTab === 'tools' || initialTab === 'agents');
+    }
+  }, [initialTab, isOpen]);
 
   const {
     permission: pushPermission,
@@ -189,8 +200,35 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
       onClick={handleBackdropClick}
     >
       <div className="flex h-full w-full flex-col overflow-hidden border border-border bg-background shadow-2xl md:h-[90vh] md:max-w-4xl md:rounded-xl">
-        {/* Header */}
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-4 py-3 md:px-5">
+        {/* Mobile header: large title on the menu, back + centered title on a section */}
+        <div className="grid flex-shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center px-2 pb-2 pt-3 md:hidden">
+          {isMobileMenuShown ? (
+            <span />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuShown(true)}
+              aria-label={t('title')}
+              className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full text-foreground active:bg-accent"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+          )}
+          <h2 className="truncate text-center text-[17px] font-semibold text-foreground">
+            {isMobileMenuShown ? t('title') : t(getSettingsTabLabelKey(activeTab))}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full text-muted-foreground active:bg-accent"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Desktop header */}
+        <div className="hidden flex-shrink-0 items-center justify-between border-b border-border px-4 py-3 md:flex md:px-5">
           <h2 className="text-base font-semibold text-foreground">{t('title')}</h2>
           <div className="flex items-center gap-2">
             {saveStatus === 'success' && (
@@ -211,8 +249,17 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
         <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
           <SettingsSidebar activeTab={activeTab} onChange={setActiveTab} />
 
+          {isMobileMenuShown && (
+            <SettingsMobileMenu
+              onSelect={(tab) => {
+                setActiveTab(tab);
+                setIsMobileMenuShown(false);
+              }}
+            />
+          )}
+
           {/* Content */}
-          <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <main className={cn('min-w-0 flex-1 overflow-y-auto overflow-x-hidden', isMobileMenuShown && 'hidden md:block')}>
             <div key={activeTab} className="settings-content-enter min-w-0 space-y-6 overflow-x-hidden p-4 pb-safe-area-inset-bottom md:space-y-8 md:p-6">
               {activeTab === 'appearance' && (
                 <AppearanceSettingsTab

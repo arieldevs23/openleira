@@ -101,6 +101,11 @@
       "openPanel": "Open shortcuts panel"
     }
   },
+  "mobileGroups": {
+    "general": "General",
+    "agents": "Agents & integrations",
+    "info": "Info"
+  },
   "mainTabs": {
     "label": "Settings",
     "agents": "Agents",
@@ -770,7 +775,20 @@
     "unknownError": "Unknown error"
   },
   "about": {
-    "tagline": "Open-source AI coding assistant interface",
-    "licensed": "Licensed under AGPL-3.0"
+    "tagline": "An AI coding workspace: chat with coding agents, manage projects, files, git and terminals from one place.",
+    "licensed": "Licensed under AGPL-3.0",
+    "version": "Version {{version}}",
+    "featuresTitle": "Features",
+    "founderRole": "CEO & Founder",
+    "features": {
+      "chat": "AI chat",
+      "queue": "Message queue",
+      "schedule": "Scheduled messages",
+      "files": "Files & editor",
+      "git": "Git panel",
+      "shell": "Terminal",
+      "extensions": "MCP, skills & plugins",
+      "voice": "Voice input"
+    }
   }
 }

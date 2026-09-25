@@ -99,6 +99,8 @@
           "src/shared/codeEditorSettings.ts",
           "src/shared/userSettings.ts",
           "src/shared/chatDrafts.ts",
+          "src/shared/composerHandoff.ts",
+          "src/shared/appReadiness.ts",
           "src/shared/syntaxHighlighter.ts"
         ],
         "mode": "file"

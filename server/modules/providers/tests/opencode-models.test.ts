@@ -19,9 +19,15 @@ const OPENCODE_ENV_KEYS = ['OPENCODE_API_KEY', 'ANTHROPIC_API_KEY', 'OPENAI_API_
  * reports depends on the fixture rather than on the providers the machine
  * running the suite happens to be logged into.
  */
+/** Zen listing stub: the curated cases expect no live reconciliation, so it fails. */
+const offlineZenFetch: typeof fetch = async () => {
+  throw new Error('offline');
+};
+
 const withOpenCodeHome = async (
   setUp: (homeDir: string) => Promise<void>,
   runTest: (adapter: OpenCodeProviderModels) => Promise<void>,
+  zenFetch: typeof fetch = offlineZenFetch,
 ): Promise<void> => {
   const homeDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-catalog-'));
   const originalHomedir = os.homedir;
@@ -34,7 +40,7 @@ const withOpenCodeHome = async (
 
   try {
     await setUp(homeDir);
-    await runTest(new OpenCodeProviderModels());
+    await runTest(new OpenCodeProviderModels(zenFetch));
   } finally {
     (os as any).homedir = originalHomedir;
     for (const [key, value] of originalEnv) {
@@ -233,6 +239,34 @@ const writeOpenCodeSessionDatabase = async (homeDir: string, rows: Array<Record<
     db.close();
   }
 };
+
+test('OpenCode reconciles Zen models against the live listing', async () => {
+  // Zen retires ids without notice; a retired one fails the run with an opaque
+  // server error, so the picker must follow the live list: keep curated
+  // labels, drop the dead, append the new, and move the default if it died.
+  const curatedZen = OPENCODE_PREDEFINED_MODELS.OPTIONS.filter((option) => option.value.startsWith('opencode/'));
+  const survivor = curatedZen[curatedZen.length - 1];
+  const liveIds = [survivor.value.slice('opencode/'.length), 'nemotron-3.5-lightning-free'];
+  const zenFetch: typeof fetch = async (input, init) => {
+    assert.equal(String(input), 'https://opencode.ai/zen/v1/models');
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer zen-key');
+    return new Response(JSON.stringify({ data: liveIds.map((id) => ({ id })) }), { status: 200 });
+  };
+
+  await withOpenCodeHome(
+    (homeDir) => writeOpenCodeAuth(homeDir, { opencode: { type: 'api', key: 'zen-key' } }),
+    async (adapter) => {
+      const catalog = await adapter.getSupportedModels();
+      const zenOptions = catalog.OPTIONS.filter((option) => option.value.startsWith('opencode/'));
+
+      assert.deepEqual(zenOptions.map((option) => option.value), [survivor.value, 'opencode/nemotron-3.5-lightning-free']);
+      assert.equal(zenOptions[0].label, survivor.label);
+      assert.equal(zenOptions[1].label, 'Nemotron 3.5 Lightning Free');
+      assert.equal(catalog.DEFAULT, survivor.value);
+    },
+    zenFetch,
+  );
+});
 
 test('OpenCode composes the provider prefix into session model ids', async () => {
   // The lookup translates the app session id through the sessions database,

@@ -52,7 +52,7 @@ export default function FileTree({ selectedProject, onFileOpen, revealDirectory 
     }
   }, [toast]);
 
-  const { files, loading, error, refreshFiles } = useFileTreeData(selectedProject);
+  const { files, loading, error, refreshFiles, loadDirectory } = useFileTreeData(selectedProject);
   const { viewMode, changeViewMode } = useFileTreeViewMode();
   const { expandedDirs, toggleDirectory, expandDirectories, collapseAll } = useExpandedDirectories();
   const { searchQuery, setSearchQuery, filteredFiles } = useFileTreeSearch({
@@ -143,6 +143,10 @@ export default function FileTree({ selectedProject, onFileOpen, revealDirectory 
   const handleItemClick = useCallback(
     (item: FileTreeNode) => {
       if (item.type === 'directory') {
+        // A truncated directory has no children yet; the first expand fetches them.
+        if (item.truncated && !item.children) {
+          void loadDirectory(item.path);
+        }
         toggleDirectory(item.path);
         return;
       }
@@ -161,7 +165,7 @@ export default function FileTree({ selectedProject, onFileOpen, revealDirectory 
 
       onFileOpen?.(item.path);
     },
-    [onFileOpen, selectedProject, toggleDirectory],
+    [loadDirectory, onFileOpen, selectedProject, toggleDirectory],
   );
 
   const formatRelativeTimeLabel = useCallback(
