@@ -1347,3 +1347,32 @@ export function findApplicationRoot(startDirectory: string): string {
     ? path.dirname(parentDirectory)
     : parentDirectory;
 }
+
+// ---------------------------
+//----------------- CANVAS-ONLY PROJECT POLICY ------------
+
+/**
+ * Folder of the built-in free-chat workspace ("obrolan"). It mirrors the
+ * frontend's `OBROLAN_WORKSPACE_PATH`: `VITE_OBROLAN_DIR`, else
+ * `<VITE_HOME_DIR>/obrolan`, else `/home/hermes/obrolan`. Read on every call so
+ * tests and a reloaded `.env` take effect without a restart.
+ */
+export function getFreeChatWorkspacePath(): string {
+  const homeDirectory = process.env.VITE_HOME_DIR || '/home/hermes';
+  return path.resolve(process.env.VITE_OBROLAN_DIR || path.join(homeDirectory, 'obrolan'));
+}
+
+/**
+ * Whether a user may prompt an agent directly (chat) in this folder. Projects
+ * are prompted only through the workspace canvas, so only the free-chat
+ * workspace and folders inside it qualify. Used by the chat WebSocket and by
+ * session creation; the canvas's own runs (`runDetachedChatTurn`) never ask.
+ */
+export function isFreeChatPath(candidate: string | null | undefined): boolean {
+  if (!candidate) {
+    return false;
+  }
+  const root = getFreeChatWorkspacePath();
+  const resolved = path.resolve(candidate);
+  return resolved === root || resolved.startsWith(`${root}${path.sep}`);
+}

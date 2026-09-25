@@ -1267,6 +1267,12 @@ export type FileTreeFileSystem = {
  */
 export type FileTreeProjectGateway = {
   getProjectPathById(projectId: string): string | null | Promise<string | null>;
+  /**
+   * Whether a workspace-canvas task is running in this project folder. While it
+   * is, File Tree refuses every edit (save, create, rename, delete, upload) so
+   * the user and the agents never write the same files at once.
+   */
+  isProjectBusy(projectPath: string): boolean;
 };
 
 /**

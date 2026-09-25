@@ -319,6 +319,20 @@ export const officeCasesDb = {
     return this.getTask(taskId);
   },
 
+  /**
+   * Is a case running in the workspace of this project folder? File Tree and the
+   * shell use it to keep the user's edits away from files the agents are writing.
+   */
+  hasRunningCaseForProjectPath(projectPath: string): boolean {
+    const row = getConnection().prepare(`
+      SELECT 1 FROM office_cases c
+      JOIN offices o ON o.id = c.office_id
+      WHERE o.project_path = ? AND c.status = 'running'
+      LIMIT 1
+    `).get(projectPath);
+    return Boolean(row);
+  },
+
   /** Does any case of this office still reference the division through a live task? */
   hasActiveTasksForDivision(divisionId: string): boolean {
     const row = getConnection().prepare(`

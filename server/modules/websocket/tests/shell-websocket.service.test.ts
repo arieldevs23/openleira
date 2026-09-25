@@ -120,7 +120,50 @@ test('shell output detects and normalizes a wrapped authentication URL', () => {
   pty.emitExit();
 });
 
-test('bypassPermissions launches claude with --dangerously-skip-permissions', () => {
+/** Agent CLIs start only in the free-chat workspace; these tests use the current folder as that workspace. */
+function withFreeChatAt(directory: string, body: () => void): void {
+  const previous = process.env.VITE_OBROLAN_DIR;
+  process.env.VITE_OBROLAN_DIR = directory;
+  try {
+    body();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.VITE_OBROLAN_DIR;
+    } else {
+      process.env.VITE_OBROLAN_DIR = previous;
+    }
+  }
+}
+
+test('in a project folder the terminal is a plain shell, never an agent CLI, and warns while a task runs', () => {
+  const spawned: Array<{ shell: string; args: string[] }> = [];
+  const socket = createFakeSocket();
+  handleShellConnection(socket as never, {
+    resolveProviderSessionId: () => null,
+    spawnPty: ((shell: string, args: string | string[]) => {
+      spawned.push({ shell, args: Array.isArray(args) ? args : [args] });
+      return createFakePty() as never;
+    }) as never,
+    isProjectBusy: () => true,
+  });
+  withFreeChatAt(path.join(os.tmpdir(), 'not-this-project-obrolan'), () => {
+    socket.emit('message', JSON.stringify({
+      type: 'init',
+      projectPath: process.cwd(),
+      sessionId: `canvas-only-${Date.now()}`,
+      hasSession: false,
+      provider: 'claude',
+    }));
+  });
+
+  assert.equal(spawned.length, 1);
+  assert.ok(!spawned[0].args.some((arg) => arg.includes('claude')));
+  const output = socket.frames.map((frame) => JSON.parse(frame) as { data?: string }).map((frame) => frame.data ?? '').join('');
+  assert.match(output, /prompted through the workspace canvas/);
+  assert.match(output, /workspace task is running/);
+});
+
+test('bypassPermissions launches claude with --dangerously-skip-permissions', () => withFreeChatAt(process.cwd(), () => {
   const spawnedCommands: string[] = [];
   const dependencies = {
     resolveProviderSessionId: () => null,
@@ -158,9 +201,9 @@ test('bypassPermissions launches claude with --dangerously-skip-permissions', ()
   );
 
   assert.deepEqual(spawnedCommands, ['claude --dangerously-skip-permissions', 'claude']);
-});
+}));
 
-test('bypassPermissions carries through to resumed claude sessions', () => {
+test('bypassPermissions carries through to resumed claude sessions', () => withFreeChatAt(process.cwd(), () => {
   const spawnedCommands: string[] = [];
   const dependencies = {
     resolveProviderSessionId: () => 'resumed-session-id',
@@ -191,7 +234,7 @@ test('bypassPermissions carries through to resumed claude sessions', () => {
       'claude --resume "resumed-session-id" --dangerously-skip-permissions || claude --dangerously-skip-permissions'
     );
   }
-});
+}));
 
 test('a missing project directory is reported as an error frame and starts no pty', () => {
   const socket = createFakeSocket();
