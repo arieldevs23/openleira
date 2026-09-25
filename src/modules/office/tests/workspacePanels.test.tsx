@@ -113,3 +113,24 @@ test('the result files panel says where the work was saved and shows the changed
   fireEvent.click(screen.getByRole('button', { name: /server/ }));
   assert.equal(screen.queryByText('app.ts'), null, 'a folder folds');
 });
+
+test('right-click on a result file or folder offers downloads', () => {
+  const task = (ref: string, divisionId: string, changedFiles: string[]) => ({
+    id: ref, ref, divisionId, changedFiles,
+  }) as unknown as OfficeTask;
+  render(
+    <ResultFilesPanel
+      projectId="shop"
+      projectPath="/srv/shop"
+      tasks={[task('T1', 'div-backend', ['server/app.ts', 'server/db.ts', 'README.md'])]}
+      divisions={[division('backend')]}
+    />,
+  );
+  fireEvent.contextMenu(screen.getByText('app.ts'));
+  assert.ok(screen.getByRole('menuitem', { name: 'Download file' }));
+  fireEvent.keyDown(document, { key: 'Escape' });
+
+  fireEvent.contextMenu(screen.getByRole('button', { name: /server/ }));
+  assert.ok(screen.getByRole('menuitem', { name: 'Download folder (zip)' }));
+  assert.ok(screen.getByRole('menuitem', { name: 'Download changed files only (zip, 2)' }));
+});

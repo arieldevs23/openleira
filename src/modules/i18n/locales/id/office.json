@@ -358,7 +358,15 @@
     "none": "task ini belum nulis file apa pun.",
     "count": "{{count}} file berubah",
     "tree": "file yang berubah",
-    "outside": "di luar folder"
+    "outside": "di luar folder",
+    "downloadFile": "download file",
+    "copyFilePath": "salin path lengkap",
+    "downloadFolder": "download folder (zip)",
+    "downloadChanged": "download file yang diubah aja (zip, {{count}})",
+    "downloadMenu": "download",
+    "rightClickHint": "klik kanan file atau folder buat download.",
+    "preparing": "lagi nyiapin download…",
+    "menu": "aksi file"
   },
   "usage": {
     "loading": "lagi baca pemakaian token...",

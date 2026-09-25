@@ -369,7 +369,15 @@
     "count_one": "{{count}} file changed",
     "count_other": "{{count}} files changed",
     "tree": "Changed files",
-    "outside": "Outside the folder"
+    "outside": "Outside the folder",
+    "downloadFile": "Download file",
+    "copyFilePath": "Copy full path",
+    "downloadFolder": "Download folder (zip)",
+    "downloadChanged": "Download changed files only (zip, {{count}})",
+    "downloadMenu": "Download",
+    "rightClickHint": "Right-click a file or folder to download it.",
+    "preparing": "Preparing the download…",
+    "menu": "File actions"
   },
   "usage": {
     "loading": "Reading token usage...",
