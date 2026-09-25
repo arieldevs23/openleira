@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OpenLeira: workspace AI di server sendiri</title>
-  <meta name="description" content="OpenLeira adalah workspace open source untuk menjalankan Claude Code, Codex, dan OpenCode dari browser, di server milik sendiri.">
+  <title>OpenLeira: agent coding di server milik sendiri</title>
+  <meta name="description" content="OpenLeira adalah workspace AI open source untuk menjalankan Claude Code, Codex, OpenCode, dan Cursor Agent dari browser, di VPS atau mesin sendiri.">
+  <meta name="theme-color" content="#F8F8F6">
   <link rel="stylesheet" href="style.css">
   <script>document.documentElement.classList.add("has-js");if("IntersectionObserver" in window)document.documentElement.classList.add("js");</script>
 </head>
@@ -17,102 +18,311 @@
       <nav class="nav__menu" aria-label="Utama">
         <ul class="nav__links" id="nav-links">
           <li><a href="#fitur">Fitur</a></li>
+          <li><a href="#workspace">Workspace AI</a></li>
           <li><a href="#docs">Docs</a></li>
           <li><a href="#tentang">Tentang</a></li>
         </ul>
       </nav>
       <button class="nav__toggle" type="button" aria-controls="nav-links" aria-expanded="false" aria-label="Buka menu">
         <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="nav__toggle-label">Menu</span>
       </button>
       <a class="btn btn--primary btn--nav" href="https://app.openleira.online">Masuk</a>
     </div>
   </header>
 
-  <main id="isi" class="wrap">
-    <section class="hero">
-      <h1>Workspace AI yang berjalan di server sendiri</h1>
-      <p class="lead">Jalankan Claude Code, Codex, atau OpenCode dari browser, dengan server dan langganan milik sendiri.</p>
-      <div class="actions">
-        <a class="btn btn--primary" href="https://app.openleira.online">Masuk</a>
-        <a class="btn btn--secondary" href="#docs">Lihat cara pasang</a>
+  <main id="isi">
+    <section class="hero" aria-labelledby="h-hero">
+      <div class="wrap hero__text">
+        <h1 id="h-hero">Agent coding di server milik sendiri</h1>
+        <p class="lead">OpenLeira menjalankan Claude Code, Codex, OpenCode, dan Cursor Agent dari browser, di VPS atau mesin sendiri, dengan langganan yang sudah dimiliki.</p>
+        <div class="actions">
+          <a class="btn btn--primary btn--lg" href="https://app.openleira.online">Masuk</a>
+          <a class="btn btn--secondary btn--lg" href="#docs">Lihat cara pasang</a>
+        </div>
+        <p class="meta">Open source GPL-3.0 <span aria-hidden="true">·</span> Tanpa telemetri <span aria-hidden="true">·</span> Dibuat di Indonesia</p>
       </div>
-      <p class="note">Open source. Bukan model AI baru. Bawa langganan AI sendiri.</p>
+
+      <div class="stage">
+        <figure class="wrap stage__inner">
+          <figcaption class="sr-only">Tampilan aplikasi OpenLeira: sidebar berisi proyek, chat, Workspace AI, dan Files. Di area chat, pengguna meminta Claude Code memeriksa endpoint yang lambat, agent membaca controller, menambahkan paginasi dan indeks, lalu pengguna meminta test.</figcaption>
+          <div class="window" aria-hidden="true">
+            <div class="window__bar">
+              <span class="window__dots"><i></i><i></i><i></i></span>
+              <span class="window__url">ai.contoh.id/p/toko-api</span>
+            </div>
+            <div class="app">
+              <aside class="app__side">
+                <p class="app__brand">OpenLeira</p>
+                <p class="app__label">Proyek</p>
+                <ul class="app__list">
+                  <li class="is-active">toko-api</li>
+                  <li>landing-web</li>
+                  <li>skrip-server</li>
+                </ul>
+                <p class="app__label">Chat</p>
+                <ul class="app__list">
+                  <li>Ringkas catatan rapat</li>
+                  <li>Draf email klien</li>
+                </ul>
+                <ul class="app__list app__list--foot">
+                  <li>Workspace AI</li>
+                  <li>Files</li>
+                </ul>
+              </aside>
+              <div class="app__main">
+                <div class="app__head">
+                  <span class="app__title">toko-api</span>
+                  <span class="tag tag--agent">Claude Code</span>
+                  <span class="app__status"><i class="dot dot--live"></i>Sesi berjalan di server</span>
+                </div>
+                <div class="chat">
+                  <p class="msg msg--user">Endpoint /orders lambat kalau datanya sudah banyak. Tolong cek penyebabnya.</p>
+                  <div class="msg msg--agent">
+                    <p>Query di OrderController memuat semua pesanan beserta relasinya tanpa paginasi, dan kolom created_at belum punya indeks.</p>
+                    <p class="tool"><span class="tool__ok">✓</span> Read <span>app/Http/Controllers/OrderController.php</span></p>
+                    <p class="tool"><span class="tool__ok">✓</span> Edit <span>database/migrations/2026_09_25_add_index_orders.php</span></p>
+                  </div>
+                  <p class="msg msg--agent">Paginasi 50 per halaman sudah ditambahkan, begitu juga migrasi indeks. Jalankan php artisan migrate untuk menerapkannya.</p>
+                  <p class="msg msg--user">Oke. Sekalian tulis feature test untuk endpoint itu.</p>
+                </div>
+                <div class="composer">
+                  <span class="composer__input">Tulis pesan untuk Claude Code</span>
+                  <span class="composer__send">Kirim</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </figure>
+      </div>
     </section>
 
-    <section class="section split reveal" id="fitur" aria-labelledby="h-fitur">
-      <h2 id="h-fitur">Fitur</h2>
-      <dl class="features">
-        <div>
-          <dt>Workspace, bukan model</dt>
-          <dd>Menjalankan agent AI dari langganan yang sudah dimiliki.</dd>
+    <section class="section wrap" id="fitur" aria-labelledby="h-fitur">
+      <header class="section__head reveal">
+        <h2 id="h-fitur">Yang sudah bisa dipakai</h2>
+        <p>Satu aplikasi web di server sendiri. Agent, file, dan sesi tetap di mesin itu.</p>
+      </header>
+
+      <div class="feat reveal">
+        <div class="feat__text">
+          <h3>Lanjut dari ponsel</h3>
+          <p>Sesi tetap berjalan di server, jadi pekerjaan yang dimulai di laptop bisa dipantau dan dilanjutkan dari browser ponsel, atau dipasang ke layar utama sebagai PWA.</p>
         </div>
-        <div>
-          <dt>Server sendiri</dt>
-          <dd>Berjalan di Ubuntu atau Debian, pada VPS maupun mesin pribadi, tanpa hosting dari OpenLeira.</dd>
+        <div class="illo illo--phone" aria-hidden="true">
+          <div class="phone">
+            <div class="phone__head"><span>toko-api</span><i class="dot dot--live"></i></div>
+            <p class="pb pb--agent">Test untuk /orders selesai. 6 lulus.</p>
+            <p class="pb pb--user">Push ke branch fitur</p>
+            <p class="pb pb--agent pb--typing"><i></i><i></i><i></i></p>
+            <div class="phone__composer"></div>
+          </div>
         </div>
-        <div>
-          <dt>Akses dari mana saja</dt>
-          <dd>Buka dari browser desktop atau ponsel, sementara sesi tetap berjalan di server.</dd>
+      </div>
+
+      <div class="feat feat--flip reveal">
+        <div class="feat__text">
+          <h3>Antrian pesan, dengan interupsi</h3>
+          <p>Pesan berikutnya bisa dikirim selagi agent masih bekerja. Pesan itu menunggu di antrian, dan tombol interupsi menghentikan langkah yang sedang berjalan.</p>
         </div>
-        <div>
-          <dt>Provider bebas</dt>
-          <dd>Mendukung Claude, Codex, dan OpenCode, dengan OpenRouter menyusul.</dd>
+        <div class="illo" aria-hidden="true">
+          <ol class="queue">
+            <li class="queue__row is-running"><span class="queue__n">1</span><span class="queue__t">Tulis feature test untuk /orders</span><span class="tag tag--run">berjalan</span></li>
+            <li class="queue__row"><span class="queue__n">2</span><span class="queue__t">Perbarui README bagian instalasi</span><span class="tag">antri</span></li>
+            <li class="queue__row"><span class="queue__n">3</span><span class="queue__t">Cek ulang migrasi indeks</span><span class="tag">antri</span></li>
+          </ol>
+          <div class="queue__foot"><span class="fake-btn fake-btn--stop">Interupsi</span></div>
         </div>
-      </dl>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat__text">
+          <h3>Agent yang sudah dilanggani</h3>
+          <p>OpenLeira bukan model AI baru. Pilih satu atau beberapa agent sekaligus, dan akses ke OpenRouter, Gemini, Ollama, serta provider lain berjalan lewat OpenCode.</p>
+        </div>
+        <div class="illo" aria-hidden="true">
+          <ul class="chips">
+            <li class="chip is-on"><b>Claude Code</b><span class="tag">aktif</span></li>
+            <li class="chip is-on"><b>OpenAI Codex</b><span class="tag">aktif</span></li>
+            <li class="chip chip--wide"><b>OpenCode</b><span class="chip__sub">OpenRouter · Gemini · Ollama</span></li>
+            <li class="chip"><b>Cursor Agent</b></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feat feat--flip reveal">
+        <div class="feat__text">
+          <h3>Skill per proyek</h3>
+          <p>Aturan kerja disimpan sebagai file SKILL.md di tiap proyek, sehingga agent membaca konvensi proyek itu sebelum mengubah kode.</p>
+        </div>
+        <div class="illo" aria-hidden="true">
+          <div class="file">
+            <div class="file__head"><span class="tag">toko-api</span><span class="file__name">SKILL.md</span></div>
+            <pre class="file__body"><span class="c">---</span>
+<span class="k">name:</span> migrasi-db
+<span class="k">description:</span> Aturan menulis migrasi
+<span class="c">---</span>
+- Buat file migrasi baru, jangan ubah yang lama.
+- Setiap kolom foreign key diberi indeks.
+- Jalankan test sebelum menandai selesai.</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat__text">
+          <h3>Penjelajah file server</h3>
+          <p>Folder proyek di server bisa dibuka dari browser untuk melihat file yang baru diubah agent, tanpa membuka SSH.</p>
+        </div>
+        <div class="illo" aria-hidden="true">
+          <ul class="tree">
+            <li class="tree__dir">toko-api</li>
+            <li class="tree__dir tree--1">app/Http/Controllers</li>
+            <li class="tree__file tree--2 is-changed">OrderController.php <span class="tag tag--run">diubah</span></li>
+            <li class="tree__dir tree--1">database/migrations</li>
+            <li class="tree__file tree--2 is-changed">2026_09_25_add_index_orders.php <span class="tag tag--run">baru</span></li>
+            <li class="tree__dir tree--1">tests/Feature</li>
+            <li class="tree__file tree--1">composer.json</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feat feat--flip reveal">
+        <div class="feat__text">
+          <h3>Login lokal</h3>
+          <p>Masuk dengan username dan password yang tersimpan di server sendiri. Akun pertama menjadi admin server, tanpa akun pihak ketiga dan tanpa telemetri.</p>
+        </div>
+        <div class="illo" aria-hidden="true">
+          <div class="login">
+            <p class="login__title">Masuk ke ai.contoh.id</p>
+            <span class="login__label">Username</span>
+            <span class="login__field"></span>
+            <span class="login__label">Password</span>
+            <span class="login__field login__field--pw">••••••••••</span>
+            <span class="fake-btn">Masuk</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="also reveal">Juga tersedia: chat umum yang terpisah dari proyek, dan antarmuka dalam bahasa Indonesia atau Inggris.</p>
     </section>
 
-    <section class="section office reveal" aria-labelledby="h-kantor">
-      <div class="office__head">
-        <h2 id="h-kantor">Kantor AI <span class="badge">Sedang dibangun</span></h2>
-        <p>Satu proyek dikerjakan beberapa agent dengan peran berbeda. Koordinator membagi tugas ke tiap divisi dan menyatukan hasilnya.</p>
-      </div>
-      <div class="org" role="img" aria-label="Bagan Kantor AI: Proyek, lalu Koordinator, lalu lima divisi: Planner, Desain UI/UX, Backend, Security, dan QA/Audit">
-        <span class="org__node">Proyek</span>
-        <span class="org__stem"></span>
-        <span class="org__node org__node--lead">Koordinator</span>
-        <span class="org__stem"></span>
-        <ul class="org__divs">
-          <li><span class="org__node">Planner</span></li>
-          <li><span class="org__node">Desain UI/UX</span></li>
-          <li><span class="org__node">Backend</span></li>
-          <li><span class="org__node">Security</span></li>
-          <li><span class="org__node">QA/Audit</span></li>
-        </ul>
-      </div>
-    </section>
+    <section class="office" id="workspace" aria-labelledby="h-workspace">
+      <div class="wrap">
+        <header class="section__head reveal">
+          <h2 id="h-workspace">Workspace AI <span class="badge">Sedang dibangun</span></h2>
+          <p>Satu proyek diperlakukan seperti workspace, dengan tim agent yang bekerja berfase. Fitur ini sudah berjalan di staging.</p>
+        </header>
 
-    <section class="section split reveal" id="docs" aria-labelledby="h-docs">
-      <div>
-        <h2 id="h-docs">Cara pasang</h2>
-        <p class="muted">Ubuntu&nbsp;22.04+ atau Debian&nbsp;12, 2&nbsp;vCPU, 4&nbsp;GB RAM, Node&nbsp;20.</p>
-      </div>
-      <div>
-        <ol class="steps">
-          <li>Siapkan server Ubuntu atau Debian dengan akses SSH.</li>
-          <li>
-            Jalankan installer di server.
-            <pre class="cmd"><code>curl -fsSL https://openleira.online/install.sh | bash</code></pre>
-            <p class="note">Installer sedang disiapkan.</p>
-          </li>
-          <li>Buka alamat server di browser.</li>
-          <li>Hubungkan akun Claude, Codex, atau OpenCode yang sudah dimiliki.</li>
+        <figure class="pipe reveal" aria-label="Alur Workspace AI: Masuk, Rencana, Eksekusi, Audit, Selesai">
+          <div class="pipe__orch"><b>Orchestrator</b><span>mengoper task dan hasil antar fase, tidak mengerjakan task sendiri</span></div>
+
+          <ol class="pipe__phases">
+            <li class="ph">
+              <span class="ph__label">Masuk</span>
+              <svg class="drop" aria-hidden="true"><line class="ln" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
+              <div class="ph__body"><span class="pn pn--in"><i class="dot"></i><span>Task dari user</span></span></div>
+            </li>
+            <li class="ph">
+              <span class="ph__label">Rencana</span>
+              <svg class="drop" aria-hidden="true"><line class="ln w1" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln w1" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
+              <div class="ph__body"><span class="pn w1"><i class="dot"></i><span>Planner</span></span><span class="note">Subtask, tim, dan urutan kerja.</span></div>
+            </li>
+            <li class="ph ph--exec">
+              <span class="ph__label">Eksekusi</span>
+              <svg class="drop" aria-hidden="true"><line class="ln wx" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln wx" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
+              <div class="ph__body">
+                <ul class="exec">
+                  <li class="pn w2"><i class="dot"></i><span>Desain UI/UX</span></li>
+                  <li class="pn w2"><i class="dot"></i><span>Backend</span></li>
+                  <li class="pn w3"><i class="dot"></i><span>Frontend</span><small class="dep">setelah Desain dan Backend</small></li>
+                  <li class="pn w4"><i class="dot"></i><span>Security</span><small class="dep">setelah Frontend</small></li>
+                  <li class="pn w4"><i class="dot"></i><span>Docs</span><small class="dep">setelah Frontend</small></li>
+                </ul>
+                <svg class="deps" viewBox="0 0 28 232" aria-hidden="true">
+                  <defs><marker id="ah" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L6 3L0 6z"/></marker></defs>
+                  <path class="ln w3" d="M0 20C24 20 24 116 2 116"/>
+                  <path class="ln w3" d="M0 68C12 68 12 116 2 116"/>
+                  <path class="ln w4" d="M0 116C12 116 12 164 2 164"/>
+                  <path class="ln w4" d="M0 116C24 116 24 212 2 212"/>
+                </svg>
+              </div>
+            </li>
+            <li class="ph">
+              <span class="ph__label">Audit</span>
+              <svg class="drop" aria-hidden="true"><line class="ln w5" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln w5" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
+              <div class="ph__body"><span class="pn w5"><i class="dot"></i><span>QA/Audit</span></span><span class="note">Tidak lolos: kembali ke tim terkait, maks. 2 kali.</span></div>
+            </li>
+            <li class="ph">
+              <span class="ph__label">Selesai</span>
+              <svg class="drop" aria-hidden="true"><line class="ln w6" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln w6" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
+              <div class="ph__body"><span class="pn pn--end w6"><i class="dot"></i><span>Ringkasan ke user</span></span></div>
+            </li>
+          </ol>
+
+          <div class="pipe__skills"><b>Skills</b> lapisan lintas fase, dibaca semua tim</div>
+
+          <figcaption class="pipe__foot">
+            <span class="pipe__legend" aria-hidden="true"><span><i class="dot dot--run"></i>berjalan</span><span><i class="dot dot--done"></i>selesai</span><span><i class="dot dot--wait"></i>menunggu</span></span>
+            <span>Ilustrasi alur, bukan data live.</span>
+          </figcaption>
+        </figure>
+
+        <ol class="flow reveal">
+          <li>Task masuk ke Orchestrator.</li>
+          <li>Planner menyusun rencana dan urutan tim.</li>
+          <li>Tim bekerja sesuai rencana, hasil diteruskan antar tim.</li>
+          <li>QA/Audit memeriksa, lalu Orchestrator merangkum ke user.</li>
         </ol>
-        <p>Masuk dengan Google, GitHub, atau email.</p>
+        <p class="flow__more reveal">Model dipilih per agent, tim bisa ditambah sendiri.</p>
       </div>
     </section>
 
-    <section class="section split reveal" id="tentang" aria-labelledby="h-tentang">
-      <h2 id="h-tentang">Tentang</h2>
-      <div>
-        <p>OpenLeira dibuat di Indonesia dan dirilis sebagai open source dengan lisensi <span class="nowrap">GPL-3.0</span>. OpenLeira tidak menjual token dan tidak menyimpan kunci API di luar server pengguna.</p>
-        <!-- TODO: ganti href dengan URL repo begitu publik, lalu hapus data-placeholder dan label Segera -->
-        <p><a class="link" href="#" data-placeholder aria-disabled="true">Kode sumber</a> <span class="badge">Segera</span></p>
+    <section class="section wrap" id="docs" aria-labelledby="h-docs">
+      <header class="section__head reveal">
+        <h2 id="h-docs">Cara pasang</h2>
+        <p class="req">Syarat minimum: Ubuntu 22.04+, Debian 12, macOS, atau Windows lewat WSL2, dengan 2&nbsp;vCPU, 4&nbsp;GB RAM, dan Node&nbsp;20.</p>
+      </header>
+
+      <div class="install reveal">
+        <div class="cmd">
+          <code id="cmd-install">curl -fsSL https://openleira.online/install.sh | bash</code>
+          <button class="btn btn--secondary btn--copy" type="button" data-copy="cmd-install">Salin</button>
+        </div>
+        <p class="cmd__status" role="status" aria-live="polite"></p>
+        <p class="note"><span class="badge">Segera</span> Installer satu baris ini sedang disiapkan dan belum bisa dijalankan.</p>
+      </div>
+
+      <ol class="steps reveal">
+        <li><h3>Siapkan mesin</h3><p>VPS Ubuntu atau Debian, atau mesin lokal Linux, macOS, maupun Windows dengan WSL2.</p></li>
+        <li><h3>Jalankan installer</h3><p>Perintah di atas memasang OpenLeira beserta layanannya di mesin itu.</p></li>
+        <li><h3>Buka di browser</h3><p>Buka alamat server, lalu buat akun pertama. Akun ini menjadi admin server.</p></li>
+        <li><h3>Hubungkan agent</h3><p>Sambungkan Claude Code, Codex, OpenCode, atau Cursor Agent yang sudah dilanggani.</p></li>
+      </ol>
+      <p class="also reveal">Login memakai username dan password lokal. Tidak ada akun Google, GitHub, atau layanan pihak ketiga lain yang terlibat.</p>
+    </section>
+
+    <section class="about" id="tentang" aria-labelledby="h-tentang">
+      <div class="wrap about__grid reveal">
+        <div>
+          <h2 id="h-tentang">Tentang</h2>
+          <p class="about__lead">OpenLeira dibuat di Indonesia dan tidak punya versi yang dihosting. Semuanya berjalan di server pengguna.</p>
+          <p class="about__link">
+            <!-- TODO: ganti href dengan URL repo begitu publik, lalu hapus data-placeholder dan label Segera -->
+            <a class="link" href="#" data-placeholder aria-disabled="true">Kode sumber</a> <span class="badge badge--dark">Segera</span>
+          </p>
+        </div>
+        <dl class="facts">
+          <div><dt>Lisensi</dt><dd>Open source, GPL-3.0</dd></div>
+          <div><dt>Token</dt><dd>Tidak menjual token. Biaya AI mengikuti langganan agent masing-masing.</dd></div>
+          <div><dt>Kunci API</dt><dd>Tidak disimpan di luar server pengguna.</dd></div>
+          <div><dt>Telemetri</dt><dd>Tidak ada.</dd></div>
+        </dl>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <p class="wrap">OpenLeira <span aria-hidden="true">·</span> GPL-3.0 <span aria-hidden="true">·</span> 2026</p>
+    <p class="wrap">OpenLeira <span aria-hidden="true">·</span> GPL-3.0 <span aria-hidden="true">·</span> Dibuat di Indonesia <span aria-hidden="true">·</span> 2026</p>
   </footer>
 
   <script src="script.js"></script>

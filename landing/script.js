@@ -36,6 +36,44 @@
     }
   });
 
+  // tombol salin perintah installer. clipboard API butuh https, jadi ada fallback execCommand
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    var src = document.getElementById(btn.getAttribute('data-copy'));
+    var status = btn.closest('.install').querySelector('.cmd__status');
+    var timer;
+
+    function report(ok) {
+      status.classList.toggle('is-error', !ok);
+      status.textContent = ok ? 'Perintah tersalin.' : 'Gagal menyalin. Blok perintah lalu salin manual.';
+      btn.textContent = ok ? 'Tersalin' : 'Salin';
+      clearTimeout(timer);
+      timer = setTimeout(function () { btn.textContent = 'Salin'; status.textContent = ''; }, 2500);
+    }
+
+    function fallback(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+      document.body.removeChild(ta);
+      report(ok);
+    }
+
+    btn.addEventListener('click', function () {
+      var text = src.textContent.trim();
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function () { report(true); }, function () { fallback(text); });
+      } else {
+        fallback(text);
+      }
+    });
+  });
+
   // TODO: hapus begitu repo publik. sementara link placeholder nggak lompat ke atas
   document.querySelectorAll('a[data-placeholder]').forEach(function (a) {
     a.addEventListener('click', function (e) { e.preventDefault(); });
