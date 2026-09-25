@@ -6,7 +6,8 @@
   "type": "module",
   "main": "dist-server/server/index.js",
   "bin": {
-    "cloudcli": "dist-server/server/modules/cli/cli.js"
+    "cloudcli": "dist-server/server/modules/cli/cli.js",
+    "openleira": "dist-server/server/modules/cli/cli.js"
   },
   "files": [
     "electron/",
@@ -30,6 +31,7 @@
     "dev": "concurrently --kill-others \"npm run server:dev\" \"npm run client\"",
     "preserver": "node scripts/promote-dist-server.mjs recover",
     "server": "node dist-server/server/index.js",
+    "reset-password": "node dist-server/server/modules/cli/cli.js reset-password",
     "server:dev": "tsx --tsconfig server/tsconfig.json server/index.ts",
     "server:dev-watch": "tsx watch --tsconfig server/tsconfig.json server/index.ts",
     "client": "vite",
