@@ -4,6 +4,12 @@ import {
   APP_CONFIG_TABLE_SCHEMA_SQL,
   LAST_SCANNED_AT_SQL,
   NOTIFICATION_CHANNEL_ENDPOINTS_TABLE_SCHEMA_SQL,
+  OFFICE_AGENTS_TABLE_SCHEMA_SQL,
+  OFFICE_CASES_TABLE_SCHEMA_SQL,
+  OFFICE_DIVISIONS_TABLE_SCHEMA_SQL,
+  OFFICE_MESSAGES_TABLE_SCHEMA_SQL,
+  OFFICE_TASKS_TABLE_SCHEMA_SQL,
+  OFFICES_TABLE_SCHEMA_SQL,
   PROJECTS_TABLE_SCHEMA_SQL,
   PROVIDER_MODELS_TABLE_SCHEMA_SQL,
   PUSH_SUBSCRIPTIONS_TABLE_SCHEMA_SQL,
@@ -476,6 +482,28 @@ const ensureProjectsForSessionPaths = (db: Database): void => {
   `);
 };
 
+/**
+ * Creates the Kantor AI tables and their lookup indexes.
+ *
+ * Runs after the projects table has been repaired, because `offices` keys on
+ * `projects.project_path` and cascades when a project is removed. Every
+ * statement is idempotent, so upgraded and fresh installs take the same path.
+ */
+const createOfficeTables = (db: Database): void => {
+  db.exec(OFFICES_TABLE_SCHEMA_SQL);
+  db.exec(OFFICE_DIVISIONS_TABLE_SCHEMA_SQL);
+  db.exec(OFFICE_AGENTS_TABLE_SCHEMA_SQL);
+  db.exec(OFFICE_CASES_TABLE_SCHEMA_SQL);
+  db.exec(OFFICE_TASKS_TABLE_SCHEMA_SQL);
+  db.exec(OFFICE_MESSAGES_TABLE_SCHEMA_SQL);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_office_divisions_office ON office_divisions(office_id, sort_order)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_office_cases_office ON office_cases(office_id, created_at)');
+  // Startup recovery looks cases up by status across every office.
+  db.exec('CREATE INDEX IF NOT EXISTS idx_office_cases_status ON office_cases(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_office_tasks_case ON office_tasks(case_id, sort_order)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_office_messages_case ON office_messages(case_id, id)');
+};
+
 export const runMigrations = (db: Database) => {
   try {
     const usersTableInfo = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
@@ -521,6 +549,7 @@ export const runMigrations = (db: Database) => {
     addForkedFromSessionIdColumn(db);
     ensureProjectsForSessionPaths(db);
     db.exec(SCHEDULED_MESSAGES_TABLE_SCHEMA_SQL);
+    createOfficeTables(db);
 
     db.exec('CREATE INDEX IF NOT EXISTS idx_session_ids_lookup ON sessions(session_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_provider_session_id ON sessions(provider_session_id)');

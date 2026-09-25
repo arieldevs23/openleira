@@ -250,6 +250,158 @@ CREATE TABLE IF NOT EXISTS superseded_provider_sessions (
 );
 `;
 
+/**
+ * Kantor AI (AI office) tables, owned by the Office module.
+ *
+ * One office per project path; an office holds divisions (rooms), each with
+ * exactly one agent. A case is the user's main request, broken by the
+ * coordinator into tasks, and `office_messages` is the message bus every
+ * hand-off between divisions goes through. Tables are prefixed with `office_`
+ * because `case` is an SQL keyword and `task` is too generic to own globally.
+ *
+ * Timestamps are ISO-8601 strings written by the repositories, so the
+ * frontend can parse them without guessing the time zone.
+ */
+export const OFFICES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS offices (
+    id TEXT PRIMARY KEY NOT NULL,
+    project_path TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    -- Language the seeded divisions were written in and agents answer in.
+    locale TEXT NOT NULL DEFAULT 'id',
+    -- How many task/audit sessions may run at the same time for one case.
+    max_parallel INTEGER NOT NULL DEFAULT 2,
+    -- Permission mode every office session runs with.
+    permission_mode TEXT NOT NULL DEFAULT 'bypassPermissions',
+    -- The user has seen the one-time bypass-permissions warning.
+    permission_warning_ack BOOLEAN NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (project_path) REFERENCES projects(project_path)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
+`;
+
+export const OFFICE_DIVISIONS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_divisions (
+    id TEXT PRIMARY KEY NOT NULL,
+    office_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT '#2551BD',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_coordinator BOOLEAN NOT NULL DEFAULT 0,
+    is_audit BOOLEAN NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    UNIQUE(office_id, slug),
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE
+);
+`;
+
+export const OFFICE_AGENTS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_agents (
+    id TEXT PRIMARY KEY NOT NULL,
+    -- Exactly one agent per division.
+    division_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    role_prompt TEXT NOT NULL DEFAULT '',
+    -- Provider and model stay NULL until the user picks them; a case cannot
+    -- start while an enabled agent has none.
+    provider TEXT,
+    model TEXT,
+    allowed_tools TEXT NOT NULL DEFAULT '[]',
+    skills TEXT NOT NULL DEFAULT '[]',
+    enabled BOOLEAN NOT NULL DEFAULT 1,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (division_id) REFERENCES office_divisions(id) ON DELETE CASCADE
+);
+`;
+
+export const OFFICE_CASES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_cases (
+    id TEXT PRIMARY KEY NOT NULL,
+    office_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'draft'
+      CHECK (status IN ('draft', 'running', 'waiting_user', 'done', 'failed')),
+    -- Why a case is waiting_user: paused | question | interrupted.
+    waiting_reason TEXT,
+    -- Where the orchestration stands: planning | executing | finalizing.
+    phase TEXT,
+    coordinator_busy BOOLEAN NOT NULL DEFAULT 0,
+    -- The coordinator keeps one provider session for the whole case, so every
+    -- turn (plan, check-in, final summary) remembers the earlier ones.
+    coordinator_session_id TEXT,
+    final_summary TEXT,
+    error TEXT,
+    created_by TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    started_at TEXT,
+    finished_at TEXT,
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE
+);
+`;
+
+export const OFFICE_TASKS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_tasks (
+    id TEXT PRIMARY KEY NOT NULL,
+    case_id TEXT NOT NULL,
+    division_id TEXT,
+    -- The failed task this one replaces, when the coordinator re-plans.
+    parent_task_id TEXT,
+    -- Short handle (T1, T2, ...) the coordinator uses for dependencies.
+    ref TEXT NOT NULL,
+    title TEXT NOT NULL,
+    instruction TEXT NOT NULL DEFAULT '',
+    -- JSON array of task ids that must be done first.
+    depends_on TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'queued'
+      CHECK (status IN ('queued', 'running', 'review', 'done', 'failed', 'blocked')),
+    -- Failed audits so far; the third failure fails the task.
+    attempts INTEGER NOT NULL DEFAULT 0,
+    result_summary TEXT,
+    audit_notes TEXT,
+    -- App session ids of the provider sessions that did the work and the audit.
+    session_id TEXT,
+    audit_session_id TEXT,
+    error TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    started_at TEXT,
+    finished_at TEXT,
+    UNIQUE(case_id, ref),
+    FOREIGN KEY (case_id) REFERENCES office_cases(id) ON DELETE CASCADE,
+    FOREIGN KEY (division_id) REFERENCES office_divisions(id) ON DELETE SET NULL,
+    FOREIGN KEY (parent_task_id) REFERENCES office_tasks(id) ON DELETE SET NULL
+);
+`;
+
+export const OFFICE_MESSAGES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    case_id TEXT NOT NULL,
+    task_id TEXT,
+    -- NULL sender is the user; NULL recipient is the user / a broadcast.
+    from_division_id TEXT,
+    to_division_id TEXT,
+    kind TEXT NOT NULL
+      CHECK (kind IN ('assign', 'result', 'question', 'audit_pass', 'audit_fail', 'note')),
+    payload TEXT NOT NULL DEFAULT '{}',
+    -- Set once the recipient agent has been given the message (notes).
+    read_at TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (case_id) REFERENCES office_cases(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_id) REFERENCES office_tasks(id) ON DELETE SET NULL,
+    FOREIGN KEY (from_division_id) REFERENCES office_divisions(id) ON DELETE SET NULL,
+    FOREIGN KEY (to_division_id) REFERENCES office_divisions(id) ON DELETE SET NULL
+);
+`;
+
 export const INIT_SCHEMA_SQL = `
 -- Initialize authentication database
 PRAGMA foreign_keys = ON;

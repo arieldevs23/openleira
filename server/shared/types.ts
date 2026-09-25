@@ -1530,3 +1530,256 @@ export type CliApplication = {
 export type SandboxCommandService = {
   execute(argumentsList: string[]): Promise<number>;
 };
+
+// ---------------------------
+//----------------- OFFICE (KANTOR AI) TYPES ------------
+
+/**
+ * Lifecycle of an office case (the user's main request).
+ *
+ * `draft` has not been started; `running` is being orchestrated;
+ * `waiting_user` is parked until the user acts (see `OfficeCaseWaitingReason`);
+ * `done` and `failed` are terminal. Written by the Office orchestrator only.
+ */
+export type OfficeCaseStatus = 'draft' | 'running' | 'waiting_user' | 'done' | 'failed';
+
+/**
+ * Why a case sits in `waiting_user`: the user paused it, the coordinator asked
+ * the user a question, or the server restarted while it ran. Resuming clears it.
+ */
+export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted';
+
+/**
+ * Which orchestration step a case is in. Recovery uses it to know what to
+ * re-run after a restart: the plan, the task loop, or the final summary.
+ */
+export type OfficeCasePhase = 'planning' | 'executing' | 'finalizing';
+
+/**
+ * Lifecycle of one sub-task. `review` means the work finished and the audit
+ * agent is (or will be) checking it; `blocked` means a dependency failed.
+ */
+export type OfficeTaskStatus = 'queued' | 'running' | 'review' | 'done' | 'failed' | 'blocked';
+
+/**
+ * Kinds of message-bus rows. `assign` hands a task to a division, `result`
+ * carries its summary back, `audit_pass`/`audit_fail` are audit verdicts,
+ * `question` is the coordinator asking the user, `note` is free text (the user
+ * writing to the coordinator, or the coordinator's own replies).
+ */
+export type OfficeMessageKind = 'assign' | 'result' | 'question' | 'audit_pass' | 'audit_fail' | 'note';
+
+/**
+ * Permission modes an office may run its sessions with. The office default is
+ * `bypassPermissions` because detached sessions have nobody watching to
+ * approve tool calls; the UI warns about it once.
+ */
+export type OfficePermissionMode = 'bypassPermissions' | 'acceptEdits' | 'default';
+
+/**
+ * One office (one per project path). Returned by the database module's
+ * `officesDb` and serialized as-is by the Office routes.
+ */
+export type Office = {
+  id: string;
+  projectPath: string;
+  name: string;
+  locale: string;
+  maxParallel: number;
+  permissionMode: OfficePermissionMode;
+  permissionWarningAcknowledged: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * The single agent staffing a division. `provider`/`model` are null until the
+ * user picks them; empty `allowedTools` means every tool the provider offers.
+ */
+export type OfficeAgent = {
+  id: string;
+  divisionId: string;
+  name: string;
+  rolePrompt: string;
+  provider: LLMProvider | null;
+  model: string | null;
+  allowedTools: string[];
+  skills: string[];
+  enabled: boolean;
+  updatedAt: string;
+};
+
+/**
+ * One division (room) of an office together with its agent. Exactly one
+ * division per office is the coordinator and one is the audit layer; neither
+ * can be deleted.
+ */
+export type OfficeDivision = {
+  id: string;
+  officeId: string;
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  sortOrder: number;
+  isCoordinator: boolean;
+  isAudit: boolean;
+  createdAt: string;
+  agent: OfficeAgent;
+};
+
+/**
+ * Seed or user input for a new division plus its agent. Used by the Office
+ * service when seeding defaults and when the user adds a division.
+ */
+export type OfficeDivisionInput = {
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  isCoordinator?: boolean;
+  isAudit?: boolean;
+  agent: {
+    name: string;
+    rolePrompt: string;
+    allowedTools: string[];
+    skills: string[];
+  };
+};
+
+/** One office case as stored and as sent to the frontend. */
+export type OfficeCase = {
+  id: string;
+  officeId: string;
+  title: string;
+  description: string;
+  status: OfficeCaseStatus;
+  waitingReason: OfficeCaseWaitingReason | null;
+  phase: OfficeCasePhase | null;
+  coordinatorBusy: boolean;
+  coordinatorSessionId: string | null;
+  finalSummary: string | null;
+  error: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+/** One sub-task of a case as stored and as sent to the frontend. */
+export type OfficeTask = {
+  id: string;
+  caseId: string;
+  divisionId: string | null;
+  parentTaskId: string | null;
+  ref: string;
+  title: string;
+  instruction: string;
+  dependsOn: string[];
+  status: OfficeTaskStatus;
+  attempts: number;
+  resultSummary: string | null;
+  auditNotes: string | null;
+  sessionId: string | null;
+  auditSessionId: string | null;
+  error: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+/**
+ * Fields a new task is created with. `dependsOn` already holds task ids,
+ * resolved from the coordinator's refs by the Office service.
+ */
+export type OfficeTaskInput = {
+  id: string;
+  divisionId: string;
+  parentTaskId: string | null;
+  ref: string;
+  title: string;
+  instruction: string;
+  dependsOn: string[];
+  status: OfficeTaskStatus;
+};
+
+/** One message-bus row. A null division id on either side means the user. */
+export type OfficeMessage = {
+  id: number;
+  caseId: string;
+  taskId: string | null;
+  fromDivisionId: string | null;
+  toDivisionId: string | null;
+  kind: OfficeMessageKind;
+  payload: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+};
+
+/** What the Office page loads first: the office, its divisions and its cases. */
+export type OfficeSnapshot = {
+  office: Office;
+  divisions: OfficeDivision[];
+  cases: OfficeCase[];
+};
+
+/** Everything the case panel shows: the case, its tasks and its message bus. */
+export type OfficeCaseDetail = {
+  case: OfficeCase;
+  tasks: OfficeTask[];
+  messages: OfficeMessage[];
+};
+
+/**
+ * The entity an `office:update` frame reports. Carries the changed row (null
+ * when it was deleted) so clients patch their state without refetching.
+ */
+export type OfficeUpdateChange =
+  | { entity: 'office'; office: Office }
+  | { entity: 'division'; id: string; division: OfficeDivision | null }
+  | { entity: 'case'; id: string; case: OfficeCase | null }
+  | { entity: 'task'; task: OfficeTask }
+  | { entity: 'message'; message: OfficeMessage };
+
+/**
+ * Realtime frame broadcast on the shared chat websocket whenever an office,
+ * division, agent, case, task or message-bus row changes. Built only by the
+ * Office module's events service.
+ */
+export type OfficeUpdateEvent = {
+  kind: 'office:update';
+  officeId: string;
+  change: OfficeUpdateChange;
+  timestamp: string;
+};
+
+/**
+ * One compact transcript line of an office session, derived from the
+ * provider's normalized live events. `id` matches the normalized message id,
+ * so a client can merge it with history fetched over REST.
+ */
+export type OfficeLogEntry = {
+  id: string;
+  type: 'text' | 'tool' | 'error' | 'done';
+  text: string;
+  toolName?: string;
+  timestamp: string;
+};
+
+/**
+ * Realtime frame carrying one `OfficeLogEntry`. The session id travels as
+ * `logSessionId` (not `sessionId`) so chat listeners never mistake it for a
+ * frame of the conversation they are showing.
+ */
+export type OfficeLogEvent = {
+  kind: 'office:log';
+  officeId: string;
+  caseId: string;
+  taskId: string | null;
+  role: 'coordinator' | 'task' | 'audit';
+  logSessionId: string;
+  entry: OfficeLogEntry;
+};
