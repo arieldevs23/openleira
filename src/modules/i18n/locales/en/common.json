@@ -318,7 +318,7 @@
     "browseAllCommits": "Browse all commits ({{count}})",
     "browseAllBranches": "Browse all branches ({{count}})",
     "switchTo": "Switch to: {{name}}",
-    "navOffice": "Open workspace mode"
+    "navOffice": "Open canvas"
   },
   "folderBrowser": {
     "title": "Select Folder",
@@ -407,7 +407,7 @@
   "mode": {
     "label": "Mode",
     "normal": "Normal",
-    "workspace": "Workspace",
+    "workspace": "Canvas",
     "workspaceTitle": "Workspace"
   }
 }

@@ -90,7 +90,7 @@
     "loading": "lagi buka OpenLeira",
     "settingUpWorkspace": "lagi nyiapin workspace...",
     "chooseProject": "pilih project",
-    "selectProjectDescription": "pilih project dari sidebar buat mulai ngoding bareng Claude. tiap project isinya session chat sama riwayat file",
+    "selectProjectDescription": "pilih project dari sidebar buat mulai ngoding bareng Claude. tiap project isinya session chat sama histori file",
     "tip": "tips",
     "createProjectMobile": "tap tombol menu di atas buat buka project",
     "createProjectDesktop": "bikin project baru, klik ikon folder di sidebar",
@@ -317,7 +317,7 @@
     "browseAllCommits": "liat semua commit ({{count}})",
     "browseAllBranches": "liat semua branch ({{count}})",
     "switchTo": "pindah ke: {{name}}",
-    "navOffice": "buka mode workspace"
+    "navOffice": "buka canvas"
   },
   "folderBrowser": {
     "title": "pilih folder",
@@ -355,7 +355,7 @@
   "cancel": "batal",
   "welcome": {
     "title": "mau ngapain hari ini?",
-    "modeObrolan": "obrolan biasa",
+    "modeObrolan": "chat biasa",
     "modeProject": "project",
     "placeholder": "tanya OpenLeira",
     "send": "kirim",
@@ -366,7 +366,7 @@
   "mode": {
     "label": "mode",
     "normal": "normal",
-    "workspace": "workspace",
+    "workspace": "canvas",
     "workspaceTitle": "workspace"
   }
 }
