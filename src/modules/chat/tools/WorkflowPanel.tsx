@@ -28,6 +28,7 @@ import {
 } from '@/modules/chat/utils/backgroundTasks';
 import { parseWorkflowMeta } from '@/modules/chat/utils/workflowScriptMeta';
 import { StatusMark } from '@/shared/ui';
+import type { StatusMarkKind } from '@/shared/ui';
 
 type WorkflowPanelProps = {
   /** Raw tool input of the `Workflow` call: the script (or its path) and a one-line description. */
@@ -107,12 +108,13 @@ const STATUS_STYLES: Record<BackgroundTaskStatus, string> = {
   stopped: 'text-muted-foreground',
 };
 
-const AGENT_STATUS_STYLES: Record<WorkflowAgentRow['status'], string> = {
-  queued: 'border border-muted-foreground/50',
-  running: 'bg-primary animate-pulse',
-  completed: 'bg-ok',
-  failed: 'bg-err',
-  stopped: 'bg-muted-foreground/40',
+// Each agent status has its own shape, not just a colour (DESIGN.md §2).
+const AGENT_STATUS_MARKS: Record<WorkflowAgentRow['status'], StatusMarkKind> = {
+  queued: 'idle',
+  running: 'running',
+  completed: 'done',
+  failed: 'error',
+  stopped: 'idle',
 };
 
 /** The live stream's word on an agent, in the card's statuses. */
@@ -306,7 +308,7 @@ const WorkflowAgentRowView = memo(({ agent, timelineAddress, onFileOpen, createD
 
   const summary = (
     <>
-      <span className={cn('h-1.5 w-1.5 flex-shrink-0 rounded-full', AGENT_STATUS_STYLES[agent.status])} />
+      <StatusMark kind={AGENT_STATUS_MARKS[agent.status]} />
       <span className={cn('min-w-0 truncate', agent.status === 'failed' ? 'text-err' : 'text-foreground')}>
         {describeWorkflowAgent(agent)}
       </span>

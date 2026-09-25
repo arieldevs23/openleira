@@ -35,7 +35,7 @@ export function StatusMark({ kind, label, className }: StatusMarkProps) {
   return (
     <span
       className={cn('status-mark', KIND_CLASS_NAMES[kind], className)}
-      role={label ? 'img' : undefined}
+      role={label ? 'status' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
     />
