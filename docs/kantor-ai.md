@@ -75,7 +75,9 @@ Workspace selalu terikat ke folder, jadi foldernya dipilih dulu:
 
 1. **Folder baru:** ketik path folder baru (atau cari folder induknya). Folder dibuat dan didaftarkan sebagai proyek lewat alur pembuatan proyek yang sudah ada, lalu workspace dibuat dengan divisi default. Folder yang sudah berisi file ditolak di pilihan ini.
 2. **Aplikasi yang udah ada:** tunjuk foldernya. Kalau belum jadi proyek, didaftarkan. Lalu pilih:
-   - **Analisis pakai AI.** Pilih model (hanya dari provider yang terhubung). Satu agent membaca repo **read-only** (di Claude hanya `Read`, `Glob`, `Grep`; mode permission `default`) dan menjawab JSON `{ summary, divisions: [...] }`. Kamu review usulannya: ganti nama divisi/agent, edit deskripsi dan peran, hapus, atau tambah. Koordinator dan audit selalu ditambahkan otomatis, dan ringkasan aplikasi ditempel ke peran koordinator. Sesi analisis muncul di riwayat chat proyek. Progresnya dikirim lewat frame WebSocket `office:analysis` (tanpa polling); hasilnya disimpan di memori server selama satu jam.
+   - **Analisis pakai AI.** Pilih model (hanya dari provider yang terhubung). Satu agent membaca repo **read-only** (di Claude hanya `Read`, `Glob`, `Grep`; mode permission `default`) dan menjawab JSON `{ summary, divisions: [...] }`. Kamu review usulannya: ganti nama divisi/agent, edit deskripsi dan peran, hapus, atau tambah. Koordinator dan audit selalu ditambahkan otomatis, dan ringkasan aplikasi ditempel ke peran koordinator. Sesi analisis muncul di riwayat chat proyek.
+
+     **Progres dan background.** Selama analisis jalan, modal menampilkan tahapnya (mulai → baca kode → nyusun usulan → selesai), waktu berjalan, jumlah langkah, dan daftar live file yang dibaca serta pencarian yang dilakukan agent (40 langkah terakhir). Modal boleh ditutup (**jalan di background**): analisisnya jalan di server, bukan di browser. Analisis yang masih jalan, sudah selesai, atau berhenti muncul di grup **workspace** di sidebar dengan tahap dan jumlah langkahnya. Klik untuk membuka lagi modalnya di posisi terakhir (progres, review, atau coba lagi). Analisis yang masih jalan bisa **dibatalin** (sesinya dihentikan). Yang sudah selesai bisa dibuang dengan tombol ×. Semua update lewat frame WebSocket `office:analysis` (tanpa polling). Hasilnya disimpan di memori server selama satu jam, dan hilang dari daftar begitu foldernya sudah punya workspace.
    - **Pakai divisi default** tanpa analisis.
 
 Path harus berada di dalam `WORKSPACES_ROOT` server, sama seperti pembuatan proyek biasa.
@@ -140,6 +142,8 @@ Semua di bawah `/api/office` (butuh login):
 | DELETE | `/:officeId` | Hapus workspace (folder tidak disentuh) |
 | POST | `/folders` | Siapkan folder `{ path, mode: 'new' \| 'existing' }` |
 | POST / GET | `/analyses`, `/analyses/:id` | Mulai / baca analisis aplikasi `{ projectId, provider, model, locale }` |
+| GET | `/analyses` | Analisis yang masih jalan atau menunggu review |
+| POST / DELETE | `/analyses/:id/cancel`, `/analyses/:id` | Batalkan analisis yang jalan / buang analisis yang selesai |
 | POST / DELETE | `/:officeId/flow` | Tambah / hapus panah `{ fromDivisionId, toDivisionId }` |
 | GET | `/:officeId/cases/:caseId/usage` | Pemakaian token kasus |
 | PATCH | `/:officeId` | `name`, `maxParallel`, `permissionMode`, `permissionWarningAcknowledged` |

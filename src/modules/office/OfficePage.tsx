@@ -10,6 +10,7 @@ import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
 import SkillsPanel from '@/modules/office/SkillsPanel';
 import UsagePanel from '@/modules/office/UsagePanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
+import { useAnalyses } from '@/modules/office/hooks/useAnalyses';
 import { useCaseDetail } from '@/modules/office/hooks/useCaseDetail';
 import { useCaseUsage } from '@/modules/office/hooks/useCaseUsage';
 import { useInstalledSkills } from '@/modules/office/hooks/useInstalledSkills';
@@ -82,6 +83,7 @@ type OfficePageProps = {
 export default function OfficePage({ initialProjectId, onOpenSession }: OfficePageProps) {
   const { t, i18n } = useTranslation('office');
   const { workspaces, error: workspacesError } = useWorkspaces();
+  const { analyses, forgetProject } = useAnalyses();
   const isNarrow = useIsNarrowLayout();
 
   // The workspace on screen, by its project folder id.
@@ -133,6 +135,8 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Whether the add-workspace dialog is open.
   const [isAddOpen, setIsAddOpen] = useState(false);
+  // The background analysis the add-workspace dialog reopens, if it was opened from the sidebar.
+  const [resumeAnalysisId, setResumeAnalysisId] = useState<string | null>(null);
   // The case waiting on the one-time bypass-permissions warning before it starts.
   const [pendingStartCaseId, setPendingStartCaseId] = useState<string | null>(null);
   // A delete waiting for confirmation.
@@ -455,7 +459,16 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
         setSelection({ type: 'case' });
         setIsSidebarOpen(false);
       }}
-      onAddWorkspace={() => setIsAddOpen(true)}
+      onAddWorkspace={() => { setResumeAnalysisId(null); setIsAddOpen(true); }}
+      analyses={analyses}
+      onOpenAnalysis={(analysisId) => {
+        setResumeAnalysisId(analysisId);
+        setIsAddOpen(true);
+        setIsSidebarOpen(false);
+      }}
+      onDismissAnalysis={(analysisId) => {
+        api.office.dismissAnalysis(analysisId).then(readApiJson).catch(reportError);
+      }}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onDeleteWorkspace={(workspace) => setPendingDelete({ kind: 'workspace', workspace })}
       cases={cases}
@@ -624,12 +637,17 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
       )}
       {isAddOpen && (
         <AddWorkspaceModal
+          key={resumeAnalysisId ?? 'new'}
           open
           onOpenChange={setIsAddOpen}
+          analyses={analyses}
+          resumeAnalysisId={resumeAnalysisId}
+          onOpenSession={(sessionId) => { setIsAddOpen(false); onOpenSession(sessionId); }}
           locale={i18n.language || 'id'}
           groups={modelGroups}
           onConnectProviders={() => { setIsAddOpen(false); openWizard('providers'); }}
           onReady={(projectId) => {
+            forgetProject(projectId);
             selectWorkspace(projectId);
             setSelectedCaseId(null);
             setSelection({ type: 'case' });

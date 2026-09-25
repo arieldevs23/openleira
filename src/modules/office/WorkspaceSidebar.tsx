@@ -1,11 +1,12 @@
-import { Building2, ChevronRight, FolderPlus, Loader2, Settings2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, ChevronRight, FolderPlus, Loader2, Settings2, Trash2, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CaseList from '@/modules/office/CaseList';
 import MarkdownPreview from '@/modules/office/MarkdownPreview';
+import { analysisStage } from '@/modules/office/utils/officeAnalysis';
 import { ContextMenu } from '@/shared/ui';
-import type { OfficeCase, OfficeDivision, OfficeWorkspaceSummary } from '@/shared/types';
+import type { OfficeAnalysis, OfficeCase, OfficeDivision, OfficeWorkspaceSummary } from '@/shared/types';
 import { cn } from '@/shared/utils';
 
 const COLLAPSE_STORAGE_KEY = 'office-sidebar-collapsed';
@@ -27,6 +28,10 @@ type WorkspaceSidebarProps = {
   selectedProjectId: string | null;
   onSelectWorkspace: (projectId: string) => void;
   onAddWorkspace: () => void;
+  /** App analyses running in the background or waiting for review. */
+  analyses: OfficeAnalysis[];
+  onOpenAnalysis: (analysisId: string) => void;
+  onDismissAnalysis: (analysisId: string) => void;
   onOpenSettings: () => void;
   onDeleteWorkspace: (workspace: OfficeWorkspaceSummary) => void;
   /** The selected workspace's cases and divisions; empty while it loads. */
@@ -51,6 +56,9 @@ export default function WorkspaceSidebar({
   selectedProjectId,
   onSelectWorkspace,
   onAddWorkspace,
+  analyses,
+  onOpenAnalysis,
+  onDismissAnalysis,
   onOpenSettings,
   onDeleteWorkspace,
   cases,
@@ -144,6 +152,43 @@ export default function WorkspaceSidebar({
                   </span>
                   <span className="truncate text-[10.5px] text-muted-foreground">{workspace.office.projectPath}</span>
                 </button>
+              );
+            })}
+            {analyses.map((analysis) => {
+              const isRunning = analysis.status === 'running';
+              const lastStep = analysis.steps[analysis.steps.length - 1];
+              const detail = isRunning
+                ? `${t(`addWorkspace.stage.${analysisStage(analysis)}`)} · ${t('addWorkspace.stepCount', { count: analysis.stepCount })}`
+                : analysis.status === 'done' ? t('sidebar.analysisReady') : t('sidebar.analysisStopped');
+              return (
+                <div key={analysis.id} className="group flex items-center rounded-[10px] hover:bg-muted/70" data-testid={`office-sidebar-analysis-${analysis.status}`}>
+                  <button
+                    type="button"
+                    onClick={() => onOpenAnalysis(analysis.id)}
+                    className="flex min-w-0 flex-1 items-start gap-2 px-2.5 py-1.5 text-left"
+                    title={lastStep?.text}
+                  >
+                    {isRunning
+                      ? <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
+                      : analysis.status === 'done'
+                        ? <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                        : <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] text-foreground">{t('sidebar.analysisOf', { name: analysis.projectName })}</span>
+                      <span className="block truncate text-[10.5px] text-muted-foreground">{detail}</span>
+                    </span>
+                  </button>
+                  {!isRunning && (
+                    <button
+                      type="button"
+                      onClick={() => onDismissAnalysis(analysis.id)}
+                      className="mr-1 rounded-md p-1 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+                      aria-label={t('sidebar.dismissAnalysis', { name: analysis.projectName })}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               );
             })}
             <button

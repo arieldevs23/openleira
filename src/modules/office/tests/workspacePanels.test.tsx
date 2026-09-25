@@ -6,7 +6,7 @@ import { beforeAll, test } from 'vitest';
 import { i18n } from '@/modules/i18n';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
-import type { OfficeDivision, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
+import type { OfficeAnalysis, OfficeDivision, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
 
 beforeAll(async () => {
   await i18n.changeLanguage('en');
@@ -44,13 +44,20 @@ const workspace = (projectId: string, name: string, activeCases = 0): OfficeWork
   totalCases: 3,
 });
 
-const renderSidebar = (overrides: { onSelectWorkspace?: (id: string) => void } = {}) => render(
+const renderSidebar = (overrides: {
+  onSelectWorkspace?: (id: string) => void;
+  analyses?: OfficeAnalysis[];
+  onOpenAnalysis?: (id: string) => void;
+} = {}) => render(
   <WorkspaceSidebar
     workspaces={[workspace('shop', 'Shop team', 1), workspace('blog', 'Blog team')]}
     workspacesError={null}
     selectedProjectId="shop"
     onSelectWorkspace={overrides.onSelectWorkspace ?? (() => {})}
     onAddWorkspace={() => {}}
+    analyses={overrides.analyses ?? []}
+    onOpenAnalysis={overrides.onOpenAnalysis ?? (() => {})}
+    onDismissAnalysis={() => {}}
     onOpenSettings={() => {}}
     onDeleteWorkspace={() => {}}
     cases={[]}

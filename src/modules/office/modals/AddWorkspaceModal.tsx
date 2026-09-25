@@ -1,16 +1,15 @@
 import { ChevronRight, FolderPlus, FolderSearch, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ModelSelect from '@/modules/office/ModelSelect';
 import { WorkspacePathField } from '@/modules/project-creation-wizard';
+import AnalysisProgress from '@/modules/office/AnalysisProgress';
 import { api, readApiJson } from '@/shared/api';
-import { useWebSocket } from '@/shared/context/WebSocketContext';
 import { Button, Dialog, DialogContent, DialogTitle } from '@/shared/ui';
 import type {
   LLMProvider,
   OfficeAnalysis,
-  OfficeAnalysisEvent,
   OfficeDivisionProposal,
   OfficeModelGroup,
   OfficePreparedFolder,
@@ -35,7 +34,18 @@ type AddWorkspaceModalProps = {
   onConnectProviders: () => void;
   /** A workspace exists for this folder now (created, or it already had one). */
   onReady: (projectId: string) => void;
+  /** Live analyses (from the page's `office:analysis` subscription). */
+  analyses: OfficeAnalysis[];
+  /** Reopens an analysis that kept running (or finished) while the dialog was closed. */
+  resumeAnalysisId?: string | null;
+  /** Opens the analysis session in the regular chat view. */
+  onOpenSession?: (sessionId: string) => void;
 };
+
+/** Where a reopened analysis puts the dialog. */
+const stepFor = (analysis: OfficeAnalysis): Step => (
+  analysis.status === 'running' ? 'analysing' : analysis.status === 'done' ? 'review' : 'setup'
+);
 
 /**
  * "Add workspace": a workspace always works in one folder, so the folder
@@ -43,62 +53,72 @@ type AddWorkspaceModalProps = {
  * that already exists, which an agent reads to propose divisions the user
  * reviews before the workspace is created.
  */
-export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, onConnectProviders, onReady }: AddWorkspaceModalProps) {
+export default function AddWorkspaceModal({
+  open,
+  onOpenChange,
+  locale,
+  groups,
+  onConnectProviders,
+  onReady,
+  analyses,
+  resumeAnalysisId,
+  onOpenSession,
+}: AddWorkspaceModalProps) {
   const { t } = useTranslation('office');
-  const { subscribe } = useWebSocket();
-  // The dialog page on screen.
-  const [step, setStep] = useState<Step>('source');
+  const resumed = analyses.find((candidate) => candidate.id === resumeAnalysisId) ?? null;
+  // The dialog page on screen; a reopened analysis starts where it stands.
+  const [step, setStep] = useState<Step>(() => (resumed ? stepFor(resumed) : 'source'));
   // New folder or existing app.
-  const [mode, setMode] = useState<'new' | 'existing'>('new');
+  const [mode, setMode] = useState<'new' | 'existing'>(resumed ? 'existing' : 'new');
   // The folder path being typed or browsed.
-  const [folderPath, setFolderPath] = useState('');
+  const [folderPath, setFolderPath] = useState(resumed?.projectPath ?? '');
   // The folder once the server readied it as a project.
-  const [folder, setFolder] = useState<OfficePreparedFolder | null>(null);
+  const [folder, setFolder] = useState<OfficePreparedFolder | null>(() => (resumed
+    ? { projectId: resumed.projectId, projectPath: resumed.projectPath, projectName: resumed.projectName, hasWorkspace: false }
+    : null));
   // Model the analysis agent runs on.
-  const [analysisModel, setAnalysisModel] = useState<{ provider: LLMProvider; model: string } | null>(null);
-  // The running or finished analysis.
-  const [analysis, setAnalysis] = useState<OfficeAnalysis | null>(null);
+  const [analysisModel, setAnalysisModel] = useState<{ provider: LLMProvider; model: string } | null>(
+    resumed ? { provider: resumed.provider, model: resumed.model } : null,
+  );
+  // The analysis this dialog follows, and its state as returned by the start request (until frames arrive).
+  const [analysisId, setAnalysisId] = useState<string | null>(resumed?.id ?? null);
+  const [startedAnalysis, setStartedAnalysis] = useState<OfficeAnalysis | null>(null);
   // App summary and divisions under review; editable.
-  const [summary, setSummary] = useState('');
-  const [proposals, setProposals] = useState<OfficeDivisionProposal[]>([]);
+  const [summary, setSummary] = useState(resumed?.status === 'done' ? resumed.summary ?? '' : '');
+  const [proposals, setProposals] = useState<OfficeDivisionProposal[]>(resumed?.status === 'done' ? resumed.divisions : []);
   // Proposal rows unfolded to edit their role.
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   // A request in flight.
   const [isBusy, setIsBusy] = useState(false);
-  // Error of the last step.
-  const [error, setError] = useState<string | null>(null);
+  // Error of the last step; a reopened failed analysis starts with its reason.
+  const [error, setError] = useState<string | null>(
+    resumed?.status === 'failed' ? resumed.error : resumed?.status === 'cancelled' ? t('addWorkspace.analysisCancelled') : null,
+  );
 
-  // The analysis reports back over the shared websocket; a reconnect re-reads it once.
+  const analysis = analyses.find((candidate) => candidate.id === analysisId)
+    ?? (startedAnalysis?.id === analysisId ? startedAnalysis : null);
+  const lastStatusRef = useRef(analysis?.status ?? null);
+
+  // The analysis runs on the server and reports over the page's websocket subscription;
+  // when it finishes while this dialog is open, the dialog moves on by itself.
   useEffect(() => {
-    if (!analysis || analysis.status !== 'running') {
-      return undefined;
+    const status = analysis?.status ?? null;
+    if (status === lastStatusRef.current) {
+      return;
     }
-    const analysisId = analysis.id;
-    const apply = (next: OfficeAnalysis) => {
-      setAnalysis(next);
-      if (next.status === 'done') {
-        setSummary(next.summary ?? '');
-        setProposals(next.divisions);
-        setStep('review');
-      } else if (next.status === 'failed') {
-        setError(next.error ?? t('addWorkspace.analysisFailed'));
-        setStep('setup');
-      }
-    };
-    return subscribe((event) => {
-      if (event.kind === 'office:analysis') {
-        const frame = event as unknown as OfficeAnalysisEvent;
-        if (frame.analysis.id === analysisId) {
-          apply(frame.analysis);
-        }
-      } else if (event.kind === 'websocket_reconnected') {
-        void api.office.analysis(analysisId)
-          .then((response) => readApiJson<{ data: OfficeAnalysis }>(response))
-          .then((body) => apply(body.data))
-          .catch(() => {});
-      }
-    });
-  }, [analysis, subscribe, t]);
+    lastStatusRef.current = status;
+    if (!analysis || step !== 'analysing') {
+      return;
+    }
+    if (analysis.status === 'done') {
+      setSummary(analysis.summary ?? '');
+      setProposals(analysis.divisions);
+      setStep('review');
+    } else if (analysis.status === 'failed' || analysis.status === 'cancelled') {
+      setError(analysis.status === 'failed' ? analysis.error ?? t('addWorkspace.analysisFailed') : t('addWorkspace.analysisCancelled'));
+      setStep('setup');
+    }
+  }, [analysis, step, t]);
 
   const run = async (work: () => Promise<void>) => {
     setIsBusy(true);
@@ -140,7 +160,9 @@ export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, 
       model: analysisModel.model,
       locale,
     }));
-    setAnalysis(body.data);
+    setStartedAnalysis(body.data);
+    setAnalysisId(body.data.id);
+    lastStatusRef.current = body.data.status;
     setStep('analysing');
   });
 
@@ -239,11 +261,32 @@ export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, 
         )}
 
         {step === 'analysing' && (
-          <div className="flex flex-col items-center gap-2 py-8 text-center" role="status">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <p className="text-sm text-foreground">{t('addWorkspace.analysing', { name: folder?.projectName ?? '' })}</p>
-            <p className="max-w-sm text-xs text-muted-foreground">{t('addWorkspace.analysingHint')}</p>
-          </div>
+          analysis ? (
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+              <AnalysisProgress analysis={analysis} onOpenSession={onOpenSession} />
+              {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+              <div className="flex justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-xs text-red-600 hover:text-red-700 dark:text-red-300"
+                  disabled={isBusy}
+                  onClick={() => void run(async () => { await readApiJson(await api.office.cancelAnalysis(analysis.id)); })}
+                >
+                  {t('addWorkspace.cancelAnalysis')}
+                </Button>
+                <Button type="button" size="sm" className="h-8 px-3 text-xs" onClick={() => onOpenChange(false)} data-testid="office-analysis-background">
+                  {t('addWorkspace.runInBackground')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground" role="status">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t('loading')}
+            </div>
+          )
         )}
 
         {step === 'review' && (

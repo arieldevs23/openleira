@@ -190,8 +190,21 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     res.status(202).json(createApiSuccessResponse(analysis));
   }));
 
+  router.get('/analyses', asyncHandler(async (_req, res) => {
+    res.json(createApiSuccessResponse({ analyses: analyzer.list() }));
+  }));
+
   router.get('/analyses/:analysisId', asyncHandler(async (req, res) => {
     res.json(createApiSuccessResponse(analyzer.get(readParam(req, 'analysisId'))));
+  }));
+
+  router.post('/analyses/:analysisId/cancel', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse(await analyzer.cancel(readParam(req, 'analysisId'))));
+  }));
+
+  router.delete('/analyses/:analysisId', asyncHandler(async (req, res) => {
+    analyzer.dismiss(readParam(req, 'analysisId'));
+    res.json(createApiSuccessResponse({ dismissed: true }));
   }));
 
   router.get('/:officeId', asyncHandler(async (req, res) => {

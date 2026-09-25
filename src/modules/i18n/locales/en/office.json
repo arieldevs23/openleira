@@ -272,7 +272,11 @@
     "activeCases_one": "{{count}} case running",
     "activeCases_other": "{{count}} cases running",
     "expandAgent": "Show {{name}}'s role",
-    "collapseAgent": "Hide {{name}}'s role"
+    "collapseAgent": "Hide {{name}}'s role",
+    "analysisOf": "Analysis: {{name}}",
+    "analysisReady": "Ready to review",
+    "analysisStopped": "Stopped. Open to retry",
+    "dismissAnalysis": "Dismiss the analysis of {{name}}"
   },
   "addWorkspace": {
     "title": "Add workspace",
@@ -296,14 +300,31 @@
     "noProvider": "Connect a provider first to run the analysis.",
     "useDefaults": "Skip the analysis and use the default divisions",
     "analysing": "Reading {{name}}...",
-    "analysingHint": "This usually takes one to three minutes. The session also shows up in the project's chat history.",
     "analysisFailed": "The analysis did not finish.",
     "reviewIntro": "Proposed divisions. Rename, edit, remove or add before creating; the coordinator and the audit layer are added for you.",
     "summary": "About the app (given to the coordinator)",
     "editRole": "Edit role",
     "removeDivision": "Remove division",
     "addDivision": "Add division",
-    "create": "Create workspace"
+    "create": "Create workspace",
+    "analysisCancelled": "The analysis was cancelled.",
+    "cancelAnalysis": "Cancel analysis",
+    "runInBackground": "Run in background",
+    "backgroundHint": "You can close this dialog: the analysis keeps running on the server and shows up in the workspace sidebar, where you can reopen it to review the result.",
+    "stepCount_one": "{{count}} step",
+    "stepCount_other": "{{count}} steps",
+    "openSession": "Open session",
+    "stagesLabel": "Analysis stages",
+    "stepsLabel": "What the agent did",
+    "stage": {
+      "session": "Starting",
+      "reading": "Reading the code",
+      "writing": "Writing the proposal",
+      "done": "Done"
+    },
+    "earlierSteps_one": "… {{count}} earlier step",
+    "earlierSteps_other": "… {{count}} earlier steps",
+    "waitingForAgent": "Waiting for the agent to start…"
   },
   "menu": {
     "label": "Actions",

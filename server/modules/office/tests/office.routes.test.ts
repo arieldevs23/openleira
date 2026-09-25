@@ -143,6 +143,9 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     assert.equal((await request('POST', '/api/office/analyses', { projectId: 'p1', provider: 'claude', model: 'sonnet' })).status, 202);
     assert.equal((await request('POST', '/api/office/analyses', { projectId: 'p1' })).status, 400);
     assert.equal((await request('GET', '/api/office/analyses/a1')).status, 200);
+    assert.equal((await request('GET', '/api/office/analyses')).status, 200);
+    assert.equal((await request('POST', '/api/office/analyses/a1/cancel')).status, 200);
+    assert.equal((await request('DELETE', '/api/office/analyses/a1')).status, 200);
     assert.equal((await request('POST', '/api/office', {
       projectId: 'p1',
       divisions: [{ name: 'API', rolePrompt: 'owns /api' }],
@@ -163,6 +166,9 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     'office.requireReadyModel',
     'analyzer.start',
     'analyzer.get',
+    'analyzer.list',
+    'analyzer.cancel',
+    'analyzer.dismiss',
     'office.createOffice',
     'office.getCaseUsage',
     'office.deleteOffice',
@@ -170,7 +176,7 @@ test('workspace, flow, position and analysis routes parse their input', async ()
   ]);
   assert.deepEqual((calls[3].args[2] as { position: unknown }).position, { x: 4, y: 5 });
   assert.equal((calls[4].args[2] as { position: unknown }).position, null);
-  assert.deepEqual(calls[8].args[0], {
+  assert.deepEqual(calls[11].args[0], {
     projectId: 'p1',
     locale: null,
     divisions: [{ name: 'API', slug: '', description: '', color: '', agentName: '', rolePrompt: 'owns /api' }],

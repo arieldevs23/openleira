@@ -435,6 +435,9 @@ export const api = {
     startAnalysis: (input: { projectId: string; provider: string; model: string; locale: string }) =>
       post('/api/office/analyses', input),
     analysis: (analysisId: string) => get(`/api/office/analyses/${encodeURIComponent(analysisId)}`),
+    analyses: () => get('/api/office/analyses'),
+    cancelAnalysis: (analysisId: string) => post(`/api/office/analyses/${encodeURIComponent(analysisId)}/cancel`),
+    dismissAnalysis: (analysisId: string) => del(`/api/office/analyses/${encodeURIComponent(analysisId)}`),
     addFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
       post(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
     deleteFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>

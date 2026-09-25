@@ -1670,19 +1670,31 @@ export type OfficeDivisionProposal = {
 export type OfficeAnalysis = {
   id: string;
   projectId: string;
-  status: 'running' | 'done' | 'failed';
+  /** The folder being analysed, so the page can show it without another lookup. */
+  projectName: string;
+  projectPath: string;
+  provider: LLMProvider;
+  model: string;
+  status: 'running' | 'done' | 'failed' | 'cancelled';
   /** One-paragraph summary of the app (stack, structure, how it runs). */
   summary: string | null;
   divisions: OfficeDivisionProposal[];
+  /** What the agent has done so far (files read, searches, notes), newest last; capped. */
+  steps: OfficeLogEntry[];
+  /** How many steps there were in total, including those dropped by the cap. */
+  stepCount: number;
   sessionId: string | null;
   error: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 /** Realtime frame for an analysis run; sent when it starts, finishes or fails. */
 export type OfficeAnalysisEvent = {
   kind: 'office:analysis';
   analysis: OfficeAnalysis;
+  /** The user dismissed the analysis; clients drop it from their list. */
+  removed?: boolean;
 };
 
 /** Token use of one office session, as the provider's own transcript reports it. */

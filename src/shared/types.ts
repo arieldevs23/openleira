@@ -1840,12 +1840,23 @@ export type OfficeDivisionProposal = {
 export type OfficeAnalysis = {
   id: string;
   projectId: string;
-  status: 'running' | 'done' | 'failed';
+  /** The folder being analysed, so the page can show it without another lookup. */
+  projectName: string;
+  projectPath: string;
+  provider: LLMProvider;
+  model: string;
+  status: 'running' | 'done' | 'failed' | 'cancelled';
+  /** One-paragraph summary of the app (stack, structure, how it runs). */
   summary: string | null;
   divisions: OfficeDivisionProposal[];
+  /** What the agent has done so far (files read, searches, notes), newest last; capped. */
+  steps: OfficeLogEntry[];
+  /** How many steps there were in total, including those dropped by the cap. */
+  stepCount: number;
   sessionId: string | null;
   error: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 /** Tokens one session of a case spent. */
@@ -1968,7 +1979,12 @@ export type OfficeUpdateEvent = {
 };
 
 /** The `office:analysis` websocket frame: an app analysis started, finished or failed. */
-export type OfficeAnalysisEvent = { kind: 'office:analysis'; analysis: OfficeAnalysis };
+export type OfficeAnalysisEvent = {
+  kind: 'office:analysis';
+  analysis: OfficeAnalysis;
+  /** The user dismissed the analysis; clients drop it from their list. */
+  removed?: boolean;
+};
 
 /** One compact transcript line of an office session, live or rebuilt from history. */
 export type OfficeLogEntry = {
