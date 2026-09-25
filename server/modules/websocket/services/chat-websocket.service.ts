@@ -16,6 +16,7 @@ import type {
   AnyRecord,
   AuthenticatedWebSocketRequest,
   LLMProvider,
+  NormalizedMessage,
   ProviderPermissionDecision,
   ProviderRuntimeWriter,
 } from '@/shared/types.js';
@@ -217,6 +218,7 @@ async function dispatchRun(
   dependencies: ChatWebSocketDependencies,
   extraRuntimeOptions: AnyRecord = {},
   beforeRun?: (run: NonNullable<ReturnType<typeof chatRunRegistry.startRun>>) => void | Promise<void>,
+  observer?: (event: NormalizedMessage) => void,
 ): Promise<{ started: boolean; error: string | null }> {
   const provider = session.provider as LLMProvider;
 
@@ -226,6 +228,7 @@ async function dispatchRun(
     providerSessionId: session.provider_session_id,
     connection: ws,
     userId,
+    observer,
   });
 
   if (!run) {
@@ -614,6 +617,12 @@ export async function runDetachedChatTurn(
      * land mid-run, so the timer outranks whatever is running.
      */
     interruptActiveRun?: boolean;
+    /**
+     * Receives every event the run emits, in order, including its terminal
+     * `complete`. The Office orchestrator uses it to read an agent's answer
+     * without a browser attached; the run is otherwise identical to any other.
+     */
+    onEvent?: (event: NormalizedMessage) => void;
   },
   dependencies: ChatWebSocketDependencies,
 ): Promise<{ started: boolean; error: string | null }> {
@@ -651,6 +660,9 @@ export async function runDetachedChatTurn(
     session,
     { sessionId: input.sessionId, content: input.content, options: input.options ?? {} },
     dependencies,
+    {},
+    undefined,
+    input.onEvent,
   );
 }
 
