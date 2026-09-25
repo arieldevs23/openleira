@@ -409,5 +409,14 @@
     "descriptionPlaceholder": "Detail (opsional)",
     "submit": "Jalanin",
     "badge": "cepat"
+  },
+  "dock": {
+    "show": "chat sama {{name}}",
+    "collapse": "kecilin chat",
+    "expand": "buka semua chat",
+    "hide": "sembunyiin chat",
+    "finished": "task ini udah kelar, chatnya cuma bisa dibaca.",
+    "title": "chat sama {{name}}",
+    "empty": "belum ada pesan. tulis ke {{name}} di bawah."
   }
 }

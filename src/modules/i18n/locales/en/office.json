@@ -422,5 +422,14 @@
     "descriptionPlaceholder": "Details (optional)",
     "submit": "Run",
     "badge": "quick"
+  },
+  "dock": {
+    "show": "Chat with {{name}}",
+    "collapse": "Collapse chat",
+    "expand": "Show the whole chat",
+    "hide": "Hide chat",
+    "finished": "This task has finished; the chat is read-only.",
+    "title": "Chat with {{name}}",
+    "empty": "No messages yet. Write to {{name}} below."
   }
 }

@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import OfficeStatusBadge from '@/modules/office/OfficeStatusBadge';
+import { coordinatorThread } from '@/modules/office/utils/coordinatorThread';
 import { Button } from '@/shared/ui';
 import type { OfficeActions, OfficeCase, OfficeDivision, OfficeMessage, OfficeTask } from '@/shared/types';
 import { cn, officeCaseTone, officeTaskTone } from '@/shared/utils';
@@ -30,7 +31,7 @@ const formatTime = (value: string | null) => (value ? new Date(value).toLocaleTi
 
 const messageText = (message: OfficeMessage) => String(message.payload.text ?? '');
 
-/** Right panel of the office page for the selected case: controls, timeline, coordinator thread and final summary. */
+/** Right panel of the office page for the selected case: controls, timeline and final summary (the coordinator chat is the dock over the canvas). */
 export default function CasePanel({
   caseItem,
   tasks,
@@ -71,12 +72,8 @@ export default function CasePanel({
     }
   };
 
-  // The thread between the user and the coordinator: user notes, replies, questions, the final report.
-  const thread = messages.filter((message) => (
-    (message.kind === 'note' || message.kind === 'question')
-    && message.payload.type !== 'task_failed'
-    && (message.fromDivisionId === null || (message.fromDivisionId === coordinator?.id && message.toDivisionId === null))
-  ));
+  // The open question lives in the chat dock over the canvas; the panel only repeats it next to the case state.
+  const thread = coordinatorThread(messages, coordinator?.id);
   const pendingQuestion = caseItem.waitingReason === 'question'
     ? [...thread].reverse().find((message) => message.kind === 'question')
     : undefined;
@@ -246,31 +243,6 @@ export default function CasePanel({
         )}
       </section>
 
-      <section className="space-y-1.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('case.conversation')}</h3>
-        {thread.length === 0 && <p className="text-xs text-muted-foreground">{t('case.noConversation')}</p>}
-        <ul className="space-y-1.5">
-          {thread.filter((message) => !message.payload.final).map((message) => {
-            const fromUser = message.fromDivisionId === null;
-            return (
-              <li
-                key={message.id}
-                className={cn(
-                  'rounded-[10px] px-2.5 py-1.5 text-xs',
-                  fromUser ? 'ml-6 bg-primary/10 text-foreground' : 'mr-6 border border-border bg-card/70',
-                  message.kind === 'question' && 'border-navy/30 dark:border-blue-300/30',
-                )}
-              >
-                <span className="mb-0.5 block text-[10px] text-muted-foreground">
-                  {fromUser ? t('case.you') : coordinator?.agent.name ?? t('case.coordinator')}
-                  {message.kind === 'question' ? ` · ${t('kinds.question')}` : ''} · {formatTime(message.createdAt)}
-                </span>
-                <span className="whitespace-pre-wrap break-words">{messageText(message)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
     </div>
   );
 }

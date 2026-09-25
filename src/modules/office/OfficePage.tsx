@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 
 import AgentPanel from '@/modules/office/AgentPanel';
 import CasePanel from '@/modules/office/CasePanel';
-import CoordinatorComposer from '@/modules/office/CoordinatorComposer';
+import CoordinatorDock, { type CoordinatorDockMode } from '@/modules/office/CoordinatorDock';
 import MessagesPanel from '@/modules/office/MessagesPanel';
 import OfficeCanvas from '@/modules/office/OfficeCanvas';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
@@ -56,6 +56,16 @@ import { cn } from '@/shared/utils';
 const NARROW_LAYOUT_QUERY = '(max-width: 899px)';
 const SELECTED_WORKSPACE_KEY = 'office-selected-project';
 const COLLAPSED_PANELS_KEY = 'office-collapsed-panels';
+const CHAT_DOCK_KEY = 'office-chat-dock';
+
+const readDockMode = (): CoordinatorDockMode => {
+  try {
+    const stored = window.localStorage.getItem(CHAT_DOCK_KEY);
+    return stored === 'hidden' || stored === 'expanded' ? stored : 'collapsed';
+  } catch {
+    return 'collapsed';
+  }
+};
 
 type CollapsedPanels = { left: boolean; right: boolean };
 
@@ -214,7 +224,18 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
   const [skillPickerAt, setSkillPickerAt] = useState<CanvasPoint | undefined>(undefined);
   // The team a quick task is being written for; null while that dialog is closed.
   const [quickTaskDivision, setQuickTaskDivision] = useState<OfficeDivision | null>(null);
+  // How much of the coordinator chat is shown over the canvas; remembered per browser.
+  const [dockMode, setDockModeState] = useState<CoordinatorDockMode>(readDockMode);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const setDockMode = (mode: CoordinatorDockMode) => {
+    setDockModeState(mode);
+    try {
+      window.localStorage.setItem(CHAT_DOCK_KEY, mode);
+    } catch {
+      // Not remembered in private windows.
+    }
+  };
   // A delete waiting for confirmation.
   const [pendingDelete, setPendingDelete] = useState<
     { kind: 'workspace'; workspace: OfficeWorkspaceSummary } | { kind: 'division'; division: OfficeDivision } | null
@@ -311,11 +332,10 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     }
   };
 
-  /** "Message the coordinator": shows the right panel and puts the cursor in its message box. */
+  /** "Message the coordinator": brings the chat dock up and puts the cursor in its message box. */
   const focusComposer = () => {
-    setIsPanelOpen(true);
-    if (collapsed.right) {
-      setPanelCollapsed('right', false);
+    if (dockMode === 'hidden') {
+      setDockMode('collapsed');
     }
     window.setTimeout(() => composerRef.current?.focus(), 60);
   };
@@ -708,7 +728,20 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
         )}
 
         <div className="flex min-h-0 flex-1">
-          <main className="min-h-0 min-w-0 flex-1">{renderMain()}</main>
+          <main className="relative min-h-0 min-w-0 flex-1">
+            {renderMain()}
+            {office && caseItem && !caseItem.quickDivisionId && (
+              <CoordinatorDock
+                ref={composerRef}
+                caseItem={caseItem}
+                messages={messages}
+                coordinator={divisions.find((division) => division.isCoordinator) ?? null}
+                mode={dockMode}
+                onModeChange={setDockMode}
+                onSend={async (text) => { await actions.postNote(caseItem.id, text); }}
+              />
+            )}
+          </main>
 
           {office && isNarrow && isPanelOpen && (
             <button type="button" aria-label={t('common.close')} className="fixed inset-0 z-30 bg-black/30 backdrop-blur-[1px]" onClick={() => setIsPanelOpen(false)} />
@@ -744,16 +777,6 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
                   : railButton(t('panel.hidePanel'), PanelRightClose, () => setPanelCollapsed('right', true), 'office-hide-right')}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">{renderPanel()}</div>
-              {caseItem && !caseItem.quickDivisionId && caseItem.status !== 'done' && caseItem.status !== 'failed' && (
-                <div className="border-t border-border/60 bg-background/80 px-3 py-2 backdrop-blur" data-testid="office-composer-dock">
-                  <CoordinatorComposer
-                    key={caseItem.id}
-                    ref={composerRef}
-                    isAnswering={caseItem.waitingReason === 'question'}
-                    onSend={async (text) => { await actions.postNote(caseItem.id, text); }}
-                  />
-                </div>
-              )}
             </aside>
           )}
         </div>
