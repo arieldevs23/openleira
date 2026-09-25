@@ -354,11 +354,14 @@ export const officeCasesDb = {
     return rows.map(toMessage);
   },
 
-  /** User notes addressed to a division that it has not been given yet, oldest first. */
+  /**
+   * Notes addressed to a division that it has not been given yet, oldest
+   * first: the user's messages and failure reports for the coordinator.
+   */
   listUnreadNotes(caseId: string, toDivisionId: string): OfficeMessage[] {
     const rows = getConnection().prepare(`
       SELECT * FROM office_messages
-      WHERE case_id = ? AND to_division_id = ? AND kind = 'note' AND from_division_id IS NULL AND read_at IS NULL
+      WHERE case_id = ? AND to_division_id = ? AND kind = 'note' AND read_at IS NULL
       ORDER BY id ASC
     `).all(caseId, toDivisionId) as MessageRow[];
     return rows.map(toMessage);
