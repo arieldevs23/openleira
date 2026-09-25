@@ -347,7 +347,7 @@
     "quickTask": "Kasih task cepat",
     "resetMarked": "reset posisi {{count}} yang dipilih",
     "clearMarked": "batal pilih",
-    "deleteMarkedSkills": "hapus {{count}} skill yang dipilih"
+    "deleteMarkedSkills": "hapus {{count}} skill/bentuk yang dipilih"
   },
   "flow": {
     "explain": "kerjaan {{to}} nunggu sampai kerjaan {{from}} di task yang sama selesai. tim di cabang yang beda jalan barengan."
@@ -427,5 +427,44 @@
     "finished": "task ini udah kelar, chatnya cuma bisa dibaca.",
     "title": "chat sama {{name}}",
     "empty": "belum ada pesan. tulis ke {{name}} di bawah."
+  },
+  "shapes": {
+    "toolbar": "alat gambar",
+    "tool": {
+      "select": "pilih dan geser",
+      "rect": "kotak",
+      "rounded": "kotak rounded",
+      "ellipse": "bulat",
+      "diamond": "belah ketupat",
+      "text": "teks"
+    },
+    "kind": {
+      "rect": "kotak",
+      "rounded": "kotak rounded",
+      "ellipse": "bulat",
+      "diamond": "belah ketupat",
+      "text": "teks"
+    },
+    "label": "{{kind}}: {{text}}",
+    "editText": "teks bentuk",
+    "menu": {
+      "editText": "edit teks",
+      "style": "warna dan gaya",
+      "front": "bawa ke depan",
+      "back": "kirim ke belakang",
+      "duplicate": "duplikat",
+      "delete": "hapus bentuk"
+    },
+    "panelTitle": "bentuk",
+    "panelHint": "bentuk cuma buat ngerapiin dan ngasih label bagan, agent ga baca ini. klik dua kali bentuk di canvas buat edit teksnya.",
+    "kindLabel": "bentuk",
+    "textLabel": "teks",
+    "fill": "isi",
+    "stroke": "garis",
+    "textColor": "warna teks",
+    "none": "ga ada",
+    "auto": "otomatis",
+    "custom": "warna lain",
+    "fontSize": "ukuran teks"
   }
 }

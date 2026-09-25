@@ -9,6 +9,9 @@ import type {
   OfficeDivisionInput,
   OfficeFlowEdge,
   OfficePermissionMode,
+  OfficeShape,
+  OfficeShapeKind,
+  OfficeShapePatch,
   OfficeSkillNode,
   OfficeWorkspaceSummary,
 } from '@/shared/types.js';
@@ -187,6 +190,46 @@ const toFlowEdge = (row: FlowEdgeRow): OfficeFlowEdge => ({
   createdAt: row.created_at,
 });
 
+type ShapeRow = {
+  id: string;
+  kind: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  fill: string | null;
+  stroke: string | null;
+  text_color: string | null;
+  font_size: number;
+  z: number;
+  created_at: string;
+  updated_at: string;
+};
+
+const toShape = (row: ShapeRow): OfficeShape => ({
+  id: row.id,
+  kind: row.kind as OfficeShapeKind,
+  x: row.x,
+  y: row.y,
+  width: row.width,
+  height: row.height,
+  text: row.text,
+  fill: row.fill,
+  stroke: row.stroke,
+  textColor: row.text_color,
+  fontSize: row.font_size,
+  z: row.z,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+/** Shape fields to their columns, for partial updates. */
+const SHAPE_COLUMNS: Record<keyof OfficeShapePatch, string> = {
+  kind: 'kind', x: 'x', y: 'y', width: 'width', height: 'height', text: 'text',
+  fill: 'fill', stroke: 'stroke', textColor: 'text_color', fontSize: 'font_size', z: 'z',
+};
+
 type SkillNodeRow = {
   id: string;
   skill_name: string;
@@ -310,6 +353,54 @@ export const officesDb = {
     getConnection()
       .prepare('UPDATE office_skill_nodes SET pos_x = ?, pos_y = ? WHERE id = ?')
       .run(position?.x ?? null, position?.y ?? null, nodeId);
+  },
+
+  /** Drawn shapes of the canvas, bottom of the stack first. */
+  listShapes(officeId: string): OfficeShape[] {
+    const rows = getConnection()
+      .prepare('SELECT * FROM office_shapes WHERE office_id = ? ORDER BY z ASC, created_at ASC, rowid ASC')
+      .all(officeId) as ShapeRow[];
+    return rows.map(toShape);
+  },
+
+  getShape(shapeId: string): (OfficeShape & { officeId: string }) | null {
+    const row = getConnection().prepare('SELECT * FROM office_shapes WHERE id = ?').get(shapeId) as (ShapeRow & { office_id: string }) | undefined;
+    return row ? { ...toShape(row), officeId: row.office_id } : null;
+  },
+
+  /** Adds a shape on top of every other one and returns its id. */
+  createShape(officeId: string, shape: Omit<OfficeShape, 'id' | 'z' | 'createdAt' | 'updatedAt'>): string {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const top = getConnection().prepare('SELECT COALESCE(MAX(z), 0) AS z FROM office_shapes WHERE office_id = ?').get(officeId) as { z: number };
+    getConnection().prepare(`
+      INSERT INTO office_shapes (id, office_id, kind, x, y, width, height, text, fill, stroke, text_color, font_size, z, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, officeId, shape.kind, shape.x, shape.y, shape.width, shape.height, shape.text, shape.fill, shape.stroke, shape.textColor, shape.fontSize, top.z + 1, now, now);
+    return id;
+  },
+
+  updateShape(shapeId: string, patch: OfficeShapePatch): void {
+    const entries = (Object.keys(patch) as Array<keyof OfficeShapePatch>).filter((key) => patch[key] !== undefined);
+    if (entries.length === 0) {
+      return;
+    }
+    const assignments = entries.map((key) => `${SHAPE_COLUMNS[key]} = ?`).join(', ');
+    getConnection()
+      .prepare(`UPDATE office_shapes SET ${assignments}, updated_at = ? WHERE id = ?`)
+      .run(...entries.map((key) => patch[key] as string | number | null), new Date().toISOString(), shapeId);
+  },
+
+  /** The z just above (or below) every shape of the office, for "bring to front" / "send to back". */
+  shapeStackEdge(officeId: string, edge: 'top' | 'bottom'): number {
+    const row = getConnection()
+      .prepare(`SELECT COALESCE(${edge === 'top' ? 'MAX(z) + 1' : 'MIN(z) - 1'}, 0) AS z FROM office_shapes WHERE office_id = ?`)
+      .get(officeId) as { z: number };
+    return row.z;
+  },
+
+  deleteShape(shapeId: string): void {
+    getConnection().prepare('DELETE FROM office_shapes WHERE id = ?').run(shapeId);
   },
 
   deleteSkillNode(nodeId: string): void {

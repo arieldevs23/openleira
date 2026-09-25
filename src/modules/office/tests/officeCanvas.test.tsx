@@ -12,6 +12,7 @@ import type {
   OfficeFlowEdge,
   OfficeMessage,
   OfficeSelection,
+  OfficeShape,
   OfficeSkillNode,
   OfficeTask,
   OfficeTaskStatus,
@@ -165,6 +166,9 @@ function recordingActions(calls: Recorded[]) {
     deleteSkillNode: record('deleteSkillNode'),
     linkSkill: record('linkSkill'),
     unlinkSkill: record('unlinkSkill'),
+    addShape: record('addShape'),
+    updateShape: record('updateShape'),
+    deleteShape: record('deleteShape'),
   } as unknown as OfficeActions;
 }
 
@@ -188,6 +192,7 @@ function renderTree(overrides: {
   messages?: OfficeMessage[];
   onAnswerQuestion?: (text: string) => Promise<void>;
   onQuickTask?: (division: OfficeDivision) => void;
+  shapes?: OfficeShape[];
 } = {}) {
   return render(
     <OfficeCanvas
@@ -211,6 +216,7 @@ function renderTree(overrides: {
       onAddSkillAt={overrides.onAddSkillAt}
       onAnswerQuestion={overrides.onAnswerQuestion}
       onQuickTask={overrides.onQuickTask}
+      shapes={overrides.shapes}
     />,
   );
 }
@@ -626,4 +632,61 @@ test('a clicked skill line is cut with Delete', () => {
   fireEvent.click(screen.getByTestId('office-skill-link-review-backend').nextElementSibling as Element);
   fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'Delete' });
   assert.deepEqual(calls, [{ method: 'unlinkSkill', args: ['n-review', 'div-backend'] }]);
+});
+
+const SHAPE: OfficeShape = {
+  id: 'shape-1', kind: 'rounded', x: 40, y: 600, width: 200, height: 100, text: 'Group', fill: null, stroke: '#8a8a90',
+  textColor: null, fontSize: 14, z: 1, createdAt: NOW, updatedAt: NOW,
+};
+
+test('a drawing tool places a shape where the canvas is clicked, then goes back to the pointer', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+  fireEvent.keyDown(canvas, { key: 'o' });
+  assert.equal(screen.getByTestId('office-tool-ellipse').getAttribute('aria-pressed'), 'true');
+
+  fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 300, clientY: 400 });
+  assert.ok(screen.getByTestId('office-shape-draft'));
+  fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 302, clientY: 401 });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'addShape');
+  const input = calls[0].args[0] as { kind: string; width: number; height: number };
+  assert.equal(input.kind, 'ellipse');
+  assert.ok(input.width >= 100 && input.height >= 50, 'a click gets the default size');
+  assert.equal(screen.getByTestId('office-tool-select').getAttribute('aria-pressed'), 'true');
+});
+
+test('a shape drags, resizes from a handle, edits its text in place and is deleted with Delete', async () => {
+  const calls: Recorded[] = [];
+  const selections: OfficeSelection[] = [];
+  renderTree({ calls, shapes: [SHAPE], selection: { type: 'shape', shapeId: 'shape-1' }, onSelect: (selection) => selections.push(selection) });
+  const shape = screen.getByTestId('office-shape-shape-1');
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+
+  fireEvent.pointerDown(shape, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(shape, { pointerId: 1, pointerType: 'mouse', clientX: 130, clientY: 110 });
+  fireEvent.pointerUp(shape, { pointerId: 1, pointerType: 'mouse', clientX: 130, clientY: 110 });
+  fireEvent.click(shape);
+  assert.equal(calls[0].method, 'updateShape');
+  assert.deepEqual(calls[0].args, ['shape-1', { x: 70, y: 610 }]);
+
+  const handle = shape.querySelector('[data-shape-handle="se"]') as Element;
+  fireEvent.pointerDown(handle, { pointerId: 2, button: 0, pointerType: 'mouse', clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 40, clientY: 20 });
+  fireEvent.pointerUp(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 40, clientY: 20 });
+  assert.equal(calls[1].method, 'updateShape');
+  const resized = calls[1].args[1] as { width: number; height: number };
+  assert.equal(resized.width, 240);
+  assert.equal(resized.height, 120);
+
+  fireEvent.doubleClick(screen.getByTestId('office-shape-shape-1'));
+  const editor = screen.getByRole('textbox', { name: 'Shape text' });
+  fireEvent.change(editor, { target: { value: 'Frontend team' } });
+  fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true });
+  assert.deepEqual(calls[2].args, ['shape-1', { text: 'Frontend team' }]);
+
+  fireEvent.keyDown(canvas, { key: 'Delete' });
+  assert.deepEqual(calls[3], { method: 'deleteShape', args: ['shape-1'] });
 });

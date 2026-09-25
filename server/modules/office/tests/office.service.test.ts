@@ -369,3 +369,30 @@ test('only draft cases can be edited, and running cases cannot be deleted', asyn
     assert.throws(() => officeService.getCaseDetail(office.id, created.id), rejectsWith('OFFICE_CASE_NOT_FOUND'));
   });
 });
+
+test('shapes are drawn, restyled, stacked and deleted, with their input checked', async () => {
+  await withProject(async (projectId) => {
+    const { office } = officeService.createOffice({ projectId, locale: 'en' });
+    const box = officeService.addShape(office.id, { kind: 'rounded', x: 10.4, y: 20, width: 200, height: 120, text: 'Frontend group' });
+    assert.equal(box.kind, 'rounded');
+    assert.equal(box.x, 10);
+    assert.equal(box.stroke, '#8a8a90', 'a box gets a border by default');
+    const label = officeService.addShape(office.id, { kind: 'text', x: 0, y: 0, width: 120, height: 40, text: 'Notes' });
+    assert.equal(label.stroke, null, 'text has no border');
+    assert.ok(label.z > box.z, 'a new shape goes on top');
+
+    const restyled = officeService.updateShape(office.id, box.id, { fill: '#1C1C1F', textColor: null, fontSize: 18, width: 260 });
+    assert.equal(restyled.fill, '#1c1c1f');
+    assert.equal(restyled.width, 260);
+    assert.ok(officeService.updateShape(office.id, box.id, { stack: 'front' }).z > label.z);
+    assert.ok(officeService.updateShape(office.id, box.id, { stack: 'back' }).z < label.z);
+
+    assert.throws(() => officeService.updateShape(office.id, box.id, { fill: 'red' }), rejectsWith('INVALID_OFFICE_INPUT'));
+    assert.throws(() => officeService.updateShape(office.id, box.id, { width: 2 }), rejectsWith('INVALID_OFFICE_INPUT'));
+    assert.throws(() => officeService.addShape(office.id, { kind: 'star' as never, x: 0, y: 0, width: 20, height: 20 }), rejectsWith('INVALID_OFFICE_INPUT'));
+
+    assert.equal(officeService.getSnapshot(office.id).shapes.length, 2);
+    assert.deepEqual(officeService.deleteShape(office.id, box.id).map((shape) => shape.id), [label.id]);
+    assert.throws(() => officeService.deleteShape(office.id, box.id), rejectsWith('OFFICE_SHAPE_NOT_FOUND'));
+  });
+});

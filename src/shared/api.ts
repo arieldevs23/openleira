@@ -5,6 +5,7 @@ import {
 } from '@/shared/authToken';
 import { IS_PLATFORM } from '@/shared/utils';
 import { readVoiceConfig, voiceConfigHeaders } from '@/shared/voiceConfig';
+import type { OfficeShape, OfficeShapePatch } from '@/shared/types';
 
 // Headers are a plain record rather than the full `HeadersInit` union so the
 // defaults below can be merged with a caller's headers by spreading.
@@ -446,6 +447,13 @@ export const api = {
       post(`/api/office/${encodeURIComponent(officeId)}/skills`, input),
     moveSkillNode: (officeId: string, nodeId: string, position: { x: number; y: number } | null) =>
       patch(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}`, { position }),
+    addShape: (officeId: string, input: OfficeShapePatch & Pick<OfficeShape, 'kind' | 'x' | 'y' | 'width' | 'height'>) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/shapes`, input),
+    // `stack` moves the shape to the front or the back of the others.
+    updateShape: (officeId: string, shapeId: string, changes: OfficeShapePatch & { stack?: 'front' | 'back' }) =>
+      patch(`/api/office/${encodeURIComponent(officeId)}/shapes/${encodeURIComponent(shapeId)}`, changes),
+    deleteShape: (officeId: string, shapeId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/shapes/${encodeURIComponent(shapeId)}`),
     deleteSkillNode: (officeId: string, nodeId: string) =>
       del(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}`),
     linkSkill: (officeId: string, nodeId: string, divisionId: string) =>

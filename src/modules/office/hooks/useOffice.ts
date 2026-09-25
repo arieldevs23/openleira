@@ -108,6 +108,8 @@ export function useOffice(projectId: string | null) {
           return { ...current, flow: change.flow };
         case 'skills':
           return { ...current, skillNodes: change.skillNodes };
+        case 'shapes':
+          return { ...current, shapes: change.shapes };
         case 'case': {
           const others = current.cases.filter((caseItem) => caseItem.id !== change.id);
           return { ...current, cases: sortCases(change.case ? [...others, change.case] : others) };
@@ -154,6 +156,11 @@ export function useOffice(projectId: string | null) {
     addSkillNode: (input) => call((id) => api.office.addSkillNode(id, input)),
     moveSkillNode: async (nodeId, position) => {
       await call((id) => api.office.moveSkillNode(id, nodeId, position));
+    },
+    addShape: (input) => call((id) => api.office.addShape(id, input)),
+    updateShape: (shapeId, changes) => call((id) => api.office.updateShape(id, shapeId, changes)),
+    deleteShape: async (shapeId) => {
+      await call((id) => api.office.deleteShape(id, shapeId));
     },
     deleteSkillNode: async (nodeId) => {
       await call((id) => api.office.deleteSkillNode(id, nodeId));

@@ -3,6 +3,7 @@ import express, { type Request } from 'express';
 import type { OfficeAnalyzer } from '@/modules/office/services/office-analysis.service.js';
 import type { OfficeOrchestrator } from '@/modules/office/services/office-orchestrator.service.js';
 import type { officeService } from '@/modules/office/services/office.service.js';
+import type { OfficeShapeKind, OfficeShapePatch } from '@/shared/types.js';
 import { AppError, asyncHandler, createApiSuccessResponse } from '@/shared/utils.js';
 
 /** The application services the Office HTTP API delegates to; tests pass fakes. */
@@ -57,6 +58,54 @@ function readOptionalInteger(body: JsonBody, field: string): number | undefined 
     throw badRequest(`${field} must be an integer.`);
   }
   return value;
+}
+
+function readOptionalNumber(body: JsonBody, field: string): number | undefined {
+  const value = body[field];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw badRequest(`${field} must be a number.`);
+  }
+  return value;
+}
+
+function readRequiredNumber(body: JsonBody, field: string): number {
+  const value = readOptionalNumber(body, field);
+  if (value === undefined) {
+    throw badRequest(`${field} is required.`);
+  }
+  return value;
+}
+
+/** A colour field: a string, or null for "none"; absent means unchanged. */
+function readOptionalColor(body: JsonBody, field: string): string | null | undefined {
+  const value = body[field];
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    throw badRequest(`${field} must be a string or null.`);
+  }
+  return value;
+}
+
+/** The optional fields of a drawn shape; the service validates their ranges. */
+function readShapeFields(body: JsonBody): OfficeShapePatch {
+  return {
+    kind: readOptionalString(body, 'kind') as OfficeShapeKind | undefined,
+    x: readOptionalNumber(body, 'x'),
+    y: readOptionalNumber(body, 'y'),
+    width: readOptionalNumber(body, 'width'),
+    height: readOptionalNumber(body, 'height'),
+    text: readOptionalString(body, 'text'),
+    fill: readOptionalColor(body, 'fill'),
+    stroke: readOptionalColor(body, 'stroke'),
+    textColor: readOptionalColor(body, 'textColor'),
+    fontSize: readOptionalNumber(body, 'fontSize'),
+    z: readOptionalInteger(body, 'z'),
+  };
 }
 
 function readOptionalBoolean(body: JsonBody, field: string): boolean | undefined {
@@ -247,6 +296,29 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
 
   router.delete('/:officeId/skills/:nodeId', asyncHandler(async (req, res) => {
     res.json(createApiSuccessResponse({ skillNodes: office.deleteSkillNode(readParam(req, 'officeId'), readParam(req, 'nodeId')) }));
+  }));
+
+  router.post('/:officeId/shapes', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const shape = office.addShape(readParam(req, 'officeId'), {
+      ...readShapeFields(body),
+      kind: readRequiredString(body, 'kind') as OfficeShapeKind,
+      x: readRequiredNumber(body, 'x'),
+      y: readRequiredNumber(body, 'y'),
+      width: readRequiredNumber(body, 'width'),
+      height: readRequiredNumber(body, 'height'),
+    });
+    res.status(201).json(createApiSuccessResponse(shape));
+  }));
+
+  router.patch('/:officeId/shapes/:shapeId', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const stack = body.stack === 'front' || body.stack === 'back' ? body.stack : undefined;
+    res.json(createApiSuccessResponse(office.updateShape(readParam(req, 'officeId'), readParam(req, 'shapeId'), { ...readShapeFields(body), stack })));
+  }));
+
+  router.delete('/:officeId/shapes/:shapeId', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse({ shapes: office.deleteShape(readParam(req, 'officeId'), readParam(req, 'shapeId')) }));
   }));
 
   router.post('/:officeId/skills/:nodeId/links', asyncHandler(async (req, res) => {

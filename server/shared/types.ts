@@ -1663,6 +1663,36 @@ export type OfficeSkillNode = {
   createdAt: string;
 };
 
+/** What a drawn shape on the workspace canvas looks like. */
+export type OfficeShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'text';
+
+/**
+ * A shape the user drew on the workspace canvas to arrange or annotate the
+ * chart (a box around a group of teams, a label, a note). Purely visual: the
+ * orchestrator never reads shapes. Colours are `#rrggbb` or null for "none"
+ * (fill, stroke) or the theme's text colour (text).
+ */
+export type OfficeShape = {
+  id: string;
+  kind: OfficeShapeKind;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  fill: string | null;
+  stroke: string | null;
+  textColor: string | null;
+  fontSize: number;
+  /** Stacking order; higher draws on top of lower. */
+  z: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Fields of a shape the UI may change; every one optional. */
+export type OfficeShapePatch = Partial<Pick<OfficeShape, 'kind' | 'x' | 'y' | 'width' | 'height' | 'text' | 'fill' | 'stroke' | 'textColor' | 'fontSize' | 'z'>>;
+
 /**
  * One workspace in the workspace switcher: the office plus the project folder
  * it works in and how many of its cases are live.
@@ -1839,6 +1869,7 @@ export type OfficeSnapshot = {
   divisions: OfficeDivision[];
   flow: OfficeFlowEdge[];
   skillNodes: OfficeSkillNode[];
+  shapes: OfficeShape[];
   cases: OfficeCase[];
 };
 
@@ -1858,6 +1889,7 @@ export type OfficeUpdateChange =
   | { entity: 'division'; id: string; division: OfficeDivision | null }
   | { entity: 'flow'; flow: OfficeFlowEdge[] }
   | { entity: 'skills'; skillNodes: OfficeSkillNode[] }
+  | { entity: 'shapes'; shapes: OfficeShape[] }
   | { entity: 'deleted' }
   | { entity: 'case'; id: string; case: OfficeCase | null }
   | { entity: 'task'; task: OfficeTask }

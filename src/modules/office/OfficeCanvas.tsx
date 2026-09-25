@@ -1,5 +1,7 @@
 import {
+  ArrowDownToLine,
   ArrowRightLeft,
+  ArrowUpToLine,
   Bot,
   ClipboardPaste,
   Copy,
@@ -29,7 +31,9 @@ import type {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import CanvasShape, { type ShapeHandle } from '@/modules/office/CanvasShape';
 import OfficeStatusBadge from '@/modules/office/OfficeStatusBadge';
+import ShapeToolbar, { TOOL_SHORTCUTS, type CanvasTool } from '@/modules/office/ShapeToolbar';
 import {
   autoSkillPositions,
   connectorEnds,
@@ -56,6 +60,8 @@ import type {
   OfficeMessage,
   OfficeNodeStatus,
   OfficeSelection,
+  OfficeShape,
+  OfficeShapeKind,
   OfficeSkillNode,
   OfficeTask,
 } from '@/shared/types';
@@ -130,6 +136,9 @@ type Gesture =
   | { kind: 'connect'; pointerId: number; from: ConnectEnd }
   | { kind: 'marquee'; pointerId: number; start: CanvasPoint; base: ReadonlySet<string> }
   | { kind: 'reconnect'; pointerId: number; fromDivisionId: string; toDivisionId: string; end: 'from' | 'to' }
+  | { kind: 'shape'; pointerId: number; shapeId: string; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
+  | { kind: 'resize'; pointerId: number; shapeId: string; handle: ShapeHandle; startX: number; startY: number; origin: ShapeRect }
+  | { kind: 'draw'; pointerId: number; start: CanvasPoint; shapeKind: OfficeShapeKind }
   | { kind: 'group'; pointerId: number; startX: number; startY: number; origins: ReadonlyMap<string, CanvasPoint>; moved: boolean; pressedKey: string }
   | { kind: 'pinch'; distance: number; zoom: number };
 
@@ -141,7 +150,47 @@ type MenuState =
   | { position: CanvasPoint; target: { kind: 'canvas'; at: CanvasPoint } }
   | { position: CanvasPoint; target: { kind: 'skill'; nodeId: string } }
   | { position: CanvasPoint; target: { kind: 'skillLink'; nodeId: string; divisionId: string } }
-  | { position: CanvasPoint; target: { kind: 'marked' } };
+  | { position: CanvasPoint; target: { kind: 'marked' } }
+  | { position: CanvasPoint; target: { kind: 'shape'; shapeId: string } };
+
+/** A drawn shape's box on the canvas. */
+type ShapeRect = { x: number; y: number; width: number; height: number };
+
+const MIN_SHAPE_SIZE = 12;
+/** Size of a shape placed with a click instead of a drag. */
+const DEFAULT_SHAPE_SIZE: Record<OfficeShapeKind, { width: number; height: number }> = {
+  rect: { width: 180, height: 100 },
+  rounded: { width: 180, height: 100 },
+  ellipse: { width: 150, height: 100 },
+  diamond: { width: 140, height: 110 },
+  text: { width: 180, height: 40 },
+};
+
+const shapeKey = (shapeId: string) => `shape:${shapeId}`;
+
+/** The box a resize handle drag leads to, never smaller than the minimum. */
+function resizeRect(origin: ShapeRect, handle: ShapeHandle, dx: number, dy: number): ShapeRect {
+  let { x, y, width, height } = origin;
+  if (handle.includes('e')) width = Math.max(MIN_SHAPE_SIZE, origin.width + dx);
+  if (handle.includes('s')) height = Math.max(MIN_SHAPE_SIZE, origin.height + dy);
+  if (handle.includes('w')) {
+    width = Math.max(MIN_SHAPE_SIZE, origin.width - dx);
+    x = origin.x + origin.width - width;
+  }
+  if (handle.includes('n')) {
+    height = Math.max(MIN_SHAPE_SIZE, origin.height - dy);
+    y = origin.y + origin.height - height;
+  }
+  return { x, y, width, height };
+}
+
+/** The rectangle between two points, whichever way it was dragged. */
+const rectBetween = (a: CanvasPoint, b: CanvasPoint): ShapeRect => ({
+  x: Math.min(a.x, b.x),
+  y: Math.min(a.y, b.y),
+  width: Math.abs(b.x - a.x),
+  height: Math.abs(b.y - a.y),
+});
 
 /** Key of a node in the multi-selection and in the pending positions: a division id, or `skill:<id>`. */
 const skillKey = (nodeId: string) => `skill:${nodeId}`;
@@ -168,7 +217,10 @@ type OfficeCanvasProps = {
     OfficeActions,
     'addFlowEdge' | 'deleteFlowEdge' | 'updateDivision' | 'updateAgent'
     | 'addSkillNode' | 'moveSkillNode' | 'deleteSkillNode' | 'linkSkill' | 'unlinkSkill'
+    | 'addShape' | 'updateShape' | 'deleteShape'
   >;
+  /** Shapes the user drew to arrange or annotate the chart. */
+  shapes?: OfficeShape[];
   /** "Add an agent here" from the canvas menu; the position is in canvas pixels. */
   onAddDivisionAt: (position: CanvasPoint) => void;
   onDeleteDivision: (division: OfficeDivision) => void;
@@ -222,6 +274,7 @@ export default function OfficeCanvas({
   onAnswerQuestion,
   onMessageCoordinator,
   onQuickTask,
+  shapes = [],
 }: OfficeCanvasProps) {
   const { t } = useTranslation('office');
   const coordinator = divisions.find((division) => division.isCoordinator) ?? null;
@@ -327,6 +380,7 @@ export default function OfficeCanvas({
       const saved = [
         ...divisions.map((division) => [division.id, division.position] as const),
         ...skillNodes.map((node) => [`skill:${node.id}`, node.position] as const),
+        ...shapes.map((shape) => [shapeKey(shape.id), { x: shape.x, y: shape.y }] as const),
       ];
       for (const [key, position] of saved) {
         const pending = next.get(key);
@@ -336,7 +390,35 @@ export default function OfficeCanvas({
       }
       return next.size === current.size ? current : next;
     });
-  }, [divisions, skillNodes]);
+  }, [divisions, skillNodes, shapes]);
+
+  // A shape being resized, or resized but not yet confirmed by the server's frame.
+  const [pendingShapeRects, setPendingShapeRects] = useState<ReadonlyMap<string, ShapeRect>>(() => new Map());
+  useEffect(() => {
+    setPendingShapeRects((current) => {
+      if (current.size === 0) {
+        return current;
+      }
+      const next = new Map(current);
+      for (const shape of shapes) {
+        const pending = next.get(shape.id);
+        if (pending && Math.round(pending.x) === shape.x && Math.round(pending.y) === shape.y
+          && Math.round(pending.width) === shape.width && Math.round(pending.height) === shape.height) {
+          next.delete(shape.id);
+        }
+      }
+      return next.size === current.size ? current : next;
+    });
+  }, [shapes]);
+
+  const shapeRectOf = useCallback((shape: OfficeShape): ShapeRect => {
+    const resized = pendingShapeRects.get(shape.id);
+    if (resized) {
+      return resized;
+    }
+    const moved = pendingPositions.get(shapeKey(shape.id));
+    return { x: moved?.x ?? shape.x, y: moved?.y ?? shape.y, width: shape.width, height: shape.height };
+  }, [pendingPositions, pendingShapeRects]);
 
   const positionOf = useCallback((division: OfficeDivision): CanvasPoint => (
     pendingPositions.get(division.id) ?? division.position ?? layout.divisions.get(division.id) ?? { x: 0, y: 0 }
@@ -360,13 +442,14 @@ export default function OfficeCanvas({
       { ...caseAt, width: CASE_WIDTH, height: CASE_HEIGHT },
       ...skillNodes.map((node) => ({ ...skillPositionOf(node), width: SKILL_WIDTH, height: SKILL_HEIGHT })),
       ...divisions.map((division) => ({ ...positionOf(division), width: NODE_WIDTH, height: NODE_HEIGHT })),
+      ...shapes.map((shape) => shapeRectOf(shape)),
     ];
     const minX = Math.min(...points.map((point) => point.x));
     const minY = Math.min(...points.map((point) => point.y));
     const maxX = Math.max(...points.map((point) => point.x + point.width));
     const maxY = Math.max(...points.map((point) => point.y + point.height));
     return { minX, minY, width: maxX - minX, height: maxY - minY };
-  }, [coordinator, divisions, positionOf, skillNodes, skillPositionOf]);
+  }, [coordinator, divisions, positionOf, skillNodes, skillPositionOf, shapes, shapeRectOf]);
 
   // ----- zoom and pan -----
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -395,6 +478,12 @@ export default function OfficeCanvas({
       setSelectedLink(null);
     }
   }, [selection.type]);
+  // The drawing tool picked in the shape bar; 'select' is the normal pointer.
+  const [tool, setTool] = useState<CanvasTool>('select');
+  // The shape being drawn with a drawing tool, in canvas pixels.
+  const [drawing, setDrawing] = useState<{ kind: OfficeShapeKind; rect: ShapeRect } | null>(null);
+  // The shape whose text is being edited in place.
+  const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
   // The Shift+drag selection rectangle, in canvas pixels.
   const [marquee, setMarquee] = useState<{ from: CanvasPoint; to: CanvasPoint } | null>(null);
   // The loose end of a line being drawn from a node's handle, in canvas pixels.
@@ -539,6 +628,10 @@ export default function OfficeCanvas({
   const keysInRectangle = (a: CanvasPoint, b: CanvasPoint): string[] => [
     ...divisions.filter((division) => isInside(positionOf(division), NODE_WIDTH, NODE_HEIGHT, a, b)).map((division) => division.id),
     ...skillNodes.filter((node) => isInside(skillPositionOf(node), SKILL_WIDTH, SKILL_HEIGHT, a, b)).map((node) => skillKey(node.id)),
+    ...shapes.filter((shape) => {
+      const rect = shapeRectOf(shape);
+      return isInside(rect, rect.width, rect.height, a, b);
+    }).map((shape) => shapeKey(shape.id)),
   ];
 
   const toggleMarked = (key: string) => {
@@ -554,6 +647,10 @@ export default function OfficeCanvas({
 
   /** Where a node is now, by multi-selection key. */
   const positionOfKey = (key: string): CanvasPoint | null => {
+    if (key.startsWith('shape:')) {
+      const shape = shapes.find((candidate) => shapeKey(candidate.id) === key);
+      return shape ? shapeRectOf(shape) : null;
+    }
     if (key.startsWith('skill:')) {
       const node = skillNodes.find((candidate) => skillKey(candidate.id) === key);
       return node ? skillPositionOf(node) : null;
@@ -565,9 +662,11 @@ export default function OfficeCanvas({
   /** Saves a dropped node's position; on failure it snaps back and the error is shown. */
   const savePosition = (key: string, dropped: CanvasPoint) => {
     const position = { x: Math.round(dropped.x), y: Math.round(dropped.y) };
-    const save = key.startsWith('skill:')
-      ? actions.moveSkillNode(key.slice('skill:'.length), position)
-      : actions.updateDivision(key, { position });
+    const save = key.startsWith('shape:')
+      ? actions.updateShape(key.slice('shape:'.length), position)
+      : key.startsWith('skill:')
+        ? actions.moveSkillNode(key.slice('skill:'.length), position)
+        : actions.updateDivision(key, { position });
     save.catch((error: unknown) => {
       setPendingPositions((current) => {
         const next = new Map(current);
@@ -578,15 +677,39 @@ export default function OfficeCanvas({
     });
   };
 
-  /** Deletes the marked skill nodes; teams are deleted one by one from their own menu, with a confirmation. */
+  /** Deletes the marked skill nodes and shapes; teams are deleted one by one from their own menu, with a confirmation. */
   const deleteMarkedSkills = () => {
     const nodeIds = [...marked].filter((key) => key.startsWith('skill:')).map((key) => key.slice('skill:'.length));
-    if (nodeIds.length === 0) {
+    const shapeIds = [...marked].filter((key) => key.startsWith('shape:')).map((key) => key.slice('shape:'.length));
+    if (nodeIds.length === 0 && shapeIds.length === 0) {
       return;
     }
     setCanvasError(null);
-    Promise.all(nodeIds.map((nodeId) => actions.deleteSkillNode(nodeId))).catch(report);
-    setMarked((current) => new Set([...current].filter((key) => !key.startsWith('skill:'))));
+    Promise.all([
+      ...nodeIds.map((nodeId) => actions.deleteSkillNode(nodeId)),
+      ...shapeIds.map((shapeId) => actions.deleteShape(shapeId)),
+    ]).catch(report);
+    setMarked((current) => new Set([...current].filter((key) => !key.startsWith('skill:') && !key.startsWith('shape:'))));
+  };
+
+  const commitShapeText = (shape: OfficeShape, text: string) => {
+    setEditingShapeId(null);
+    if (text !== shape.text) {
+      actions.updateShape(shape.id, { text }).catch(report);
+    }
+  };
+
+  const handleShapeClick = (shape: OfficeShape, withShift: boolean) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (withShift) {
+      toggleMarked(shapeKey(shape.id));
+      return;
+    }
+    clearMarked();
+    onSelect({ type: 'shape', shapeId: shape.id });
   };
 
   const cancelLongPress = () => {
@@ -635,6 +758,19 @@ export default function OfficeCanvas({
       return;
     }
 
+    // A handle of the selected shape resizes it.
+    const shapeHandle = target.closest<HTMLElement>('[data-shape-handle]');
+    const handledShape = shapeHandle ? shapes.find((shape) => shape.id === shapeHandle.dataset.shapeId) : undefined;
+    if (shapeHandle && handledShape) {
+      gestureRef.current = {
+        kind: 'resize', pointerId: event.pointerId, shapeId: handledShape.id, handle: shapeHandle.dataset.shapeHandle as ShapeHandle,
+        startX: event.clientX, startY: event.clientY, origin: shapeRectOf(handledShape),
+      };
+      capture();
+      userMovedRef.current = true;
+      return;
+    }
+
     const handle = target.closest<HTMLElement>('[data-connect-from]');
     if (handle) {
       const from: ConnectEnd = { kind: handle.dataset.connectKind === 'skill' ? 'skill' : 'division', id: handle.dataset.connectFrom as string };
@@ -645,8 +781,10 @@ export default function OfficeCanvas({
     }
 
     // Pressing a node that is part of a multi-selection drags the whole selection.
-    const pressedElement = target.closest<HTMLElement>('[data-division-id], [data-skill-node-id]');
-    const pressedKey = pressedElement?.dataset.divisionId ?? (pressedElement?.dataset.skillNodeId ? skillKey(pressedElement.dataset.skillNodeId) : null);
+    const pressedElement = target.closest<HTMLElement>('[data-division-id], [data-skill-node-id], [data-shape-id]');
+    const pressedKey = pressedElement?.dataset.divisionId
+      ?? (pressedElement?.dataset.skillNodeId ? skillKey(pressedElement.dataset.skillNodeId) : null)
+      ?? (pressedElement?.dataset.shapeId ? shapeKey(pressedElement.dataset.shapeId) : null);
     if (pressedKey && marked.has(pressedKey) && marked.size > 1 && !event.shiftKey) {
       const origins = new Map<string, CanvasPoint>();
       for (const key of marked) {
@@ -695,7 +833,33 @@ export default function OfficeCanvas({
       }
       return;
     }
+    const shapeElement = target.closest<HTMLElement>('[data-shape-id]');
+    const pressedShape = shapeElement && tool === 'select' ? shapes.find((shape) => shape.id === shapeElement.dataset.shapeId) : undefined;
+    if (pressedShape) {
+      gestureRef.current = {
+        kind: 'shape', pointerId: event.pointerId, shapeId: pressedShape.id,
+        startX: event.clientX, startY: event.clientY, origin: shapeRectOf(pressedShape), moved: false,
+      };
+      if (event.pointerType !== 'mouse') {
+        const { clientX, clientY } = event;
+        longPressRef.current = window.setTimeout(() => {
+          longPressRef.current = null;
+          gestureRef.current = null;
+          suppressClickRef.current = true;
+          setMenu({ position: { x: clientX, y: clientY }, target: { kind: 'shape', shapeId: pressedShape.id } });
+        }, LONG_PRESS_MS);
+      }
+      return;
+    }
     if (target.closest('[data-case-node], path[data-hit], [data-edge-chip]')) {
+      return;
+    }
+    // A drawing tool draws a shape where the pointer is dragged.
+    if (tool !== 'select') {
+      const start = toCanvasPoint(event.clientX, event.clientY);
+      gestureRef.current = { kind: 'draw', pointerId: event.pointerId, start, shapeKind: tool };
+      capture();
+      setDrawing({ kind: tool, rect: { ...start, width: 0, height: 0 } });
       return;
     }
     // Shift+drag on empty canvas draws a selection rectangle instead of panning.
@@ -751,6 +915,15 @@ export default function OfficeCanvas({
       setConnectingTo({ from: gesture.from, point: toCanvasPoint(event.clientX, event.clientY) });
       return;
     }
+    if (gesture.kind === 'draw') {
+      setDrawing({ kind: gesture.shapeKind, rect: rectBetween(gesture.start, toCanvasPoint(event.clientX, event.clientY)) });
+      return;
+    }
+    if (gesture.kind === 'resize') {
+      const next = resizeRect(gesture.origin, gesture.handle, (event.clientX - gesture.startX) / view.zoom, (event.clientY - gesture.startY) / view.zoom);
+      setPendingShapeRects((current) => new Map(current).set(gesture.shapeId, next));
+      return;
+    }
     if (gesture.kind === 'reconnect') {
       setReconnecting({ fromDivisionId: gesture.fromDivisionId, toDivisionId: gesture.toDivisionId, end: gesture.end, point: toCanvasPoint(event.clientX, event.clientY) });
       return;
@@ -772,7 +945,9 @@ export default function OfficeCanvas({
       event.currentTarget.setPointerCapture?.(event.pointerId);
       // Moving a node is arranging the chart; stop refitting it under the user.
       userMovedRef.current = true;
-      setDraggingId(gesture.kind === 'node' ? gesture.divisionId : gesture.kind === 'group' ? gesture.pressedKey : `skill:${gesture.nodeId}`);
+      setDraggingId(gesture.kind === 'node' ? gesture.divisionId
+        : gesture.kind === 'group' ? gesture.pressedKey
+          : gesture.kind === 'shape' ? shapeKey(gesture.shapeId) : `skill:${gesture.nodeId}`);
     }
     if (gesture.kind === 'group') {
       setPendingPositions((current) => {
@@ -785,7 +960,7 @@ export default function OfficeCanvas({
       return;
     }
     const next = { x: gesture.origin.x + dx / view.zoom, y: gesture.origin.y + dy / view.zoom };
-    const key = gesture.kind === 'node' ? gesture.divisionId : `skill:${gesture.nodeId}`;
+    const key = gesture.kind === 'node' ? gesture.divisionId : gesture.kind === 'shape' ? shapeKey(gesture.shapeId) : `skill:${gesture.nodeId}`;
     setPendingPositions((current) => new Map(current).set(key, next));
   };
 
@@ -816,6 +991,58 @@ export default function OfficeCanvas({
     }
     if (gesture.kind === 'marquee') {
       setMarquee(null);
+      return;
+    }
+    if (gesture.kind === 'draw') {
+      setDrawing(null);
+      setTool('select');
+      if (event.type !== 'pointerup') {
+        return;
+      }
+      const dragged = rectBetween(gesture.start, toCanvasPoint(event.clientX, event.clientY));
+      // A click (or a tiny drag) places a shape of the default size where it was clicked.
+      const rect = dragged.width < MIN_SHAPE_SIZE || dragged.height < MIN_SHAPE_SIZE
+        ? { ...gesture.start, ...DEFAULT_SHAPE_SIZE[gesture.shapeKind] }
+        : dragged;
+      setCanvasError(null);
+      actions.addShape({
+        kind: gesture.shapeKind,
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      })
+        .then((shape) => {
+          onSelect({ type: 'shape', shapeId: shape.id });
+          if (shape.kind === 'text') {
+            setEditingShapeId(shape.id);
+          }
+        })
+        .catch(report);
+      return;
+    }
+    if (gesture.kind === 'resize') {
+      const rect = resizeRect(gesture.origin, gesture.handle, (event.clientX - gesture.startX) / view.zoom, (event.clientY - gesture.startY) / view.zoom);
+      setPendingShapeRects((current) => new Map(current).set(gesture.shapeId, rect));
+      actions.updateShape(gesture.shapeId, {
+        x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height),
+      }).catch((error: unknown) => {
+        setPendingShapeRects((current) => {
+          const next = new Map(current);
+          next.delete(gesture.shapeId);
+          return next;
+        });
+        report(error);
+      });
+      return;
+    }
+    if (gesture.kind === 'shape') {
+      if (gesture.moved) {
+        suppressClickRef.current = true;
+        const dropped = { x: gesture.origin.x + (event.clientX - gesture.startX) / view.zoom, y: gesture.origin.y + (event.clientY - gesture.startY) / view.zoom };
+        setPendingPositions((current) => new Map(current).set(shapeKey(gesture.shapeId), dropped));
+        savePosition(shapeKey(gesture.shapeId), dropped);
+      }
       return;
     }
     if (gesture.kind === 'reconnect') {
@@ -897,6 +1124,7 @@ export default function OfficeCanvas({
     if (event.key === 'Escape') {
       setConnectSource(null);
       clearMarked();
+      setTool('select');
       return;
     }
     // Ctrl/Cmd+C copies the selected skill node, Ctrl/Cmd+V places a copy where the pointer is.
@@ -914,6 +1142,18 @@ export default function OfficeCanvas({
     if (isShortcut && !inField && event.key.toLowerCase() === 'a') {
       event.preventDefault();
       setMarked(new Set([...divisions.map((division) => division.id), ...skillNodes.map((node) => skillKey(node.id))]));
+      return;
+    }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && selection.type === 'shape' && marked.size === 0) {
+      event.preventDefault();
+      setCanvasError(null);
+      actions.deleteShape(selection.shapeId).then(() => onSelect({ type: 'case' })).catch(report);
+      return;
+    }
+    // Single letters pick a drawing tool, like a diagram editor (V pointer, R box, U rounded, O ellipse, D diamond, T text).
+    if (!inField && !event.ctrlKey && !event.metaKey && !event.altKey && TOOL_SHORTCUTS[event.key.toLowerCase()]) {
+      event.preventDefault();
+      setTool(TOOL_SHORTCUTS[event.key.toLowerCase()]);
       return;
     }
     if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && selection.type === 'edge' && marked.size === 0) {
@@ -1110,13 +1350,37 @@ export default function OfficeCanvas({
         },
       ];
     }
+    if (target.kind === 'shape') {
+      const shape = shapes.find((candidate) => candidate.id === target.shapeId);
+      if (!shape) return [];
+      return [
+        { key: 'text', label: t('shapes.menu.editText'), icon: FileText, onSelect: () => setEditingShapeId(shape.id) },
+        { key: 'style', label: t('shapes.menu.style'), icon: Sparkles, onSelect: () => onSelect({ type: 'shape', shapeId: shape.id }) },
+        { key: 'front', label: t('shapes.menu.front'), icon: ArrowUpToLine, showDividerBefore: true, onSelect: () => { actions.updateShape(shape.id, { stack: 'front' }).catch(report); } },
+        { key: 'back', label: t('shapes.menu.back'), icon: ArrowDownToLine, onSelect: () => { actions.updateShape(shape.id, { stack: 'back' }).catch(report); } },
+        {
+          key: 'duplicate', label: t('shapes.menu.duplicate'), icon: Copy,
+          onSelect: () => {
+            const { id: _id, z: _z, createdAt: _createdAt, updatedAt: _updatedAt, ...copy } = shape;
+            actions.addShape({ ...copy, x: shape.x + 24, y: shape.y + 24 })
+              .then((created) => onSelect({ type: 'shape', shapeId: created.id }))
+              .catch(report);
+          },
+        },
+        {
+          key: 'delete', label: t('shapes.menu.delete'), icon: Trash2, isDanger: true, showDividerBefore: true,
+          onSelect: () => { actions.deleteShape(shape.id).catch(report); },
+        },
+      ];
+    }
     if (target.kind === 'marked') {
-      const markedSkills = [...marked].filter((key) => key.startsWith('skill:')).length;
+      const markedSkills = [...marked].filter((key) => key.startsWith('skill:') || key.startsWith('shape:')).length;
       return [
         {
           key: 'reset', label: t('menu.resetMarked', { count: marked.size }), icon: RotateCcw,
           onSelect: () => {
-            Promise.all([...marked].map((key) => (key.startsWith('skill:')
+            // Shapes have no automatic place; only nodes go back to the automatic layout.
+            Promise.all([...marked].filter((key) => !key.startsWith('shape:')).map((key) => (key.startsWith('skill:')
               ? actions.moveSkillNode(key.slice('skill:'.length), null)
               : actions.updateDivision(key, { position: null })))).catch(report);
           },
@@ -1278,7 +1542,7 @@ export default function OfficeCanvas({
         onPointerCancel={handlePointerEnd}
         onKeyDown={handleCanvasKeyDown}
         onContextMenu={(event) => {
-          if ((event.target as Element).closest('[data-division-id], path[data-hit], [data-skill-node-id], [data-canvas-control]')) {
+          if ((event.target as Element).closest('[data-division-id], path[data-hit], [data-skill-node-id], [data-shape-id], [data-canvas-control]')) {
             return;
           }
           openMenu(event, { kind: 'canvas', at: toCanvasPoint(event.clientX, event.clientY) });
@@ -1286,7 +1550,7 @@ export default function OfficeCanvas({
         className={cn(
           'office-canvas absolute inset-0 touch-none select-none focus-visible:outline-none',
           isPanning ? 'cursor-grabbing' : 'cursor-grab',
-          connectSource && 'cursor-crosshair',
+          (connectSource || tool !== 'select') && 'cursor-crosshair',
         )}
         style={{ backgroundPosition: `${view.x}px ${view.y}px`, backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px` }}
       >
@@ -1296,6 +1560,36 @@ export default function OfficeCanvas({
           data-testid="office-tree"
           data-zoom={view.zoom.toFixed(2)}
         >
+          {/* shapes the user drew, under the chart */}
+          {shapes.map((shape) => (
+            <CanvasShape
+              key={shape.id}
+              shape={shape}
+              rect={shapeRectOf(shape)}
+              zoom={view.zoom}
+              selected={selection.type === 'shape' && selection.shapeId === shape.id}
+              marked={marked.has(shapeKey(shape.id))}
+              editing={editingShapeId === shape.id}
+              onClick={(withShift) => handleShapeClick(shape, withShift)}
+              onDoubleClick={() => setEditingShapeId(shape.id)}
+              onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(shapeKey(shape.id)) ? { kind: 'marked' } : { kind: 'shape', shapeId: shape.id })}
+              onTextCommit={(text) => commitShapeText(shape, text)}
+              onTextCancel={() => setEditingShapeId(null)}
+            />
+          ))}
+          {drawing && (
+            <div
+              aria-hidden
+              data-testid="office-shape-draft"
+              className={cn(
+                'pointer-events-none absolute border border-dashed border-primary bg-primary/5',
+                drawing.kind === 'ellipse' && 'rounded-[50%]',
+                drawing.kind === 'rounded' && 'rounded-xl',
+              )}
+              style={{ left: drawing.rect.x, top: drawing.rect.y, width: drawing.rect.width, height: drawing.rect.height, borderWidth: 1 / view.zoom }}
+            />
+          )}
+
           <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={1} height={1} aria-hidden>
             <defs>
               <marker id={`office-arrow-${officeId}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -1637,6 +1931,8 @@ export default function OfficeCanvas({
           )}
         </div>
       </div>
+
+      <ShapeToolbar tool={tool} onToolChange={setTool} />
 
       {openQuestion && coordinator && isQuestionFolded && (
         <button

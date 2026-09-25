@@ -357,7 +357,7 @@
     "quickTask": "Quick task",
     "resetMarked": "Reset position of {{count}} selected",
     "clearMarked": "Clear selection",
-    "deleteMarkedSkills": "Delete {{count}} selected skill(s)"
+    "deleteMarkedSkills": "Delete {{count}} selected skill(s) and shape(s)"
   },
   "flow": {
     "explain": "Work of {{to}} waits until the work of {{from}} in the same task is done. Teams on separate branches run in parallel."
@@ -440,5 +440,44 @@
     "finished": "This task has finished; the chat is read-only.",
     "title": "Chat with {{name}}",
     "empty": "No messages yet. Write to {{name}} below."
+  },
+  "shapes": {
+    "toolbar": "Drawing tools",
+    "tool": {
+      "select": "Select and move",
+      "rect": "Box",
+      "rounded": "Rounded box",
+      "ellipse": "Ellipse",
+      "diamond": "Diamond",
+      "text": "Text"
+    },
+    "kind": {
+      "rect": "Box",
+      "rounded": "Rounded box",
+      "ellipse": "Ellipse",
+      "diamond": "Diamond",
+      "text": "Text"
+    },
+    "label": "{{kind}}: {{text}}",
+    "editText": "Shape text",
+    "menu": {
+      "editText": "Edit text",
+      "style": "Colours and style",
+      "front": "Bring to front",
+      "back": "Send to back",
+      "duplicate": "Duplicate",
+      "delete": "Delete shape"
+    },
+    "panelTitle": "Shape",
+    "panelHint": "Drawn shapes only arrange and label the chart; the agents never read them. Double-click a shape on the canvas to edit its text.",
+    "kindLabel": "Shape",
+    "textLabel": "Text",
+    "fill": "Fill",
+    "stroke": "Border",
+    "textColor": "Text colour",
+    "none": "None",
+    "auto": "Auto",
+    "custom": "Custom colour",
+    "fontSize": "Text size"
   }
 }

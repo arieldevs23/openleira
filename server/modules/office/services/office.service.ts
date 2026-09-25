@@ -17,6 +17,9 @@ import type {
   OfficePermissionMode,
   OfficeWorkspaceSummary,
   OfficeSessionUsage,
+  OfficeShape,
+  OfficeShapeKind,
+  OfficeShapePatch,
   OfficeSkillNode,
   OfficeSnapshot,
   ProviderAuthStatus,
@@ -277,6 +280,71 @@ function requireSkillNode(officeId: string, nodeId: string): OfficeSkillNode {
   return node;
 }
 
+// ----- drawn shapes -----
+
+const SHAPE_KINDS: OfficeShapeKind[] = ['rect', 'rounded', 'ellipse', 'diamond', 'text'];
+const MIN_SHAPE_SIZE = 8;
+const MAX_SHAPE_SIZE = 5000;
+const MAX_SHAPE_TEXT = 5000;
+const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+const readShapeColor = (value: string | null | undefined, field: string): string | null | undefined => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!COLOR_PATTERN.test(value)) {
+    throw badRequest(`${field} must be a #rrggbb colour or null.`);
+  }
+  return value.toLowerCase();
+};
+
+const readShapeNumber = (value: number | undefined, field: string, min: number, max: number): number | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Number.isFinite(value) || value < min || value > max) {
+    throw badRequest(`${field} must be between ${min} and ${max}.`);
+  }
+  return Math.round(value);
+};
+
+/** Validates and normalises every field of a shape patch that is present. */
+function readShapePatch(patch: OfficeShapePatch): OfficeShapePatch {
+  if (patch.kind !== undefined && !SHAPE_KINDS.includes(patch.kind)) {
+    throw badRequest(`kind must be one of ${SHAPE_KINDS.join(', ')}.`);
+  }
+  if (patch.text !== undefined && (typeof patch.text !== 'string' || patch.text.length > MAX_SHAPE_TEXT)) {
+    throw badRequest(`text must be at most ${MAX_SHAPE_TEXT} characters.`);
+  }
+  return {
+    kind: patch.kind,
+    x: readShapeNumber(patch.x, 'x', -MAX_CANVAS_COORDINATE, MAX_CANVAS_COORDINATE),
+    y: readShapeNumber(patch.y, 'y', -MAX_CANVAS_COORDINATE, MAX_CANVAS_COORDINATE),
+    width: readShapeNumber(patch.width, 'width', MIN_SHAPE_SIZE, MAX_SHAPE_SIZE),
+    height: readShapeNumber(patch.height, 'height', MIN_SHAPE_SIZE, MAX_SHAPE_SIZE),
+    text: patch.text,
+    fill: readShapeColor(patch.fill, 'fill'),
+    stroke: readShapeColor(patch.stroke, 'stroke'),
+    textColor: readShapeColor(patch.textColor, 'textColor'),
+    fontSize: readShapeNumber(patch.fontSize, 'fontSize', 8, 96),
+    z: readShapeNumber(patch.z, 'z', -1_000_000, 1_000_000),
+  };
+}
+
+function requireShape(officeId: string, shapeId: string): OfficeShape {
+  const shape = officesDb.getShape(shapeId);
+  if (!shape || shape.officeId !== officeId) {
+    throw notFound('Shape not found.', 'OFFICE_SHAPE_NOT_FOUND');
+  }
+  return shape;
+}
+
+const broadcastShapes = (officeId: string): OfficeShape[] => {
+  const shapes = officesDb.listShapes(officeId);
+  broadcastOfficeUpdate(officeId, { entity: 'shapes', shapes });
+  return shapes;
+};
+
 const broadcastSkillNodes = (officeId: string): OfficeSkillNode[] => {
   const skillNodes = officesDb.listSkillNodes(officeId);
   broadcastOfficeUpdate(officeId, { entity: 'skills', skillNodes });
@@ -311,6 +379,7 @@ export const officeService = {
       divisions: officesDb.listDivisions(office.id),
       flow: officesDb.listFlowEdges(office.id),
       skillNodes: officesDb.listSkillNodes(office.id),
+      shapes: officesDb.listShapes(office.id),
       cases: officeCasesDb.listCases(office.id),
     };
   },
@@ -613,6 +682,43 @@ export const officeService = {
     }
     const nodeId = officesDb.createSkillNode(officeId, skillName, readPosition(input.position ?? null));
     return broadcastSkillNodes(officeId).find((node) => node.id === nodeId) as OfficeSkillNode;
+  },
+
+  /** Draws a shape on the canvas, on top of the others. Text shapes default to no fill and no border. */
+  addShape(officeId: string, input: OfficeShapePatch & { kind: OfficeShapeKind; x: number; y: number; width: number; height: number }): OfficeShape {
+    requireOffice(officeId);
+    const shape = readShapePatch(input);
+    const isText = shape.kind === 'text';
+    const shapeId = officesDb.createShape(officeId, {
+      kind: shape.kind as OfficeShapeKind,
+      x: shape.x as number,
+      y: shape.y as number,
+      width: shape.width as number,
+      height: shape.height as number,
+      text: shape.text ?? '',
+      fill: shape.fill === undefined ? null : shape.fill,
+      stroke: shape.stroke === undefined ? (isText ? null : '#8a8a90') : shape.stroke,
+      textColor: shape.textColor ?? null,
+      fontSize: shape.fontSize ?? (isText ? 16 : 14),
+    });
+    return broadcastShapes(officeId).find((candidate) => candidate.id === shapeId) as OfficeShape;
+  },
+
+  updateShape(officeId: string, shapeId: string, patch: OfficeShapePatch & { stack?: 'front' | 'back' }): OfficeShape {
+    requireShape(officeId, shapeId);
+    const { stack, ...fields } = patch;
+    const clean = readShapePatch(fields);
+    if (stack) {
+      clean.z = officesDb.shapeStackEdge(officeId, stack === 'front' ? 'top' : 'bottom');
+    }
+    officesDb.updateShape(shapeId, clean);
+    return broadcastShapes(officeId).find((candidate) => candidate.id === shapeId) as OfficeShape;
+  },
+
+  deleteShape(officeId: string, shapeId: string): OfficeShape[] {
+    requireShape(officeId, shapeId);
+    officesDb.deleteShape(shapeId);
+    return broadcastShapes(officeId);
   },
 
   moveSkillNode(officeId: string, nodeId: string, position: { x: number; y: number } | null): OfficeSkillNode[] {

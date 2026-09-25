@@ -26,6 +26,7 @@ import CoordinatorDock, { type CoordinatorDockMode } from '@/modules/office/Coor
 import MessagesPanel from '@/modules/office/MessagesPanel';
 import OfficeCanvas from '@/modules/office/OfficeCanvas';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
+import ShapePanel from '@/modules/office/ShapePanel';
 import SkillNodePanel from '@/modules/office/SkillNodePanel';
 import UsagePanel from '@/modules/office/UsagePanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
@@ -410,6 +411,18 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     if (!office) {
       return null;
     }
+    if (selection.type === 'shape') {
+      const shape = snapshot?.shapes?.find((candidate) => candidate.id === selection.shapeId);
+      if (shape) {
+        return (
+          <ShapePanel
+            shape={shape}
+            onChange={(changes) => { actions.updateShape(shape.id, changes).catch(reportError); }}
+            onDelete={() => { actions.deleteShape(shape.id).then(() => setSelection({ type: 'case' })).catch(reportError); }}
+          />
+        );
+      }
+    }
     if (selection.type === 'skill') {
       const node = snapshot?.skillNodes.find((candidate) => candidate.id === selection.nodeId);
       if (node) {
@@ -589,6 +602,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
         onAddDivisionAt={(position) => setNewDivisionAt(position)}
         onDeleteDivision={(division) => setPendingDelete({ kind: 'division', division })}
         skillNodes={snapshot?.skillNodes ?? []}
+        shapes={snapshot?.shapes ?? []}
         installedSkills={installedSkills}
         onAddSkillAt={(position) => setSkillPickerAt(position)}
         skillClipboard={skillClipboard}

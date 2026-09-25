@@ -9,6 +9,7 @@ import {
   OFFICE_DIVISIONS_TABLE_SCHEMA_SQL,
   OFFICE_MESSAGES_TABLE_SCHEMA_SQL,
   OFFICE_FLOW_EDGES_TABLE_SCHEMA_SQL,
+  OFFICE_SHAPES_TABLE_SCHEMA_SQL,
   OFFICE_SKILL_LINKS_TABLE_SCHEMA_SQL,
   OFFICE_SKILL_NODES_TABLE_SCHEMA_SQL,
   OFFICE_TASKS_TABLE_SCHEMA_SQL,
@@ -502,6 +503,7 @@ const createOfficeTables = (db: Database): void => {
   db.exec(OFFICE_FLOW_EDGES_TABLE_SCHEMA_SQL);
   db.exec(OFFICE_SKILL_NODES_TABLE_SCHEMA_SQL);
   db.exec(OFFICE_SKILL_LINKS_TABLE_SCHEMA_SQL);
+  db.exec(OFFICE_SHAPES_TABLE_SCHEMA_SQL);
   db.exec('CREATE INDEX IF NOT EXISTS idx_office_skill_nodes_office ON office_skill_nodes(office_id)');
   // Columns added after the first office release; older databases get them here.
   const divisionColumns = (db.prepare('PRAGMA table_info(office_divisions)').all() as { name: string }[]).map((column) => column.name);

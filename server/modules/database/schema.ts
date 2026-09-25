@@ -415,6 +415,28 @@ CREATE TABLE IF NOT EXISTS office_skill_nodes (
 );
 `;
 
+export const OFFICE_SHAPES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_shapes (
+    id TEXT PRIMARY KEY NOT NULL,
+    office_id TEXT NOT NULL,
+    -- rect | rounded | ellipse | diamond | text; drawn by the user, never read by the orchestrator.
+    kind TEXT NOT NULL,
+    x REAL NOT NULL,
+    y REAL NOT NULL,
+    width REAL NOT NULL,
+    height REAL NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    fill TEXT,
+    stroke TEXT,
+    text_color TEXT,
+    font_size INTEGER NOT NULL DEFAULT 14,
+    z INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE
+);
+`;
+
 export const OFFICE_SKILL_LINKS_TABLE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS office_skill_links (
     -- A division linked to a skill node on the canvas has that skill.
