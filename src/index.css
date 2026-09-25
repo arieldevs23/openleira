@@ -1276,3 +1276,43 @@ h1, h2, h3, h4 {
 .splash-enter { animation: splash-enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .splash-logo { animation: splash-breathe 2.4s ease-in-out 0.6s infinite; }
 .splash-exit { animation: splash-exit 0.5s ease-in both; pointer-events: none; }
+
+/* ---------------------------------------------------------------------------
+   Kantor AI tree. Nodes fade/scale in, running nodes pulse a soft ring, and an
+   edge carrying work "flows" by moving its dashes. Reduced motion keeps the
+   dashes (so an active edge still reads as active) but stops every animation.
+   --------------------------------------------------------------------------- */
+@keyframes office-node-enter {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes office-node-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.32); }
+  50% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+}
+
+@keyframes office-edge-flow {
+  to { stroke-dashoffset: -24; }
+}
+
+.office-node-enter {
+  animation: office-node-enter 180ms ease-out both;
+}
+
+.office-node-running {
+  animation: office-node-pulse 1.6s ease-in-out infinite;
+}
+
+.office-edge-flow {
+  stroke-dasharray: 6 6;
+  animation: office-edge-flow 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .office-node-enter,
+  .office-node-running,
+  .office-edge-flow {
+    animation: none;
+  }
+}

@@ -7,6 +7,7 @@ import { PluginTabContent } from '@/modules/plugins';
 import { BrowserUsePanel, useBrowserUseEnabled } from '@/modules/browser-use';
 import { usePaletteOpsRegister } from '@/modules/command-palette';
 import { TaskMasterPanel, useTaskMasterProjectSync, useTasksSettings } from '@/modules/task-master';
+import { OfficePage } from '@/modules/office';
 import type { AppTab, DirectoryRevealRequest, Project, ProjectSession, SessionEstablishedContext, SessionNavigationOptions, SettingsMainTab } from '@/shared/types';
 import { useUiPreferences } from '@/shared/context/UiPreferencesContext';
 import { useFileOpenResolver } from '@/modules/project-workspace/hooks/useFileOpenResolver';
@@ -33,7 +34,7 @@ type WorkspaceMainProps = {
   newSessionTrigger: number;
 };
 
-/** Rendered by ProjectMainRegion to show the selected project's active tab: chat, files, shell, tasks, browser or a plugin. */
+/** Rendered by ProjectMainRegion to show the selected project's active tab: chat, files, shell, tasks, browser, the Kantor AI office or a plugin. */
 function WorkspaceMain({
   selectedProject,
   selectedSession,
@@ -118,6 +119,12 @@ function WorkspaceMain({
     setRevealDirectory({ path: directoryPath });
   }, [setActiveTab]);
 
+  // Office sessions are ordinary app sessions, so "open" is the regular chat view.
+  const openOfficeSession = useCallback((targetSessionId: string) => {
+    setActiveTab('chat');
+    onNavigateToSession(targetSessionId);
+  }, [onNavigateToSession, setActiveTab]);
+
   // Stable arguments keep usePaletteOpsRegister's effect from tearing down and
   // rewriting the whole palette registry on every render.
   usePaletteOpsRegister({ openFile, openFileInEditor, openDirectory });
@@ -189,6 +196,14 @@ function WorkspaceMain({
           )}
 
           {shouldShowTasksTab && <TaskMasterPanel isVisible={activeTab === 'tasks'} />}
+
+          {activeTab === 'office' && (
+            <div className="h-full overflow-hidden">
+              <WorkspaceErrorBoundary showDetails>
+                <OfficePage project={selectedProject} onOpenSession={openOfficeSession} />
+              </WorkspaceErrorBoundary>
+            </div>
+          )}
 
           {shouldShowBrowserTab && activeTab === 'browser' && (
             <div className="h-full overflow-hidden">

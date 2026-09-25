@@ -1,0 +1,213 @@
+{
+  "loading": "bentar, lagi buka kantor...",
+  "loadError": "kantor gagal dibuka: {{message}}",
+  "retry": "coba lagi",
+  "empty": {
+    "title": "proyek ini belum punya kantor",
+    "body": "kantor AI itu tim agent: koordinator mecah kasus lo jadi tugas buat divisi planner, designer, backend, frontend, security, dan docs, terus lapisan audit ngecek tiap hasil sebelum dianggap selesai.",
+    "create": "bikin kantor",
+    "creating": "lagi bikin kantor..."
+  },
+  "toolbar": {
+    "models": "model agent",
+    "addDivision": "tambah divisi",
+    "settings": "pengaturan"
+  },
+  "missingModels": {
+    "banner": "{{count}} agent belum punya model",
+    "action": "pilih model"
+  },
+  "panel": {
+    "label": "detail",
+    "backToCase": "balik ke kasus"
+  },
+  "cases": {
+    "title": "kasus",
+    "new": "kasus baru",
+    "titlePlaceholder": "judul kasus",
+    "descriptionPlaceholder": "jelasin apa yang mau dikerjain...",
+    "create": "bikin",
+    "empty": "belum ada kasus. bikin satu buat mulai."
+  },
+  "status": {
+    "draft": "draft",
+    "running": "jalan",
+    "waiting_user": "nunggu lo",
+    "done": "selesai",
+    "failed": "gagal"
+  },
+  "taskStatus": {
+    "queued": "antri",
+    "running": "jalan",
+    "review": "direview",
+    "done": "selesai",
+    "failed": "gagal",
+    "blocked": "keblok"
+  },
+  "nodeStatus": {
+    "idle": "idle",
+    "running": "jalan",
+    "review": "review",
+    "done": "selesai",
+    "failed": "gagal",
+    "blocked": "keblok"
+  },
+  "kinds": {
+    "assign": "penugasan",
+    "result": "hasil",
+    "question": "pertanyaan",
+    "audit_pass": "lolos audit",
+    "audit_fail": "gagal audit",
+    "note": "catatan"
+  },
+  "tree": {
+    "label": "bagan kantor",
+    "caseNode": "kasus",
+    "noCase": "pilih atau bikin kasus",
+    "layer": "lapisan lintas divisi",
+    "skills": "skills",
+    "skillsCount": "{{count}} skill dipakai",
+    "noModel": "belum ada model",
+    "queued": "{{count}} antri",
+    "messages": "{{count}} pesan",
+    "openMessages": "pesan sama {{name}}",
+    "disabled": "nonaktif"
+  },
+  "case": {
+    "run": "jalanin",
+    "starting": "lagi mulai...",
+    "pause": "jeda",
+    "resume": "lanjut",
+    "cancel": "batal",
+    "confirmCancel": "yakin batalin?",
+    "delete": "hapus",
+    "confirmDelete": "yakin hapus?",
+    "phase": {
+      "planning": "koordinator lagi nyusun rencana...",
+      "executing": "divisi lagi kerja...",
+      "finalizing": "koordinator lagi nulis ringkasan..."
+    },
+    "waiting": {
+      "paused": "lagi dijeda. kerjaan yang jalan tetap diselesaiin, yang baru ga dimulai.",
+      "question": "koordinator punya pertanyaan. jawab di bawah biar lanjut.",
+      "interrupted": "server sempet restart pas ini jalan. klik lanjut buat nerusin dari posisi terakhir."
+    },
+    "modelsMissing": "belum bisa jalan: pilih model dulu buat {{names}}.",
+    "finalSummary": "ringkasan akhir",
+    "timeline": "timeline task",
+    "noTasks": "belum ada task.",
+    "noTasksDraft": "task bakal muncul di sini setelah koordinator nyusun rencana.",
+    "auditAttempts": "gagal audit {{count}}x",
+    "deletedDivision": "divisi udah dihapus",
+    "openSession": "buka sesinya di chat",
+    "conversation": "obrolan sama koordinator",
+    "noConversation": "belum ada pesan.",
+    "you": "lo",
+    "coordinator": "koordinator",
+    "notePlaceholder": "kirim pesan ke koordinator (ctrl+enter buat kirim)",
+    "send": "kirim",
+    "noCaseSelected": "pilih kasus di kiri, atau bikin yang baru."
+  },
+  "division": {
+    "section": "divisi",
+    "name": "nama",
+    "namePlaceholder": "misalnya data, mobile, devops",
+    "description": "deskripsi",
+    "color": "warna",
+    "delete": "hapus divisi",
+    "confirmDelete": "yakin hapus?",
+    "protected": "koordinator dan lapisan audit bisa diedit, tapi ga bisa dihapus.",
+    "coordinatorTag": "koordinator",
+    "auditTag": "lapisan audit",
+    "addTitle": "tambah divisi",
+    "add": "tambah",
+    "addHint": "divisi baru dapet agent sendiri. atur peran, model, tools, sama skills-nya setelah ditambah."
+  },
+  "agent": {
+    "section": "agent",
+    "name": "nama agent",
+    "model": "model",
+    "pickModel": "pilih model",
+    "rolePrompt": "peran (markdown)",
+    "rolePromptPlaceholder": "agent ini fokus ke apa, kerjanya gimana, apa yang ga boleh...",
+    "rolePromptHint": "dikirim ke agent sebagai instruksi peran di setiap tugas.",
+    "tools": "tools yang boleh",
+    "toolsAll": "kalau ga ada yang dipilih, semua tools boleh.",
+    "toolsLimited": "cuma tools yang dipilih yang bisa dipakai.",
+    "toolsClaudeOnly": "batas tools cuma berlaku buat agent Claude.",
+    "skills": "skills",
+    "noSkills": "belum ada skill di ~/.claude/skills atau .claude/skills proyek ini.",
+    "enabled": "divisi ini nerima kerjaan",
+    "enabledAudit": "audit ngecek tiap hasil (kalau mati, hasil langsung diterima)",
+    "saved": "kesimpen.",
+    "noCase": "pilih kasus buat liat kerjaan agent ini.",
+    "noTasks": "divisi ini belum dapet task di kasus yang dipilih.",
+    "task": "task",
+    "result": "hasil",
+    "auditNotes": "catatan audit"
+  },
+  "messages": {
+    "title": "pesan sama {{name}}",
+    "subtitle": "semua lewat koordinator dan message bus.",
+    "empty": "belum ada pesan sama divisi ini di kasus yang dipilih."
+  },
+  "skills": {
+    "title": "skills",
+    "subtitle": "skill yang kepasang buat Claude dan agent yang make. atur skill di panel tiap agent.",
+    "none": "belum ada skill yang kepasang.",
+    "unused": "belum dipake agent mana pun",
+    "missing": "dipasang di agent tapi skill-nya udah ga ada.",
+    "scope": {
+      "user": "user",
+      "project": "proyek"
+    }
+  },
+  "wizard": {
+    "title": "pilih model buat tiap agent",
+    "subtitle": "kasus baru bisa jalan kalau semua agent yang aktif udah punya model. bisa diganti kapan aja.",
+    "applyAllLabel": "satu model buat semua",
+    "applyAll": "terapkan ke semua",
+    "rowLabel": "model buat {{name}}",
+    "stillMissing": "{{count}} agent aktif masih belum punya model.",
+    "noModels": "daftar model provider gagal dimuat.",
+    "later": "nanti aja"
+  },
+  "permission": {
+    "title": "agent bakal jalan tanpa nanya",
+    "body": "kantor ini jalanin sesinya dengan bypass permission: agent bakal ngedit file dan jalanin command di proyek ini tanpa minta izin lo dulu.",
+    "hint": "bisa ganti ke mode yang lebih ketat di pengaturan kantor. kalau mode ketat, setujui tool call dengan buka sesinya di chat.",
+    "confirm": "oke, jalanin"
+  },
+  "settings": {
+    "title": "pengaturan kantor",
+    "name": "nama kantor",
+    "maxParallel": "sesi yang jalan barengan",
+    "maxParallelHint": "gabungan sesi task dan audit, per kasus (1–6).",
+    "permissionMode": "mode permission",
+    "modes": {
+      "bypassPermissions": "bypass permission (default)",
+      "acceptEdits": "terima edit",
+      "default": "tanya semuanya"
+    },
+    "modeHints": {
+      "bypassPermissions": "agent jalan tanpa nanya. paling cepet, tapi cek hasilnya.",
+      "acceptEdits": "edit file dibolehin; tools lain nunggu persetujuan di chat.",
+      "default": "tiap tool call nunggu persetujuan lo di chat."
+    }
+  },
+  "transcript": {
+    "title": "transcript",
+    "openInChat": "buka di chat",
+    "none": "belum ada yang jalan.",
+    "empty": "belum ada output.",
+    "loading": "bentar...",
+    "done": "giliran selesai",
+    "aborted": "dihentiin"
+  },
+  "common": {
+    "cancel": "batal",
+    "save": "simpan",
+    "saving": "lagi nyimpen...",
+    "close": "tutup"
+  }
+}

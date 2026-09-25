@@ -179,5 +179,9 @@
     "renameProject": "Rename project",
     "deleteProject": "Remove project",
     "starred": "Starred"
+  },
+  "office": {
+    "open": "Office",
+    "needsProject": "Select a project to open its office"
   }
 }

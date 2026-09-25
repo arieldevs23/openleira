@@ -51,7 +51,7 @@ export type ProviderModelActions = {
 //----------------- PROJECTS AND SESSIONS ------------
 
 /** Identifies the workspace pane the user is looking at; plugin panes are namespaced by plugin id. */
-export type AppTab = 'chat' | 'files' | 'shell' | 'git' | 'tasks' | 'browser' | `plugin:${string}`;
+export type AppTab = 'chat' | 'files' | 'shell' | 'git' | 'tasks' | 'browser' | 'office' | `plugin:${string}`;
 
 /** A message queued to be sent to a session at a future time. */
 export type ScheduledMessage = {
@@ -1750,3 +1750,208 @@ type TaskStatus =
 
 /** A TaskMaster task's priority; high, medium and low are the known values and the string fallback tolerates anything else TaskMaster emits. */
 type TaskPriority = 'high' | 'medium' | 'low' | string;
+
+// ---------------------------
+
+//----------------- OFFICE (KANTOR AI) ------------
+
+/** Lifecycle of an office case: draft until started, then running, parked (waiting_user) or finished. */
+export type OfficeCaseStatus = 'draft' | 'running' | 'waiting_user' | 'done' | 'failed';
+
+/** Why a case waits for the user: paused by them, a coordinator question, or a server restart. */
+export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted';
+
+/** Lifecycle of one sub-task handed to a division. */
+export type OfficeTaskStatus = 'queued' | 'running' | 'review' | 'done' | 'failed' | 'blocked';
+
+/** Kinds of message-bus rows exchanged between the coordinator, divisions, audit and the user. */
+export type OfficeMessageKind = 'assign' | 'result' | 'question' | 'audit_pass' | 'audit_fail' | 'note';
+
+/** Permission mode every session of an office runs with. */
+export type OfficePermissionMode = 'bypassPermissions' | 'acceptEdits' | 'default';
+
+/** One office (one per project) with its run settings. */
+export type Office = {
+  id: string;
+  projectPath: string;
+  name: string;
+  locale: string;
+  maxParallel: number;
+  permissionMode: OfficePermissionMode;
+  permissionWarningAcknowledged: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** The agent staffing a division; provider/model stay null until the user picks them. */
+export type OfficeAgent = {
+  id: string;
+  divisionId: string;
+  name: string;
+  rolePrompt: string;
+  provider: LLMProvider | null;
+  model: string | null;
+  allowedTools: string[];
+  skills: string[];
+  enabled: boolean;
+  updatedAt: string;
+};
+
+/** One division (room) of an office together with its agent. */
+export type OfficeDivision = {
+  id: string;
+  officeId: string;
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  sortOrder: number;
+  isCoordinator: boolean;
+  isAudit: boolean;
+  createdAt: string;
+  agent: OfficeAgent;
+};
+
+/** The user's main request as the office tracks it. */
+export type OfficeCase = {
+  id: string;
+  officeId: string;
+  title: string;
+  description: string;
+  status: OfficeCaseStatus;
+  waitingReason: OfficeCaseWaitingReason | null;
+  phase: 'planning' | 'executing' | 'finalizing' | null;
+  coordinatorBusy: boolean;
+  coordinatorSessionId: string | null;
+  finalSummary: string | null;
+  error: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+/** One sub-task of a case, with the sessions that worked on and audited it. */
+export type OfficeTask = {
+  id: string;
+  caseId: string;
+  divisionId: string | null;
+  parentTaskId: string | null;
+  ref: string;
+  title: string;
+  instruction: string;
+  dependsOn: string[];
+  status: OfficeTaskStatus;
+  attempts: number;
+  resultSummary: string | null;
+  auditNotes: string | null;
+  sessionId: string | null;
+  auditSessionId: string | null;
+  error: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+/** One message-bus row; a null division id means the user. */
+export type OfficeMessage = {
+  id: number;
+  caseId: string;
+  taskId: string | null;
+  fromDivisionId: string | null;
+  toDivisionId: string | null;
+  kind: OfficeMessageKind;
+  payload: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+};
+
+/** What the Office page loads first. */
+export type OfficeSnapshot = {
+  office: Office;
+  divisions: OfficeDivision[];
+  cases: OfficeCase[];
+};
+
+/** A case with its tasks and message bus, as the case panel shows it. */
+export type OfficeCaseDetail = {
+  case: OfficeCase;
+  tasks: OfficeTask[];
+  messages: OfficeMessage[];
+};
+
+/** The `office:update` websocket frame: one changed row, or null when it was deleted. */
+export type OfficeUpdateEvent = {
+  kind: 'office:update';
+  officeId: string;
+  timestamp: string;
+  change:
+    | { entity: 'office'; office: Office }
+    | { entity: 'division'; id: string; division: OfficeDivision | null }
+    | { entity: 'case'; id: string; case: OfficeCase | null }
+    | { entity: 'task'; task: OfficeTask }
+    | { entity: 'message'; message: OfficeMessage };
+};
+
+/** One compact transcript line of an office session, live or rebuilt from history. */
+export type OfficeLogEntry = {
+  id: string;
+  type: 'text' | 'tool' | 'error' | 'done';
+  text: string;
+  toolName?: string;
+  timestamp: string;
+};
+
+/** The `office:log` websocket frame streaming one line of a running office session. */
+export type OfficeLogEvent = {
+  kind: 'office:log';
+  officeId: string;
+  caseId: string;
+  taskId: string | null;
+  role: 'coordinator' | 'task' | 'audit';
+  logSessionId: string;
+  entry: OfficeLogEntry;
+};
+
+/** Mutations the Office page's panels call; implemented by the office module's useOffice hook. */
+export type OfficeActions = {
+  createOffice(locale: string): Promise<OfficeSnapshot>;
+  updateOffice(changes: {
+    name?: string;
+    maxParallel?: number;
+    permissionMode?: OfficePermissionMode;
+    permissionWarningAcknowledged?: boolean;
+  }): Promise<Office>;
+  createDivision(input: { name: string; description?: string; color?: string }): Promise<OfficeDivision>;
+  updateDivision(
+    divisionId: string,
+    changes: { name?: string; description?: string; color?: string; sortOrder?: number },
+  ): Promise<OfficeDivision>;
+  deleteDivision(divisionId: string): Promise<void>;
+  /** `model: null` clears the model; `provider` + `model` set it. */
+  updateAgent(agentId: string, changes: Record<string, unknown>): Promise<OfficeDivision>;
+  assignModels(assignments: Array<{ agentId: string; provider: string; model: string }>): Promise<void>;
+  createCase(input: { title: string; description: string }): Promise<OfficeCase>;
+  deleteCase(caseId: string): Promise<void>;
+  caseAction(caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel'): Promise<OfficeCase>;
+  postNote(caseId: string, text: string): Promise<OfficeMessage>;
+};
+
+/** One provider's model catalog, rendered as one option group of the office agent model menus. */
+export type OfficeModelGroup = { provider: LLMProvider; options: ProviderModelOption[] };
+
+/** A skill installed for Claude (user or project scope) that an office agent can be given. */
+export type OfficeInstalledSkill = { name: string; description: string; scope: string };
+
+/** Live state a node in the office tree shows. */
+export type OfficeNodeStatus = 'idle' | 'running' | 'review' | 'done' | 'failed' | 'blocked';
+
+/** What the right-hand panel of the Office page is showing. */
+export type OfficeSelection =
+  | { type: 'case' }
+  | { type: 'division'; divisionId: string; taskId?: string }
+  | { type: 'messages'; divisionId: string }
+  | { type: 'skills' };

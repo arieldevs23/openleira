@@ -24,7 +24,8 @@
     "git": "Source Control",
     "tasks": "Tasks",
     "browser": "Browser",
-    "computer": "Computer"
+    "computer": "Computer",
+    "office": "Office"
   },
   "status": {
     "loading": "Loading...",
@@ -316,7 +317,8 @@
     "browseAllFiles": "Browse all files ({{count}})",
     "browseAllCommits": "Browse all commits ({{count}})",
     "browseAllBranches": "Browse all branches ({{count}})",
-    "switchTo": "Switch to: {{name}}"
+    "switchTo": "Switch to: {{name}}",
+    "navOffice": "Go to Office"
   },
   "folderBrowser": {
     "title": "Select Folder",

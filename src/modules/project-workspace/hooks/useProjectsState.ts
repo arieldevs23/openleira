@@ -347,7 +347,7 @@ const removeSessionFromProject = (project: Project, sessionIdToDelete: string): 
   return updatedProject;
 };
 
-const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'tasks', 'browser']);
+const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'tasks', 'browser', 'office']);
 
 const isValidTab = (tab: string): tab is AppTab => {
   return VALID_TABS.has(tab) || tab.startsWith('plugin:');
@@ -1036,7 +1036,7 @@ export function useProjectsState({
       clearSessionAttention(session.id);
       setSelectedSession(session);
 
-      if (activeTab === 'tasks' || activeTab === 'browser') {
+      if (activeTab === 'tasks' || activeTab === 'browser' || activeTab === 'office') {
         setActiveTab('chat');
       }
 
@@ -1087,6 +1087,15 @@ export function useProjectsState({
     },
     [isMobile, navigate],
   );
+
+  // Opens the Kantor AI page of the selected project; the sidebar's "kantor" entry uses it.
+  const handleOpenOffice = useCallback(() => {
+    setActiveTab('office');
+
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   const handleSessionDelete = useCallback(
     (sessionIdToDelete: string) => {
@@ -1221,6 +1230,8 @@ export function useProjectsState({
       onSessionSelect: handleSessionSelect,
       onNewSession: handleNewSession,
       onOpenFileBrowser: handleOpenFileBrowser,
+      onOpenOffice: handleOpenOffice,
+      isOfficeOpen: activeTab === 'office',
       onSessionDelete: handleSessionDelete,
       onLoadMoreSessions: loadMoreProjectSessions,
       onProjectDelete: handleProjectDelete,
@@ -1239,6 +1250,8 @@ export function useProjectsState({
       attentionSessionIds,
       handleNewSession,
       handleOpenFileBrowser,
+      handleOpenOffice,
+      activeTab,
       handleProjectDelete,
       handleProjectSelect,
       handleSessionDelete,

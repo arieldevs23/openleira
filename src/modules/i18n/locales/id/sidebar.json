@@ -178,5 +178,9 @@
     "renameProject": "ganti nama project",
     "deleteProject": "hapus project",
     "starred": "difavoritin"
+  },
+  "office": {
+    "open": "kantor",
+    "needsProject": "pilih proyek dulu buat buka kantornya"
   }
 }

@@ -44,6 +44,7 @@ const NAV_TABS: Array<{ id: AppTab; labelKey: string; keywords: string }> = [
   { id: 'files', labelKey: 'commandPalette.navFiles', keywords: 'files file tree explorer' },
   { id: 'shell', labelKey: 'commandPalette.navShell', keywords: 'shell terminal console' },
   { id: 'tasks', labelKey: 'commandPalette.navTasks', keywords: 'tasks taskmaster' },
+  { id: 'office', labelKey: 'commandPalette.navOffice', keywords: 'office kantor agents team coordinator audit' },
 ];
 
 /** Rendered by the project-workspace module to search sessions and files and run app actions. */

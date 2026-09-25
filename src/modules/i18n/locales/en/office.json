@@ -1,0 +1,218 @@
+{
+  "loading": "Opening the office...",
+  "loadError": "The office could not be opened: {{message}}",
+  "retry": "Try again",
+  "empty": {
+    "title": "This project has no office yet",
+    "body": "An AI office is a team of agents: the coordinator splits your case into tasks for the planner, designer, backend, frontend, security and docs divisions, and the audit layer checks every result before it counts as done.",
+    "create": "Create office",
+    "creating": "Creating the office..."
+  },
+  "toolbar": {
+    "models": "Agent models",
+    "addDivision": "Add division",
+    "settings": "Settings"
+  },
+  "missingModels": {
+    "banner_one": "{{count}} agent has no model yet",
+    "banner_other": "{{count}} agents have no model yet",
+    "action": "Pick models"
+  },
+  "panel": {
+    "label": "Details",
+    "backToCase": "Back to the case"
+  },
+  "cases": {
+    "title": "Cases",
+    "new": "New case",
+    "titlePlaceholder": "Case title",
+    "descriptionPlaceholder": "Describe what needs to be done...",
+    "create": "Create",
+    "empty": "No cases yet. Create one to get started."
+  },
+  "status": {
+    "draft": "Draft",
+    "running": "Running",
+    "waiting_user": "Waiting for you",
+    "done": "Done",
+    "failed": "Failed"
+  },
+  "taskStatus": {
+    "queued": "Queued",
+    "running": "Running",
+    "review": "In review",
+    "done": "Done",
+    "failed": "Failed",
+    "blocked": "Blocked"
+  },
+  "nodeStatus": {
+    "idle": "Idle",
+    "running": "Running",
+    "review": "Review",
+    "done": "Done",
+    "failed": "Failed",
+    "blocked": "Blocked"
+  },
+  "kinds": {
+    "assign": "Assignment",
+    "result": "Result",
+    "question": "Question",
+    "audit_pass": "Audit passed",
+    "audit_fail": "Audit failed",
+    "note": "Note"
+  },
+  "tree": {
+    "label": "Office chart",
+    "caseNode": "Case",
+    "noCase": "Pick or create a case",
+    "layer": "Cross-division layer",
+    "skills": "Skills",
+    "skillsCount_one": "{{count}} skill in use",
+    "skillsCount_other": "{{count}} skills in use",
+    "noModel": "no model",
+    "queued": "{{count}} queued",
+    "messages_one": "{{count}} message",
+    "messages_other": "{{count}} messages",
+    "openMessages": "Messages with {{name}}",
+    "disabled": "disabled"
+  },
+  "case": {
+    "run": "Run",
+    "starting": "Starting...",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "confirmCancel": "Cancel for real?",
+    "delete": "Delete",
+    "confirmDelete": "Delete for real?",
+    "phase": {
+      "planning": "The coordinator is planning...",
+      "executing": "Divisions are working...",
+      "finalizing": "The coordinator is writing the summary..."
+    },
+    "waiting": {
+      "paused": "Paused. Running work finishes, nothing new starts.",
+      "question": "The coordinator has a question. Answer it below to continue.",
+      "interrupted": "The server restarted while this ran. Resume to continue where it left off."
+    },
+    "modelsMissing": "Can't run yet: pick a model for {{names}}.",
+    "finalSummary": "Final summary",
+    "timeline": "Task timeline",
+    "noTasks": "No tasks yet.",
+    "noTasksDraft": "Tasks appear here once the coordinator has planned the case.",
+    "auditAttempts_one": "audit failed {{count}}×",
+    "auditAttempts_other": "audit failed {{count}}×",
+    "deletedDivision": "deleted division",
+    "openSession": "Open the session in chat",
+    "conversation": "With the coordinator",
+    "noConversation": "No messages yet.",
+    "you": "You",
+    "coordinator": "Coordinator",
+    "notePlaceholder": "Message the coordinator (Ctrl+Enter to send)",
+    "send": "Send",
+    "noCaseSelected": "Pick a case on the left, or create a new one."
+  },
+  "division": {
+    "section": "Division",
+    "name": "Name",
+    "namePlaceholder": "e.g. Data, Mobile, DevOps",
+    "description": "Description",
+    "color": "Color",
+    "delete": "Delete division",
+    "confirmDelete": "Delete for real?",
+    "protected": "The coordinator and the audit layer can be edited but not deleted.",
+    "coordinatorTag": "coordinator",
+    "auditTag": "audit layer",
+    "addTitle": "Add a division",
+    "add": "Add",
+    "addHint": "The division gets its own agent. Set its role, model, tools and skills after adding it."
+  },
+  "agent": {
+    "section": "Agent",
+    "name": "Agent name",
+    "model": "Model",
+    "pickModel": "Pick a model",
+    "rolePrompt": "Role (markdown)",
+    "rolePromptPlaceholder": "What this agent focuses on, how it works, what it must not do...",
+    "rolePromptHint": "Sent to the agent as its role instructions on every task.",
+    "tools": "Allowed tools",
+    "toolsAll": "None selected means every tool is allowed.",
+    "toolsLimited": "Only the selected tools are available.",
+    "toolsClaudeOnly": "Tool limits only apply to Claude agents.",
+    "skills": "Skills",
+    "noSkills": "No skills installed in ~/.claude/skills or in this project's .claude/skills.",
+    "enabled": "This division takes work",
+    "enabledAudit": "Audit checks every result (off: results are accepted as is)",
+    "saved": "Saved.",
+    "noCase": "Pick a case to see this agent's work.",
+    "noTasks": "This division has no task in the selected case.",
+    "task": "Task",
+    "result": "Result",
+    "auditNotes": "Audit notes"
+  },
+  "messages": {
+    "title": "Messages with {{name}}",
+    "subtitle": "Everything goes through the coordinator and the message bus.",
+    "empty": "No messages with this division in the selected case."
+  },
+  "skills": {
+    "title": "Skills",
+    "subtitle": "Skills installed for Claude and the agents that use them. Assign skills in each agent's panel.",
+    "none": "No skills installed yet.",
+    "unused": "not used by any agent",
+    "missing": "Assigned to an agent but no longer installed.",
+    "scope": {
+      "user": "user",
+      "project": "project"
+    }
+  },
+  "wizard": {
+    "title": "Pick a model for every agent",
+    "subtitle": "A case can only run once every enabled agent has a model. You can change them any time.",
+    "applyAllLabel": "One model for everyone",
+    "applyAll": "Apply to all",
+    "rowLabel": "Model for {{name}}",
+    "stillMissing_one": "{{count}} enabled agent still has no model.",
+    "stillMissing_other": "{{count}} enabled agents still have no model.",
+    "noModels": "No provider models could be loaded.",
+    "later": "Later"
+  },
+  "permission": {
+    "title": "Agents will run without asking",
+    "body": "This office runs its sessions with bypassed permissions: agents edit files and run commands in this project without asking you first.",
+    "hint": "You can switch to a stricter mode in the office settings. With stricter modes, approve tool calls by opening the session in chat.",
+    "confirm": "I understand, run it"
+  },
+  "settings": {
+    "title": "Office settings",
+    "name": "Office name",
+    "maxParallel": "Sessions running at the same time",
+    "maxParallelHint": "Task and audit sessions together, per case (1–6).",
+    "permissionMode": "Permission mode",
+    "modes": {
+      "bypassPermissions": "Bypass permissions (default)",
+      "acceptEdits": "Accept edits",
+      "default": "Ask for everything"
+    },
+    "modeHints": {
+      "bypassPermissions": "Agents act without asking. Fastest, but review the result.",
+      "acceptEdits": "File edits are allowed; other tools wait for approval in chat.",
+      "default": "Every tool call waits for your approval in chat."
+    }
+  },
+  "transcript": {
+    "title": "Transcript",
+    "openInChat": "Open in chat",
+    "none": "Nothing has run yet.",
+    "empty": "No output yet.",
+    "loading": "Loading...",
+    "done": "Turn finished",
+    "aborted": "Stopped"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "close": "Close"
+  }
+}

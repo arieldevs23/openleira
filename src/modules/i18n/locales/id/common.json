@@ -24,7 +24,8 @@
     "git": "source control",
     "tasks": "task",
     "browser": "browser",
-    "computer": "komputer"
+    "computer": "komputer",
+    "office": "kantor"
   },
   "status": {
     "loading": "bentar...",
@@ -315,7 +316,8 @@
     "browseAllFiles": "liat semua file ({{count}})",
     "browseAllCommits": "liat semua commit ({{count}})",
     "browseAllBranches": "liat semua branch ({{count}})",
-    "switchTo": "pindah ke: {{name}}"
+    "switchTo": "pindah ke: {{name}}",
+    "navOffice": "ke kantor"
   },
   "folderBrowser": {
     "title": "pilih folder",

@@ -424,6 +424,40 @@ export const api = {
       post(`/api/providers/${provider}/skills`, payload),
   },
 
+  // Kantor AI: one office per project, its divisions/agents, cases and controls.
+  office: {
+    forProject: (projectId: string) => get(`/api/office${query({ projectId })}`),
+    create: (projectId: string, locale: string) => post('/api/office', { projectId, locale }),
+    update: (
+      officeId: string,
+      changes: { name?: string; maxParallel?: number; permissionMode?: string; permissionWarningAcknowledged?: boolean },
+    ) => patch(`/api/office/${encodeURIComponent(officeId)}`, changes),
+    createDivision: (officeId: string, input: { name: string; description?: string; color?: string }) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/divisions`, input),
+    updateDivision: (
+      officeId: string,
+      divisionId: string,
+      changes: { name?: string; description?: string; color?: string; sortOrder?: number },
+    ) => patch(`/api/office/${encodeURIComponent(officeId)}/divisions/${encodeURIComponent(divisionId)}`, changes),
+    deleteDivision: (officeId: string, divisionId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/divisions/${encodeURIComponent(divisionId)}`),
+    // `model: null` clears the agent's model; `provider` + `model` set it.
+    updateAgent: (officeId: string, agentId: string, changes: Record<string, unknown>) =>
+      patch(`/api/office/${encodeURIComponent(officeId)}/agents/${encodeURIComponent(agentId)}`, changes),
+    assignModels: (officeId: string, assignments: Array<{ agentId: string; provider: string; model: string }>) =>
+      put(`/api/office/${encodeURIComponent(officeId)}/agents/models`, { assignments }),
+    createCase: (officeId: string, input: { title: string; description: string }) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/cases`, input),
+    caseDetail: (officeId: string, caseId: string) =>
+      get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
+    deleteCase: (officeId: string, caseId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
+    caseAction: (officeId: string, caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel') =>
+      post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/${action}`),
+    postNote: (officeId: string, caseId: string, text: string) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/notes`, { text }),
+  },
+
   // Slash commands
   commands: {
     // `projectPath` stays optional: a workspace without a resolved path omits

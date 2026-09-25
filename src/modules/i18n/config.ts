@@ -23,6 +23,8 @@ import enCodeEditor from '@/modules/i18n/locales/en/codeEditor.json';
 import enTasks from '@/modules/i18n/locales/en/tasks.json';
 // oxlint-disable-next-line importx/order
 import enGit from '@/modules/i18n/locales/en/git.json';
+// oxlint-disable-next-line importx/order
+import enOffice from '@/modules/i18n/locales/en/office.json';
 
 import frCommon from '@/modules/i18n/locales/fr/common.json';
 import frSettings from '@/modules/i18n/locales/fr/settings.json';
@@ -111,6 +113,8 @@ import idCodeEditor from '@/modules/i18n/locales/id/codeEditor.json';
 import idTasks from '@/modules/i18n/locales/id/tasks.json';
 // oxlint-disable-next-line importx/order
 import idGit from '@/modules/i18n/locales/id/git.json';
+// oxlint-disable-next-line importx/order
+import idOffice from '@/modules/i18n/locales/id/office.json';
 
 import zhTWCommon from '@/modules/i18n/locales/zh-TW/common.json';
 import zhTWSettings from '@/modules/i18n/locales/zh-TW/settings.json';
@@ -156,6 +160,7 @@ i18n
         codeEditor: enCodeEditor,
         tasks: enTasks,
 git: enGit,
+        office: enOffice,
       },
       fr: {
         common: frCommon,
@@ -247,6 +252,7 @@ git: enGit,
         codeEditor: idCodeEditor,
         tasks: idTasks,
         git: idGit,
+        office: idOffice,
       },
       'zh-TW': {
         common: zhTWCommon,
@@ -269,7 +275,7 @@ git: enGit,
     debug: false,
 
     // Namespaces - load only what's needed
-    ns: ['common', 'settings', 'auth', 'sidebar', 'chat', 'codeEditor', 'tasks', 'git'],
+    ns: ['common', 'settings', 'auth', 'sidebar', 'chat', 'codeEditor', 'tasks', 'git', 'office'],
     defaultNS: 'common',
 
     // Key separator for nested keys (default: '.')
