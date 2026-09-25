@@ -117,7 +117,8 @@
     "browser": "browser",
     "notifications": "notifikasi",
     "plugins": "plugin",
-    "about": "tentang aplikasi"
+    "about": "tentang aplikasi",
+    "workspace": "Node Design"
   },
   "notifications": {
     "title": "notifikasi",
@@ -783,6 +784,90 @@
       "shell": "terminal",
       "extensions": "mcp, skill & plugin",
       "voice": "input suara"
+    }
+  },
+  "workspace": {
+    "modelTitle": "proyek dan chat",
+    "modelBody": "proyek dikerjain tim agent di workspace-nya; chat bebas buat yang lain.",
+    "projectsLabel": "proyek",
+    "projectsBody": "agent di proyek cuma bisa di-prompt lewat canvas Node Design. sesi chat lamanya disembunyiin (ga dihapus); sesi agent yang dibuka dari canvas cuma bisa dibaca.",
+    "canvasOnly": "cuma canvas",
+    "freeChatLabel": "folder chat bebas",
+    "freeChatBody": "satu-satunya tempat yang ada kotak chat biasa. diatur lewat VITE_OBROLAN_DIR (atau VITE_HOME_DIR) di server dan build.",
+    "lockLabel": "kunci file pas task jalan",
+    "lockBody": "selama ada task yang jalan di proyek, simpan, bikin, rename, hapus sama upload file di situ ditolak, dan terminal ngasih peringatan.",
+    "automatic": "otomatis",
+    "manual": "kalau diminta",
+    "canvasTitle": "canvas",
+    "dockLabel": "chat koordinator",
+    "dockBody": "gimana chat sama koordinator kebuka di bawah canvas. bisa diganti langsung di canvas juga.",
+    "dock": {
+      "collapsed": "kecil (kotak pesan)",
+      "expanded": "lebar (semua chat)",
+      "hidden": "disembunyiin (tombol kecil)"
+    },
+    "panelsLabel": "panel samping",
+    "panelsBody": "munculin lagi sidebar workspace sama panel hasil kalau tadi dilipet.",
+    "panelsReset": "munculin dua-duanya",
+    "panelsDone": "beres",
+    "flowLabel": "flow bawaan workspace baru",
+    "flowBody": "koordinator → planner → tim (designer → frontend, backend → security); tiap tim cuma dapet bagian plan buat dia.",
+    "gitTitle": "akses git",
+    "gitBody": "workspace bisa mulai dari repo GitHub, dan panel git bisa push sama pull ke sana.",
+    "tokensLabel": "token GitHub",
+    "tokensBody": "dipakai buat clone repo private dan fetch, pull, push ke remote https github.com. disimpen di server ini.",
+    "openGit": "atur di Git",
+    "sshLabel": "SSH dan server",
+    "sshBody": "remote SSH (git@…) pakai SSH key server tempat app ini jalan. agent jalanin git pakai kredensial server sendiri, jadi pasang SSH key atau kredensial git di server biar agent bisa push.",
+    "failTitle": "kalau task gagal",
+    "limitLabel": "kuota provider abis",
+    "limitBody": "jawaban yang isinya cuma pesan limit provider bikin task diparkir, bukan gagal; klik lanjut abis limitnya reset.",
+    "retryLabel": "ulangi yang gagal",
+    "retryBody": "task yang gagal bisa diulang: subtask yang gagal jalan lagi dengan jatah audit baru, yang udah kelar dibiarin.",
+    "quickLabel": "task cepat",
+    "quickBody": "klik kanan tim di canvas buat kerjaan kecil langsung ke tim itu: tanpa plan, audit, atau ringkasan.",
+    "shortcutsTitle": "pintasan canvas",
+    "shortcuts": {
+      "select": {
+        "action": "pointer (pilih dan geser)",
+        "keys": "V"
+      },
+      "shapes": {
+        "action": "gambar kotak, kotak rounded, bulat, belah ketupat, teks",
+        "keys": "R · U · O · D · T"
+      },
+      "marquee": {
+        "action": "pilih area",
+        "keys": "Shift + seret"
+      },
+      "shiftClick": {
+        "action": "tambah/kurangin node dari pilihan",
+        "keys": "Shift + klik"
+      },
+      "selectAll": {
+        "action": "pilih semua",
+        "keys": "Ctrl/Cmd + A"
+      },
+      "delete": {
+        "action": "hapus garis, bentuk, atau skill yang dipilih",
+        "keys": "Delete"
+      },
+      "arrowEnd": {
+        "action": "pindahin atau putusin panah",
+        "keys": "seret ujungnya"
+      },
+      "copySkill": {
+        "action": "salin dan tempel node skill",
+        "keys": "Ctrl/Cmd + C / V"
+      },
+      "zoom": {
+        "action": "zoom, pas layar",
+        "keys": "+ · − · 0"
+      },
+      "escape": {
+        "action": "batal, lepas pilihan, balik ke pointer",
+        "keys": "Esc"
+      }
     }
   }
 }

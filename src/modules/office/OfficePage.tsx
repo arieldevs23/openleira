@@ -49,6 +49,7 @@ import SkillPickerModal from '@/modules/office/modals/SkillPickerModal';
 import type { CanvasPoint } from '@/modules/office/utils/officeCanvasLayout';
 import { ProviderLoginModal } from '@/modules/provider-auth';
 import { api, readApiJson } from '@/shared/api';
+import { OFFICE_CHAT_DOCK_STORAGE_KEY, OFFICE_COLLAPSED_PANELS_STORAGE_KEY } from '@/shared/constants';
 import { Button } from '@/shared/ui';
 import type { LLMProvider, OfficeDivision, OfficeSelection, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
 import { cn } from '@/shared/utils';
@@ -56,8 +57,8 @@ import { cn } from '@/shared/utils';
 /** Below this width the sidebar and the right panel turn into drawers. */
 const NARROW_LAYOUT_QUERY = '(max-width: 899px)';
 const SELECTED_WORKSPACE_KEY = 'office-selected-project';
-const COLLAPSED_PANELS_KEY = 'office-collapsed-panels';
-const CHAT_DOCK_KEY = 'office-chat-dock';
+const COLLAPSED_PANELS_KEY = OFFICE_COLLAPSED_PANELS_STORAGE_KEY;
+const CHAT_DOCK_KEY = OFFICE_CHAT_DOCK_STORAGE_KEY;
 
 const readDockMode = (): CoordinatorDockMode => {
   try {
