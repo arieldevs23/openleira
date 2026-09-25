@@ -15,7 +15,8 @@
   <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/img/rose.webp" as="image" type="image/webp">
   <link rel="stylesheet" href="style.css">
-  <script>(function(){var d=document.documentElement,t;try{t=localStorage.getItem("openleira-theme")}catch(e){}if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";d.setAttribute("data-theme",t);document.querySelector('meta[name="theme-color"]').content=t==="dark"?"#0A0A0B":"#F2F2F0"})();</script>
+  <!-- tema dipasang sebelum render. kelas rv hanya dipasang kalau reveal bisa jalan, jadi tanpa JS semua konten tetap tampil -->
+  <script>(function(){var d=document.documentElement,t;try{t=localStorage.getItem("openleira-theme")}catch(e){}if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";d.setAttribute("data-theme",t);document.querySelector('meta[name="theme-color"]').content=t==="dark"?"#0A0A0B":"#F2F2F0";if("IntersectionObserver"in window&&!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("rv")})();</script>
 </head>
 <body>
   <a class="skip" href="#isi">Langsung ke isi</a>
@@ -23,8 +24,8 @@
   <!-- lapisan ornamen: tekstur titik dan sulur tepi, di belakang semua konten -->
   <div class="orn" aria-hidden="true">
     <svg class="orn__dots" width="100%" height="100%"><defs><pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="0.9"/></pattern></defs><rect width="100%" height="100%" fill="url(#dots)"/></svg>
-    <svg class="orn__vine orn__vine--l" width="88" height="100%"><defs><pattern id="vine" width="88" height="240" patternUnits="userSpaceOnUse"><g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M44 0C64 40 24 80 44 120S24 200 44 240"/><path d="M52 44c16-2 24-16 14-24-7-5-14 1-10 7"/><path d="M36 164c-16 2-24 16-14 24 7 5 14-1 10-7"/><path d="M47 96q20-10 26-30-20 4-26 30z"/><path d="M41 216q-20-10-26-30 20 4 26 30z"/><circle cx="44" cy="120" r="3"/></g></pattern></defs><rect width="88" height="100%" fill="url(#vine)"/></svg>
-    <svg class="orn__vine orn__vine--r" width="88" height="100%"><rect width="88" height="100%" fill="url(#vine)"/></svg>
+    <svg class="orn__vine orn__vine--l" data-fx="vine" width="88" height="100%"><defs><pattern id="vine" width="88" height="240" patternUnits="userSpaceOnUse"><g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M44 0C64 40 24 80 44 120S24 200 44 240"/><path d="M52 44c16-2 24-16 14-24-7-5-14 1-10 7"/><path d="M36 164c-16 2-24 16-14 24 7 5 14-1 10-7"/><path d="M47 96q20-10 26-30-20 4-26 30z"/><path d="M41 216q-20-10-26-30 20 4 26 30z"/><circle cx="44" cy="120" r="3"/></g></pattern></defs><rect width="88" height="100%" fill="url(#vine)"/></svg>
+    <svg class="orn__vine orn__vine--r" data-fx="vine" width="88" height="100%"><rect width="88" height="100%" fill="url(#vine)"/></svg>
   </div>
 
   <header class="nav">
@@ -38,188 +39,231 @@
           <li><a href="#dukung">Dukung</a></li>
         </ul>
       </nav>
-      <button class="theme-toggle" type="button" aria-pressed="true" aria-label="Mode gelap">
-        <svg class="theme-toggle__moon" width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        <svg class="theme-toggle__sun" width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.8v2M10 16.2v2M1.8 10h2M16.2 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </button>
       <button class="nav__toggle" type="button" aria-controls="nav-links" aria-expanded="false" aria-label="Buka menu">
         <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span class="nav__toggle-label">Menu</span>
       </button>
-      <a class="btn btn--primary btn--nav" href="https://app.openleira.online">Masuk</a>
+      <button class="theme-toggle" type="button" aria-pressed="true" aria-label="Mode gelap">
+        <svg class="theme-toggle__moon" width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <svg class="theme-toggle__sun" width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.8v2M10 16.2v2M1.8 10h2M16.2 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
     </div>
   </header>
 
   <main id="isi">
     <section class="hero" id="top" aria-labelledby="h-hero">
-      <!-- jendela mawar katedral, berputar 120 detik per putaran di belakang mawar -->
-      <svg class="rosewin" viewBox="-320 -320 640 640" aria-hidden="true">
-        <defs>
-          <g id="rw-p">
-            <path d="M0-60V-130M-22-130V-228A44 44 0 0 1 0-266A44 44 0 0 1 22-228V-130M0-266V-300"/>
-            <circle cy="-200" r="11"/>
-            <circle cy="-290" r="7"/>
-            <circle cx="56.6" cy="-284.4" r="5"/>
-            <path d="M-10-24V-44A20 20 0 0 1 0-61.3A20 20 0 0 1 10-44V-24" transform="rotate(11.25)"/>
+      <!-- jendela mawar katedral, berputar 120 detik per putaran. pembungkus menerima parallax, svg menerima rotasi -->
+      <div class="rosewin" data-fx="rose" aria-hidden="true">
+        <svg viewBox="-320 -320 640 640">
+          <defs>
+            <g id="rw-p">
+              <path d="M0-60V-130M-22-130V-228A44 44 0 0 1 0-266A44 44 0 0 1 22-228V-130M0-266V-300"/>
+              <circle cy="-200" r="11"/>
+              <circle cy="-290" r="7"/>
+              <circle cx="56.6" cy="-284.4" r="5"/>
+              <path d="M-10-24V-44A20 20 0 0 1 0-61.3A20 20 0 0 1 10-44V-24" transform="rotate(11.25)"/>
+            </g>
+            <g id="rw-q"><use href="#rw-p"/><use href="#rw-p" transform="rotate(22.5)"/><use href="#rw-p" transform="rotate(45)"/><use href="#rw-p" transform="rotate(67.5)"/></g>
+          </defs>
+          <g fill="none" stroke="currentColor" stroke-width="1.3">
+            <circle r="310"/><circle r="300"/><circle r="276"/><circle r="130"/><circle r="60"/><circle r="20"/>
+            <use href="#rw-q"/><use href="#rw-q" transform="rotate(90)"/><use href="#rw-q" transform="rotate(180)"/><use href="#rw-q" transform="rotate(270)"/>
           </g>
-          <g id="rw-q"><use href="#rw-p"/><use href="#rw-p" transform="rotate(22.5)"/><use href="#rw-p" transform="rotate(45)"/><use href="#rw-p" transform="rotate(67.5)"/></g>
-        </defs>
-        <g fill="none" stroke="currentColor" stroke-width="1.3">
-          <circle r="310"/><circle r="300"/><circle r="276"/><circle r="130"/><circle r="60"/><circle r="20"/>
-          <use href="#rw-q"/><use href="#rw-q" transform="rotate(90)"/><use href="#rw-q" transform="rotate(180)"/><use href="#rw-q" transform="rotate(270)"/>
-        </g>
-      </svg>
+        </svg>
+      </div>
 
       <div class="wrap hero__grid">
-        <div class="hero__art">
-          <img src="img/rose.webp" srcset="img/rose-512.webp 512w, img/rose.webp 1024w" sizes="(max-width: 767px) 200px, 420px" width="420" height="420" alt="">
+        <p class="chap hero__chap" data-rv>I · Claude Code, Codex, OpenCode, Cursor</p>
+        <h1 id="h-hero" data-rv="rise">Workspace agent coding di server sendiri</h1>
+        <p class="hero__sub" data-rv>Buka sesi dari browser atau ponsel, tutup tab, dan pekerjaan agent tetap berjalan di VPS atau mesin sendiri.</p>
+
+        <div class="hero__art" data-rv="side">
+          <img data-fx="art" src="img/rose.webp" srcset="img/rose-512.webp 512w, img/rose.webp 1024w" sizes="(max-width: 759px) 180px, 480px" width="480" height="480" alt="">
         </div>
 
-        <div class="hero__text">
-          <p class="chap">I · Claude Code, Codex, OpenCode, Cursor</p>
-          <h1 id="h-hero">Workspace agent coding di server sendiri</h1>
-          <p class="hero__sub">Buka sesi dari browser atau ponsel, tutup tab, dan pekerjaan agent tetap berjalan di VPS atau mesin sendiri.</p>
-
-          <div class="install">
-            <div class="cmd">
-              <code id="cmd-install">curl -fsSL https://openleira.online/install.sh | bash</code>
-              <button class="btn btn--ghost btn--copy" type="button" data-copy="cmd-install">Salin</button>
-            </div>
-            <p class="cmd__note">Installer sedang disiapkan. <span class="cmd__status" role="status" aria-live="polite"></span></p>
+        <div class="install" data-rv="rise">
+          <p class="chap install__label" id="install-label">Pasang dengan satu perintah</p>
+          <div class="cmd">
+            <code id="cmd-install">curl -fsSL https://openleira.online/install.sh | bash</code>
+            <button class="btn btn--primary btn--copy" type="button" data-copy="cmd-install" aria-describedby="install-label">Salin</button>
           </div>
-
-          <div class="hero__cta">
-            <a class="btn btn--primary" href="https://app.openleira.online">Masuk</a>
-            <a class="btn btn--ghost" href="#fitur">Lihat fitur</a>
-          </div>
-          <p class="hero__fine">Open source. Bukan model AI baru. Bawa langganan AI sendiri.</p>
+          <p class="cmd__note">Installer sedang disiapkan. <span class="cmd__status" role="status" aria-live="polite"></span></p>
         </div>
+
+        <a class="btn btn--ghost hero__alt" href="#fitur" data-rv>Lihat fitur</a>
+        <p class="hero__fine" data-rv>Open source. Bukan model AI baru. Bawa langganan AI sendiri.</p>
       </div>
     </section>
 
-    <div class="arch" aria-hidden="true"><svg viewBox="540 0 120 56"><path d="M540 55H570A60 60 0 0 1 600 3A60 60 0 0 1 630 55H660M582 55A42 42 0 0 1 600 17A42 42 0 0 1 618 55"/><circle cx="600" cy="34" r="4"/></svg></div>
+    <div class="arch arch--r" data-fx="arch" aria-hidden="true"><svg viewBox="540 0 120 56"><path d="M540 55H570A60 60 0 0 1 600 3A60 60 0 0 1 630 55H660M582 55A42 42 0 0 1 600 17A42 42 0 0 1 618 55"/><circle cx="600" cy="34" r="4"/></svg></div>
 
-    <section class="section wrap" id="fitur" aria-labelledby="h-fitur">
-      <header class="head">
-        <p class="chap">II · Fitur</p>
-        <h2 id="h-fitur">Yang sudah bisa dipakai</h2>
+    <section class="section feats-sec wrap" id="fitur" aria-labelledby="h-fitur">
+      <header class="head feats-sec__head">
+        <p class="chap" data-rv>II · Fitur</p>
+        <h2 id="h-fitur" data-rv="rise">Yang sudah bisa dipakai</h2>
       </header>
       <ol class="feats">
-        <li><span class="chap">I</span><h3>Chat dari browser dan ponsel</h3><p>Sesi tetap berjalan di server saat tab ditutup atau koneksi putus, lalu bisa dilanjutkan dari perangkat lain.</p></li>
-        <li><span class="chap">II</span><h3>Antrian dan interupsi</h3><p>Pesan baru masuk antrian selama agent bekerja, dan interupsi menghentikan langkah yang sedang berjalan untuk mengganti arah.</p></li>
-        <li><span class="chap">III</span><h3>Penjelajah file server</h3><p>Telusuri dan buka file di server dari panel yang sama dengan chat.</p></li>
-        <li><span class="chap">IV</span><h3>Skill per proyek</h3><p>Setiap proyek membawa kumpulan skill sendiri, jadi instruksi untuk satu repo tidak terbawa ke repo lain.</p></li>
-        <li><span class="chap">V</span><h3>Empat provider</h3><p>Claude Code, Codex, OpenCode, dan Cursor Agent berjalan dengan langganan yang sudah dimiliki.</p></li>
-        <li><span class="chap">VI</span><h3>Login lokal</h3><p>Akun dibuat dan diperiksa di server sendiri, tanpa akun Google, GitHub, atau pihak ketiga lain.</p></li>
+        <li class="ft ft--chat" data-rv="rise">
+          <span class="chap">I</span>
+          <h3>Chat dari browser dan ponsel</h3>
+          <p>Sesi tetap berjalan di server saat tab ditutup atau koneksi putus, lalu bisa dilanjutkan dari perangkat lain.</p>
+        </li>
+        <li class="ft ft--queue" data-rv="side">
+          <span class="chap">II</span>
+          <h3>Antrian dan interupsi</h3>
+          <p>Pesan baru masuk antrian selama agent bekerja, dan interupsi menghentikan langkah yang sedang berjalan untuk mengganti arah.</p>
+        </li>
+        <li class="ft ft--prov" data-rv="rise">
+          <span class="chap">V</span>
+          <h3>Empat provider</h3>
+          <ul class="prov">
+            <li>Claude Code</li>
+            <li>Codex</li>
+            <li>OpenCode</li>
+            <li>Cursor Agent</li>
+          </ul>
+          <p>Berjalan dengan langganan yang sudah dimiliki.</p>
+        </li>
+        <li class="ft ft--files" data-rv="side">
+          <span class="chap">III</span>
+          <h3>Penjelajah file server</h3>
+          <p>Telusuri dan buka file di server dari panel yang sama dengan chat.</p>
+        </li>
+        <li class="ft ft--skill" data-rv="side">
+          <span class="chap">IV</span>
+          <h3>Skill per proyek</h3>
+          <p>Setiap proyek membawa kumpulan skill sendiri, jadi instruksi untuk satu repo tidak terbawa ke repo lain.</p>
+        </li>
+        <li class="ft ft--login" data-rv>
+          <span class="chap">VI</span>
+          <h3>Login lokal</h3>
+          <p>Akun dibuat dan diperiksa di server sendiri, tanpa akun Google, GitHub, atau pihak ketiga lain.</p>
+        </li>
       </ol>
     </section>
 
-    <div class="arch" aria-hidden="true"><svg viewBox="540 0 120 56"><path d="M540 55H570A60 60 0 0 1 600 3A60 60 0 0 1 630 55H660M582 55A42 42 0 0 1 600 17A42 42 0 0 1 618 55"/><circle cx="600" cy="34" r="4"/></svg></div>
+    <div class="arch arch--l" data-fx="arch" aria-hidden="true"><svg viewBox="540 0 120 56"><path d="M540 55H570A60 60 0 0 1 600 3A60 60 0 0 1 630 55H660M582 55A42 42 0 0 1 600 17A42 42 0 0 1 618 55"/><circle cx="600" cy="34" r="4"/></svg></div>
 
-    <section class="section wrap" id="workspace" aria-labelledby="h-workspace">
-      <header class="head">
-        <p class="chap">III · Workspace AI</p>
-        <h2 id="h-workspace">Tim agent yang bekerja berfase <span class="badge">Sedang dibangun</span></h2>
+    <section class="section ws wrap" id="workspace" aria-labelledby="h-workspace">
+      <header class="head ws__head">
+        <p class="chap" data-rv>III · Workspace AI</p>
+        <h2 id="h-workspace" data-rv="rise">Tim agent di satu canvas</h2>
+        <p class="badge" data-rv>Sedang dibangun</p>
       </header>
 
-      <div class="ws">
-        <figure class="pipe" aria-label="Alur Workspace AI: Masuk, Rencana, Eksekusi, Audit, Selesai">
-          <div class="pipe__orch"><b>Orchestrator</b><span>mengoper task dan hasil antar fase</span></div>
+      <figure class="ws__fig" data-rv="rise">
+        <!-- ilustrasi statis, posisi node dalam satuan viewBox: desktop 1000x620, ponsel 360x880 -->
+        <div class="cv" data-step="4" role="img" aria-label="Contoh canvas: task masuk ke Orchestrator, lalu Planner, lalu tim Desain UI/UX dan Backend, lalu Frontend, lalu Security dan Docs, lalu QA/Audit, dan hasilnya kembali ke Orchestrator.">
+          <svg class="cv__grid" width="100%" height="100%" aria-hidden="true">
+            <defs>
+              <pattern id="cvdot" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1"/></pattern>
+              <marker id="arw" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z"/></marker>
+              <marker id="arw-on" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z"/></marker>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#cvdot)"/>
+          </svg>
 
-          <ol class="pipe__phases">
-            <li class="ph">
-              <span class="ph__label">Masuk</span>
-              <svg class="drop" aria-hidden="true"><line class="ln" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
-              <div class="ph__body"><span class="pn pn--in"><i class="dot"></i><span>Task dari user</span></span></div>
-            </li>
-            <li class="ph">
-              <span class="ph__label">Rencana</span>
-              <svg class="drop" aria-hidden="true"><line class="ln w1" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln w1" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
-              <div class="ph__body"><span class="pn w1"><i class="dot"></i><span>Planner</span></span></div>
-            </li>
-            <li class="ph ph--exec">
-              <span class="ph__label">Eksekusi</span>
-              <svg class="drop" aria-hidden="true"><line class="ln wx" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln wx" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
-              <div class="ph__body">
-                <ul class="exec">
-                  <li class="pn w2"><i class="dot"></i><span>Desain UI/UX</span></li>
-                  <li class="pn w2"><i class="dot"></i><span>Backend</span></li>
-                  <li class="pn w3"><i class="dot"></i><span>Frontend</span><small class="dep">setelah Desain dan Backend</small></li>
-                  <li class="pn w4"><i class="dot"></i><span>Security</span><small class="dep">setelah Frontend</small></li>
-                  <li class="pn w4"><i class="dot"></i><span>Docs</span><small class="dep">setelah Frontend</small></li>
-                </ul>
-                <svg class="deps" viewBox="0 0 24 194" aria-hidden="true">
-                  <defs><marker id="ah" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L6 3L0 6z"/></marker></defs>
-                  <path class="ln w3" d="M0 17C22 17 22 97 2 97"/>
-                  <path class="ln w3" d="M0 57C11 57 11 97 2 97"/>
-                  <path class="ln w4" d="M0 97C11 97 11 137 2 137"/>
-                  <path class="ln w4" d="M0 97C22 97 22 177 2 177"/>
-                </svg>
-              </div>
-            </li>
-            <li class="ph">
-              <span class="ph__label">Audit</span>
-              <svg class="drop" aria-hidden="true"><line class="ln w5" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln w5" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
-              <div class="ph__body"><span class="pn w5"><i class="dot"></i><span>QA/Audit</span></span></div>
-            </li>
-            <li class="ph">
-              <span class="ph__label">Selesai</span>
-              <svg class="drop" aria-hidden="true"><line class="ln w6" x1="50%" y1="0" x2="50%" y2="100%"/><line class="ln w6" x1="0" y1="50%" x2="100%" y2="50%"/></svg>
-              <div class="ph__body"><span class="pn pn--end w6"><i class="dot"></i><span>Ringkasan</span></span></div>
-            </li>
-          </ol>
+          <svg class="cv__edges cv__edges--d" viewBox="0 0 1000 620" aria-hidden="true">
+            <path class="e" data-s="1" d="M112 82C112 118 160 112 160 146"/>
+            <path class="e" data-s="2" d="M248 198C292 198 288 140 326 140"/>
+            <path class="e" data-s="3" d="M506 120C548 120 548 76 588 76"/>
+            <path class="e" data-s="3" d="M440 188C440 252 500 310 556 310"/>
+            <path class="e e--both is-on" data-s="4" d="M662 124C662 176 640 206 640 258"/>
+            <path class="e is-on" data-s="4" d="M740 124C740 172 860 160 860 192"/>
+            <path class="e is-on" data-s="4" d="M736 300C772 300 770 244 796 244"/>
+            <path class="e" data-s="5" d="M920 292C930 340 892 360 892 396"/>
+            <path class="e" data-s="5" d="M830 292C830 380 680 380 680 446"/>
+            <path class="e" data-s="6" d="M808 430C704 404 560 410 480 470"/>
+            <path class="e" data-s="6" d="M560 512C528 512 512 500 480 500"/>
+            <path class="e" data-s="7" d="M330 440C330 340 190 330 190 250"/>
+            <path class="e e--sk" d="M768 72C790 72 790 90 812 90"/>
+            <path class="e e--sk" d="M900 496C900 516 900 520 900 540"/>
+            <path class="e e--sk" d="M300 506C268 506 262 546 232 546"/>
+          </svg>
 
-          <figcaption class="pipe__foot">
-            <span class="pipe__legend" aria-hidden="true"><span><i class="dot dot--run"></i>berjalan</span><span><i class="dot dot--done"></i>selesai</span><span><i class="dot dot--wait"></i>menunggu</span></span>
-            <span>Ilustrasi alur, bukan data live.</span>
-          </figcaption>
-        </figure>
+          <svg class="cv__edges cv__edges--m" viewBox="0 0 360 880" aria-hidden="true">
+            <path class="e" data-s="1" d="M110 64C110 80 112 80 112 96"/>
+            <path class="e" data-s="2" d="M184 132C232 132 270 130 270 160"/>
+            <path class="e" data-s="3" d="M230 228C230 250 150 234 120 252"/>
+            <path class="e" data-s="3" d="M300 228C300 258 290 272 290 296"/>
+            <path class="e e--both is-on" data-s="4" d="M184 296C194 296 188 330 192 330"/>
+            <path class="e is-on" data-s="4" d="M170 320C170 380 180 380 180 416"/>
+            <path class="e is-on" data-s="4" d="M270 364C270 400 240 392 240 416"/>
+            <path class="e" data-s="5" d="M150 484C150 512 110 510 110 536"/>
+            <path class="e" data-s="5" d="M240 484C240 520 270 528 270 556"/>
+            <path class="e" data-s="6" d="M184 590C200 650 200 690 200 726"/>
+            <path class="e" data-s="6" d="M270 624C270 690 240 690 240 726"/>
+            <path class="e" data-s="7" d="M118 762C60 762 14 740 14 690C14 520 14 300 14 190C14 150 20 132 32 132"/>
+            <path class="e e--sk" d="M100 320C100 330 100 330 100 340"/>
+            <path class="e e--sk" d="M100 604C100 614 100 614 100 624"/>
+            <path class="e e--sk" d="M240 794C240 806 256 806 262 816"/>
+          </svg>
 
-        <div class="ws__side">
-          <ol class="flow">
-            <li>Task masuk ke Orchestrator.</li>
-            <li>Planner menyusun rencana dan urutan tim.</li>
-            <li>Tim bekerja sesuai rencana, hasil diteruskan antar tim.</li>
-            <li>QA/Audit memeriksa, yang tidak lolos kembali ke tim terkait maksimal dua kali.</li>
-          </ol>
-          <p class="muted">Sudah berjalan di staging. Model dipilih per agent, dan tim bisa ditambah sendiri.</p>
+          <div class="cv__zoom" aria-hidden="true"><span>−</span><span>+</span><small>100%</small></div>
+
+          <div class="nd nd--task is-done" data-s="0" style="--x:24;--y:24;--mx:28;--my:16"><i class="nd__st"></i><small>Task</small><b>Task dari user</b></div>
+          <div class="nd is-done" data-s="1 7" style="--x:72;--y:150;--mx:36;--my:100"><i class="nd__st"></i><b>Orchestrator</b><span class="nd__m">Opus</span></div>
+          <div class="nd is-done" data-s="2" style="--x:330;--y:92;--mx:196;--my:164"><i class="nd__st"></i><b>Planner</b><span class="nd__m">Opus</span></div>
+          <div class="nd is-done" data-s="3" style="--x:592;--y:28;--mx:36;--my:256"><i class="nd__st"></i><b>Desain UI/UX</b><span class="nd__m">Sonnet</span></div>
+          <div class="nd is-done" data-s="3" style="--x:560;--y:262;--mx:196;--my:300"><i class="nd__st"></i><b>Backend</b><span class="nd__m">Sonnet</span></div>
+          <div class="nd is-run" data-s="4" style="--x:800;--y:196;--mx:118;--my:420"><i class="nd__st"></i><b>Frontend</b><span class="nd__m">Sonnet</span></div>
+          <div class="nd" data-s="5" style="--x:808;--y:400;--mx:36;--my:540"><i class="nd__st"></i><b>Security</b><span class="nd__m">Opus</span></div>
+          <div class="nd" data-s="5" style="--x:560;--y:450;--mx:196;--my:560"><i class="nd__st"></i><b>Docs</b><span class="nd__m">Sonnet</span></div>
+          <div class="nd" data-s="6" style="--x:300;--y:440;--mx:118;--my:730"><i class="nd__st"></i><b>QA/Audit</b><span class="nd__m">Opus</span></div>
+          <div class="nd nd--sk" style="--x:812;--y:64;--mx:40;--my:340"><small>skill</small><b>panduan-ui</b></div>
+          <div class="nd nd--sk" style="--x:824;--y:540;--mx:40;--my:624"><small>skill</small><b>cek-owasp</b></div>
+          <div class="nd nd--sk" style="--x:80;--y:520;--mx:206;--my:816"><small>skill</small><b>uji-regresi</b></div>
         </div>
-      </div>
+        <figcaption class="cv__cap">
+          <span class="cv__legend" aria-hidden="true"><span><i class="nd__st"></i>menunggu</span><span class="is-run"><i class="nd__st"></i>berjalan</span><span class="is-done"><i class="nd__st"></i>selesai</span></span>
+          <span>Ilustrasi alur, bukan data live.</span>
+        </figcaption>
+      </figure>
+
+      <ol class="flow">
+        <li data-rv="side">Task masuk ke Orchestrator.</li>
+        <li data-rv="side">Planner menyusun rencana dan urutan tim.</li>
+        <li data-rv="side">Tim bekerja sesuai rencana, hasil diteruskan antar tim.</li>
+        <li data-rv="side">QA/Audit memeriksa, yang tidak lolos kembali ke tim terkait maksimal dua kali.</li>
+      </ol>
+      <p class="muted ws__note" data-rv>Sudah berjalan di staging. Model dipilih per agent, dan tim bisa ditambah sendiri.</p>
     </section>
 
-    <div class="arch" aria-hidden="true"><svg viewBox="540 0 120 56"><path d="M540 55H570A60 60 0 0 1 600 3A60 60 0 0 1 630 55H660M582 55A42 42 0 0 1 600 17A42 42 0 0 1 618 55"/><circle cx="600" cy="34" r="4"/></svg></div>
+    <div class="arch" data-fx="arch" aria-hidden="true"><svg viewBox="540 0 120 56"><path d="M540 55H570A60 60 0 0 1 600 3A60 60 0 0 1 630 55H660M582 55A42 42 0 0 1 600 17A42 42 0 0 1 618 55"/><circle cx="600" cy="34" r="4"/></svg></div>
 
-    <section class="section wrap split" id="pasang" aria-labelledby="h-pasang">
-      <div>
-        <header class="head">
-          <p class="chap">IV · Pasang</p>
-          <h2 id="h-pasang">Cara pasang</h2>
-        </header>
-        <p class="req">Syarat: Ubuntu 22.04+ atau Debian 12 atau macOS atau WSL2, 2&nbsp;vCPU, 4&nbsp;GB RAM, Node&nbsp;20.</p>
-        <ol class="steps">
-          <li>Siapkan VPS atau mesin lokal yang memenuhi syarat di atas.</li>
-          <li>Jalankan perintah installer dari bagian atas halaman ini.</li>
-          <li>Buka alamat server di browser dan buat akun pertama, yang otomatis menjadi admin.</li>
-          <li>Sambungkan Claude Code, Codex, OpenCode, atau Cursor Agent yang sudah dilanggani.</li>
-        </ol>
-      </div>
+    <section class="section pasang wrap" id="pasang" aria-labelledby="h-pasang">
+      <header class="head pasang__head">
+        <p class="chap" data-rv>IV · Pasang</p>
+        <h2 id="h-pasang" data-rv="rise">Cara pasang</h2>
+      </header>
+      <p class="req" data-rv="side"><span class="chap">Syarat</span> Ubuntu 22.04+ atau Debian 12 atau macOS atau WSL2, 2&nbsp;vCPU, 4&nbsp;GB RAM, Node&nbsp;20.</p>
+      <ol class="steps">
+        <li data-rv>Siapkan VPS atau mesin lokal yang memenuhi syarat.</li>
+        <li data-rv>Jalankan perintah installer dari bagian atas halaman ini.</li>
+        <li data-rv>Buka alamat server di browser dan buat akun pertama, yang otomatis menjadi admin.</li>
+        <li data-rv>Sambungkan Claude Code, Codex, OpenCode, atau Cursor Agent yang sudah dilanggani.</li>
+      </ol>
+    </section>
 
-      <div class="about" id="tentang">
-        <h2 class="about__title">Tentang</h2>
-        <dl class="facts">
-          <div><dt>Asal</dt><dd>Dibuat di Indonesia.</dd></div>
-          <div><dt>Lisensi</dt><dd>Open source, GPL-3.0.</dd></div>
-          <div><dt>Token</dt><dd>Tidak menjual token. Biaya AI mengikuti langganan masing-masing.</dd></div>
-          <div><dt>Kunci API</dt><dd>Tidak disimpan di luar server pengguna.</dd></div>
-          <div><dt>Telemetri</dt><dd>Tidak ada.</dd></div>
-        </dl>
+    <section class="section tentang wrap" id="tentang" aria-labelledby="h-tentang">
+      <header class="head tentang__head">
+        <p class="chap" data-rv>V · Tentang</p>
+        <h2 id="h-tentang" data-rv="rise">Dibuat terbuka, dibiayai sukarela</h2>
+      </header>
+      <dl class="facts">
+        <div data-rv><dt>Asal</dt><dd>Dibuat di Indonesia.</dd></div>
+        <div data-rv><dt>Lisensi</dt><dd>Open source, GPL-3.0.</dd></div>
+        <div data-rv><dt>Token</dt><dd>Tidak menjual token. Biaya AI mengikuti langganan masing-masing.</dd></div>
+        <div data-rv><dt>Kunci API</dt><dd>Tidak disimpan di luar server pengguna.</dd></div>
+        <div data-rv><dt>Telemetri</dt><dd>Tidak ada.</dd></div>
+      </dl>
 
-        <div class="support" id="dukung">
-          <h3>Dukung OpenLeira</h3>
-          <p>Dukungan lewat Saweria membantu biaya server, domain, dan waktu pengembangan.</p>
-          <a class="btn btn--primary" href="https://saweria.co/leira" target="_blank" rel="noopener noreferrer">Dukung lewat Saweria</a>
-          <p class="muted">Dukungan bersifat sukarela dan tidak memengaruhi fitur.</p>
-        </div>
+      <div class="support" id="dukung" data-rv="rise">
+        <img class="support__rose" src="img/rose-512.webp" width="220" height="220" alt="" loading="lazy">
+        <h3>Dukung OpenLeira</h3>
+        <p>Dukungan lewat Saweria membantu biaya server, domain, dan waktu pengembangan.</p>
+        <a class="btn btn--primary" href="https://saweria.co/leira" target="_blank" rel="noopener noreferrer">Dukung lewat Saweria</a>
+        <p class="muted">Dukungan bersifat sukarela dan tidak memengaruhi fitur.</p>
       </div>
     </section>
   </main>
