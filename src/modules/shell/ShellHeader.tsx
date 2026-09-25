@@ -93,7 +93,7 @@ export default function ShellHeader({
             <button
               type="button"
               onClick={onDisconnect}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-err px-3 text-xs font-medium text-on-status transition-colors hover:bg-err/90 focus:outline-none focus:ring-2 focus:ring-err/70 focus:ring-offset-2 focus:ring-offset-background"
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-err bg-transparent px-3 text-xs font-medium text-err transition-colors hover:bg-err/10"
               title={disconnectTitle}
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />

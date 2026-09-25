@@ -818,6 +818,12 @@
   outline-offset: 2px !important;
 }
 
+/* On a solid --accent fill (user bubble, primary button) the accent ring
+   would vanish, so it takes the fill's text colour instead. */
+:is(.chat-bubble-user, .bg-primary) :focus-visible {
+  outline-color: var(--on-accent) !important;
+}
+
 /* Text fields (§7): the field itself shows focus through its border; the
    global ring above still applies for keyboard users. */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
