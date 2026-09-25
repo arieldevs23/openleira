@@ -1,13 +1,14 @@
-import { ChevronRight, FolderPlus, FolderSearch, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronRight, FolderPlus, FolderSearch, GitBranch, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ModelSelect from '@/modules/office/ModelSelect';
-import { WorkspacePathField } from '@/modules/project-creation-wizard';
+import { cloneWorkspaceWithProgress, fetchGithubTokenCredentials, WorkspacePathField } from '@/modules/project-creation-wizard';
 import AnalysisProgress from '@/modules/office/AnalysisProgress';
 import { api, readApiJson } from '@/shared/api';
 import { Button, Dialog, DialogContent, DialogTitle } from '@/shared/ui';
 import type {
+  GithubTokenCredential,
   LLMProvider,
   OfficeAnalysis,
   OfficeDivisionProposal,
@@ -69,7 +70,17 @@ export default function AddWorkspaceModal({
   // The dialog page on screen; a reopened analysis starts where it stands.
   const [step, setStep] = useState<Step>(() => (resumed ? stepFor(resumed) : 'source'));
   // New folder or existing app.
-  const [mode, setMode] = useState<'new' | 'existing'>(resumed ? 'existing' : 'new');
+  const [mode, setMode] = useState<'new' | 'existing' | 'github'>(resumed ? 'existing' : 'new');
+  // The repository to clone (https, or git@host:owner/repo over the server's SSH keys).
+  const [repoUrl, setRepoUrl] = useState('');
+  // Stored GitHub tokens the clone can use, loaded when the GitHub source is picked.
+  const [tokens, setTokens] = useState<GithubTokenCredential[] | null>(null);
+  // Which token the clone uses: a stored one (its id), a pasted one, or none (public repo or SSH).
+  const [tokenChoice, setTokenChoice] = useState<string>('none');
+  // A token pasted for this clone only; it is not stored.
+  const [newToken, setNewToken] = useState('');
+  // Progress lines git reports while cloning.
+  const [cloneLog, setCloneLog] = useState<string[]>([]);
   // The folder path being typed or browsed.
   const [folderPath, setFolderPath] = useState(resumed?.projectPath ?? '');
   // The folder once the server readied it as a project.
@@ -133,7 +144,7 @@ export default function AddWorkspaceModal({
   };
 
   const prepareFolder = () => run(async () => {
-    const body = await readApiJson<{ data: OfficePreparedFolder }>(await api.office.prepareFolder(folderPath.trim(), mode));
+    const body = await readApiJson<{ data: OfficePreparedFolder }>(await api.office.prepareFolder(folderPath.trim(), mode === 'new' ? 'new' : 'existing'));
     const prepared = body.data;
     if (prepared.hasWorkspace) {
       setFolder(prepared);
@@ -145,6 +156,43 @@ export default function AddWorkspaceModal({
       await readApiJson(await api.office.create(prepared.projectId, locale));
       onReady(prepared.projectId);
       onOpenChange(false);
+      return;
+    }
+    setStep('setup');
+  });
+
+  const loadTokens = () => {
+    if (tokens !== null) {
+      return;
+    }
+    fetchGithubTokenCredentials()
+      .then((loaded) => {
+        setTokens(loaded);
+        if (loaded.length > 0) {
+          setTokenChoice(String(loaded[0].id));
+        }
+      })
+      .catch(() => setTokens([]));
+  };
+
+  /** Clones the repository into the picked folder, then continues like an existing app (analysis or default teams). */
+  const cloneRepository = () => run(async () => {
+    setCloneLog([]);
+    const project = await cloneWorkspaceWithProgress({
+      workspacePath: folderPath,
+      githubUrl: repoUrl,
+      tokenMode: tokenChoice === 'new' ? 'new' : tokenChoice === 'none' ? 'none' : 'stored',
+      selectedGithubToken: tokenChoice !== 'new' && tokenChoice !== 'none' ? tokenChoice : '',
+      newGithubToken: newToken,
+    }, { onProgress: (message) => setCloneLog((current) => [...current.slice(-40), message]) });
+    const clonedPath = String(project?.fullPath ?? project?.path ?? '');
+    if (!clonedPath) {
+      throw new Error(t('addWorkspace.cloneNoPath'));
+    }
+    const body = await readApiJson<{ data: OfficePreparedFolder }>(await api.office.prepareFolder(clonedPath, 'existing'));
+    setFolder(body.data);
+    if (body.data.hasWorkspace) {
+      setError(t('addWorkspace.alreadyHasWorkspace'));
       return;
     }
     setStep('setup');
@@ -181,10 +229,15 @@ export default function AddWorkspaceModal({
     setProposals((current) => current.map((proposal, position) => (position === index ? { ...proposal, ...changes } : proposal)));
   };
 
-  const sourceCard = (value: 'new' | 'existing', Icon: typeof FolderPlus, title: string, body: string) => (
+  const sourceCard = (value: 'new' | 'existing' | 'github', Icon: typeof FolderPlus, title: string, body: string) => (
     <button
       type="button"
-      onClick={() => { setMode(value); setStep('folder'); setError(null); }}
+      onClick={() => {
+        setMode(value);
+        setStep('folder');
+        setError(null);
+        if (value === 'github') loadTokens();
+      }}
       className="flex w-full items-start gap-3 rounded-[12px] border border-border p-3 text-left hover:border-primary/60 hover:bg-primary/5"
       data-testid={`office-add-${value}`}
     >
@@ -206,10 +259,86 @@ export default function AddWorkspaceModal({
             <p className="text-xs text-muted-foreground">{t('addWorkspace.intro')}</p>
             {sourceCard('new', FolderPlus, t('addWorkspace.newTitle'), t('addWorkspace.newBody'))}
             {sourceCard('existing', FolderSearch, t('addWorkspace.existingTitle'), t('addWorkspace.existingBody'))}
+            {sourceCard('github', GitBranch, t('addWorkspace.githubTitle'), t('addWorkspace.githubBody'))}
           </div>
         )}
 
-        {step === 'folder' && (
+        {step === 'folder' && mode === 'github' && (
+          <div className="space-y-2" data-testid="office-add-github-form">
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-foreground">{t('addWorkspace.repoUrl')}</span>
+              <input
+                value={repoUrl}
+                onChange={(event) => setRepoUrl(event.target.value)}
+                placeholder="https://github.com/owner/repo  ·  git@github.com:owner/repo.git"
+                className={cn(inputClass, 'h-9 font-mono text-xs')}
+                aria-label={t('addWorkspace.repoUrl')}
+                disabled={isBusy}
+              />
+            </label>
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-foreground">{t('addWorkspace.cloneInto')}</span>
+              <WorkspacePathField value={folderPath} onChange={setFolderPath} onAdvanceToConfirm={() => void cloneRepository()} disabled={isBusy} />
+            </div>
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-foreground">{t('addWorkspace.token')}</span>
+              <select
+                value={tokenChoice}
+                onChange={(event) => setTokenChoice(event.target.value)}
+                className={cn(inputClass, 'h-9')}
+                aria-label={t('addWorkspace.token')}
+                disabled={isBusy}
+              >
+                <option value="none">{t('addWorkspace.tokenNone')}</option>
+                {(tokens ?? []).map((token) => <option key={token.id} value={String(token.id)}>{token.credential_name}</option>)}
+                <option value="new">{t('addWorkspace.tokenNew')}</option>
+              </select>
+            </label>
+            {tokenChoice === 'new' && (
+              <input
+                type="password"
+                value={newToken}
+                onChange={(event) => setNewToken(event.target.value)}
+                placeholder="ghp_…"
+                autoComplete="off"
+                className={cn(inputClass, 'h-9 font-mono text-xs')}
+                aria-label={t('addWorkspace.tokenNew')}
+                disabled={isBusy}
+              />
+            )}
+            <p className="text-[11px] text-muted-foreground">{t('addWorkspace.githubHint')}</p>
+            {cloneLog.length > 0 && (
+              <ol className="max-h-32 overflow-y-auto rounded-[10px] border border-border bg-muted/30 p-2 font-mono text-[11px]" aria-live="polite" data-testid="office-clone-log">
+                {cloneLog.map((line, index) => <li key={index} className="truncate">{line}</li>)}
+              </ol>
+            )}
+            {error && (
+              <p className="text-xs text-red-600 dark:text-red-300">
+                {error}
+                {folder?.hasWorkspace && (
+                  <button type="button" className="ml-1 font-medium underline" onClick={() => { onReady(folder.projectId); onOpenChange(false); }}>
+                    {t('addWorkspace.openIt')}
+                  </button>
+                )}
+              </p>
+            )}
+            <div className="flex justify-between gap-2 pt-1">
+              <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => { setStep('source'); setError(null); }}>{t('addWorkspace.back')}</Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5 px-3 text-xs"
+                disabled={!repoUrl.trim() || !folderPath.trim() || (tokenChoice === 'new' && !newToken.trim()) || isBusy}
+                onClick={() => void cloneRepository()}
+              >
+                {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {t('addWorkspace.clone')}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 'folder' && mode !== 'github' && (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">{mode === 'new' ? t('addWorkspace.newFolderHint') : t('addWorkspace.existingFolderHint')}</p>
             <WorkspacePathField value={folderPath} onChange={setFolderPath} onAdvanceToConfirm={() => void prepareFolder()} disabled={isBusy} />

@@ -327,7 +327,17 @@
     },
     "earlierSteps_one": "… {{count}} earlier step",
     "earlierSteps_other": "… {{count}} earlier steps",
-    "waitingForAgent": "Waiting for the agent to start…"
+    "waitingForAgent": "Waiting for the agent to start…",
+    "githubTitle": "From GitHub or another git server",
+    "githubBody": "Clone a repository (https with a token, or git@… over the server's SSH keys), then the teams are proposed from what it contains.",
+    "repoUrl": "Repository URL",
+    "cloneInto": "Clone into this folder (the repository gets its own subfolder)",
+    "token": "Access",
+    "tokenNone": "No token (public repository, or SSH)",
+    "tokenNew": "Paste a token for this clone",
+    "githubHint": "Tokens are managed in Settings. An SSH URL uses the SSH keys of the server this app runs on. Agents push and pull with the same access.",
+    "clone": "Clone",
+    "cloneNoPath": "The clone finished but did not report where it went."
   },
   "menu": {
     "label": "Actions",

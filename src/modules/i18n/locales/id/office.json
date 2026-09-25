@@ -317,7 +317,17 @@
       "done": "selesai"
     },
     "earlierSteps": "… {{count}} langkah sebelumnya",
-    "waitingForAgent": "nunggu agent mulai…"
+    "waitingForAgent": "nunggu agent mulai…",
+    "githubTitle": "dari GitHub atau server git lain",
+    "githubBody": "clone repo (https pakai token, atau git@… lewat SSH key server), terus tim diusulin dari isinya.",
+    "repoUrl": "URL repo",
+    "cloneInto": "clone ke folder ini (repo-nya dapet subfolder sendiri)",
+    "token": "akses",
+    "tokenNone": "tanpa token (repo publik, atau SSH)",
+    "tokenNew": "tempel token buat clone ini",
+    "githubHint": "token diatur di Pengaturan. URL SSH pakai SSH key server tempat app ini jalan. agent push dan pull pakai akses yang sama.",
+    "clone": "clone",
+    "cloneNoPath": "clone-nya kelar tapi ga ngasih tau foldernya di mana."
   },
   "menu": {
     "label": "aksi",
