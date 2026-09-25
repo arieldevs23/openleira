@@ -101,7 +101,8 @@
           "src/shared/chatDrafts.ts",
           "src/shared/composerHandoff.ts",
           "src/shared/appReadiness.ts",
-          "src/shared/syntaxHighlighter.ts"
+          "src/shared/syntaxHighlighter.ts",
+          "src/shared/sounds.ts"
         ],
         "mode": "file"
       },
