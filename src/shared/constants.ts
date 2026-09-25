@@ -8,6 +8,7 @@ import {
   MonitorPlay,
   Palette,
   Plug,
+  UserRound,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
@@ -72,6 +73,7 @@ type SettingsMainTabMeta = {
  */
 export const SETTINGS_MAIN_TABS: SettingsMainTabMeta[] = [
   { id: 'agents', label: 'Agents', keywords: 'agents subagents claude code', icon: Bot },
+  { id: 'account', label: 'Account', keywords: 'account password profile login', icon: UserRound },
   { id: 'appearance', label: 'Appearance', keywords: 'appearance theme dark light language', icon: Palette },
   { id: 'git', label: 'Git', keywords: 'git github commits', icon: GitBranch },
   { id: 'api', label: 'API Tokens', keywords: 'api tokens auth keys', icon: KeyRound },

@@ -20,6 +20,9 @@ const initialState: SetupFormState = {
   confirmPassword: '',
 };
 
+const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,32}$/;
+const MIN_PASSWORD_LENGTH = 8;
+
 /**
  * Validates the account-setup form state.
  * @returns An error message string if validation fails, or `null` when the
@@ -30,11 +33,12 @@ function validateSetupForm(formState: SetupFormState, t: (key: string) => string
     return t('register.errors.requiredFields');
   }
 
-  if (formState.username.trim().length < 3) {
-    return t('register.errors.usernameLength');
+  // Mirrors the server rules so the user sees the problem before submitting.
+  if (!USERNAME_PATTERN.test(formState.username.trim())) {
+    return t('register.errors.usernameInvalid');
   }
 
-  if (formState.password.length < 6) {
+  if (formState.password.length < MIN_PASSWORD_LENGTH) {
     return t('register.errors.passwordLength');
   }
 
@@ -86,11 +90,7 @@ export default function SetupForm() {
   );
 
   return (
-    <AuthScreenLayout
-      title={t('register.title')}
-      description={t('register.description')}
-      footerText={t('register.footerText')}
-    >
+    <AuthScreenLayout intro={t('register.intro')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <AuthInputField
           id="username"

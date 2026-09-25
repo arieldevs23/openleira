@@ -15,7 +15,26 @@
     "username": "username",
     "email": "email",
     "profile": "profil",
-    "changePassword": "ganti password"
+    "changePassword": "ganti password",
+    "description": "login sebagai {{username}}",
+    "password": {
+      "title": "ganti password",
+      "description": "device lain yang udah login tetep login",
+      "current": "password sekarang",
+      "new": "password baru",
+      "confirm": "ulangi password baru",
+      "save": "simpan password",
+      "saving": "lagi nyimpen...",
+      "success": "password udah diganti",
+      "errors": {
+        "requiredFields": "isi ketiga kolomnya dulu",
+        "tooShort": "password baru minimal 8 karakter",
+        "mismatch": "password baru ga sama",
+        "currentInvalid": "password sekarang salah",
+        "rateLimited": "kebanyakan percobaan. tunggu beberapa menit terus coba lagi",
+        "failed": "gagal ganti password. coba lagi"
+      }
+    }
   },
   "mcp": {
     "title": "server MCP",
@@ -117,7 +136,8 @@
     "browser": "browser",
     "notifications": "notifikasi",
     "plugins": "plugin",
-    "about": "tentang aplikasi"
+    "about": "tentang aplikasi",
+    "account": "akun"
   },
   "notifications": {
     "title": "notifikasi",

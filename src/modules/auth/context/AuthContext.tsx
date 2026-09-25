@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
-import { IS_PLATFORM } from '@/shared/utils';
+import { IS_PLATFORM, getApiErrorCode } from '@/shared/utils';
 import { api } from '@/shared/api';
 import { AUTH_SESSION_EXPIRED_EVENT, AUTH_TOKEN_REFRESHED_EVENT, getAuthTokenRefreshDelay, isValidRefreshedToken, storeAuthToken } from '@/shared/authToken';
 import { hydrateChatDrafts, resetChatDrafts } from '@/shared/chatDrafts';
@@ -24,13 +24,22 @@ const AUTH_ERROR_MESSAGES = {
   sessionExpired: 'errors.sessionExpired',
 } as const;
 
+// Server error codes the login and setup forms can explain in the user's language.
+const AUTH_ERROR_CODE_MESSAGES: Record<string, string> = {
+  AUTH_INVALID_CREDENTIALS: 'login.errors.invalidCredentials',
+  AUTH_CREDENTIALS_REQUIRED: 'login.errors.requiredFields',
+  AUTH_USERNAME_INVALID: 'register.errors.usernameInvalid',
+  AUTH_PASSWORD_TOO_SHORT: 'register.errors.passwordLength',
+  AUTH_USERNAME_CONFLICT: 'register.errors.usernameTaken',
+  AUTH_USER_ALREADY_CONFIGURED: 'register.errors.alreadyConfigured',
+  AUTH_RATE_LIMITED: 'errors.rateLimited',
+};
+
 type AuthActionResult = { success: true } | { success: false; error: string };
 
-type AuthSessionPayload = {
+type AuthSessionPayload = ApiErrorPayload & {
   token?: string;
   user?: AuthUser;
-  error?: string;
-  message?: string;
 };
 
 type AuthStatusPayload = {
@@ -46,8 +55,7 @@ type OnboardingStatusPayload = {
 };
 
 type ApiErrorPayload = {
-  error?: string;
-  message?: string;
+  error?: string | { code?: string; message?: string };
 };
 
 type AuthContextValue = {
@@ -75,12 +83,18 @@ async function parseJsonSafely<T>(response: Response): Promise<T | null> {
   }
 }
 
-function resolveApiErrorMessage(payload: ApiErrorPayload | null, fallback: string): string {
-  if (!payload) {
-    return fallback;
+// The backend sends `{ error: { code, message } }`; known codes are translated,
+// anything else falls back to a generic message rather than raw server text.
+function resolveApiErrorMessage(
+  payload: ApiErrorPayload | null,
+  fallback: string,
+  translate: (key: string) => string,
+): string {
+  const messageKey = AUTH_ERROR_CODE_MESSAGES[getApiErrorCode(payload) ?? ''];
+  if (messageKey) {
+    return translate(messageKey);
   }
-
-  return payload.error ?? payload.message ?? fallback;
+  return typeof payload?.error === 'string' ? payload.error : fallback;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -301,7 +315,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const payload = await parseJsonSafely<AuthSessionPayload>(response);
 
         if (!response.ok || !payload?.token || !payload.user) {
-          const message = resolveApiErrorMessage(payload, t(AUTH_ERROR_MESSAGES.loginFailed));
+          const message = resolveApiErrorMessage(payload, t(AUTH_ERROR_MESSAGES.loginFailed), t);
           setError(message);
           return { success: false, error: message };
         }
@@ -327,7 +341,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const payload = await parseJsonSafely<AuthSessionPayload>(response);
 
         if (!response.ok || !payload?.token || !payload.user) {
-          const message = resolveApiErrorMessage(payload, t(AUTH_ERROR_MESSAGES.registrationFailed));
+          const message = resolveApiErrorMessage(payload, t(AUTH_ERROR_MESSAGES.registrationFailed), t);
           setError(message);
           return { success: false, error: message };
         }

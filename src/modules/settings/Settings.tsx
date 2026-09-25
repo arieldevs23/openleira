@@ -6,6 +6,7 @@ import { ProviderLoginModal } from '@/modules/provider-auth';
 import { Button } from '@/shared/ui';
 import SettingsSidebar, { SettingsMobileMenu, getSettingsTabLabelKey } from '@/modules/settings/SettingsSidebar';
 import AgentsSettingsTab from '@/modules/settings/tabs/agents-settings/AgentsSettingsTab';
+import AccountSettingsTab from '@/modules/settings/tabs/AccountSettingsTab';
 import AppearanceSettingsTab from '@/modules/settings/tabs/AppearanceSettingsTab';
 import CredentialsSettingsTab from '@/modules/settings/tabs/api-settings/CredentialsSettingsTab';
 import VoiceSettingsTab from '@/modules/settings/tabs/VoiceSettingsTab';
@@ -272,6 +273,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
                   onCodeEditorFontSizeChange={(value) => updateCodeEditorSetting('fontSize', value)}
                 />
               )}
+
+              {activeTab === 'account' && <AccountSettingsTab />}
 
               {activeTab === 'git' && <GitSettingsTab />}
 
