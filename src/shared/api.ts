@@ -427,17 +427,30 @@ export const api = {
   // Kantor AI: one office per project, its divisions/agents, cases and controls.
   office: {
     forProject: (projectId: string) => get(`/api/office${query({ projectId })}`),
-    create: (projectId: string, locale: string) => post('/api/office', { projectId, locale }),
+    create: (projectId: string, locale: string, extra: { divisions?: unknown[]; appSummary?: string | null } = {}) =>
+      post('/api/office', { projectId, locale, ...extra }),
+    workspaces: () => get('/api/office/workspaces'),
+    remove: (officeId: string) => del(`/api/office/${encodeURIComponent(officeId)}`),
+    prepareFolder: (path: string, mode: 'new' | 'existing') => post('/api/office/folders', { path, mode }),
+    startAnalysis: (input: { projectId: string; provider: string; model: string; locale: string }) =>
+      post('/api/office/analyses', input),
+    analysis: (analysisId: string) => get(`/api/office/analyses/${encodeURIComponent(analysisId)}`),
+    addFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
+    deleteFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
+    caseUsage: (officeId: string, caseId: string) =>
+      get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/usage`),
     update: (
       officeId: string,
       changes: { name?: string; maxParallel?: number; permissionMode?: string; permissionWarningAcknowledged?: boolean },
     ) => patch(`/api/office/${encodeURIComponent(officeId)}`, changes),
-    createDivision: (officeId: string, input: { name: string; description?: string; color?: string }) =>
+    createDivision: (officeId: string, input: Record<string, unknown>) =>
       post(`/api/office/${encodeURIComponent(officeId)}/divisions`, input),
     updateDivision: (
       officeId: string,
       divisionId: string,
-      changes: { name?: string; description?: string; color?: string; sortOrder?: number },
+      changes: Record<string, unknown>,
     ) => patch(`/api/office/${encodeURIComponent(officeId)}/divisions/${encodeURIComponent(divisionId)}`, changes),
     deleteDivision: (officeId: string, divisionId: string) =>
       del(`/api/office/${encodeURIComponent(officeId)}/divisions/${encodeURIComponent(divisionId)}`),

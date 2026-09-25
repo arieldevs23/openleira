@@ -12,10 +12,13 @@ type CaseListProps = {
   selectedCaseId: string | null;
   onSelect: (caseId: string) => void;
   onCreate: (input: { title: string; description: string }) => Promise<void>;
+  /** `section` sits inside the workspace sidebar, which draws the heading and scrolls itself. */
+  variant?: 'column' | 'section';
 };
 
-/** Left column of the office page: the office's cases, newest first, and the new-case form. */
-export default function CaseList({ cases, selectedCaseId, onSelect, onCreate }: CaseListProps) {
+/** The workspace's cases, newest first, and the new-case form; shown in the workspace sidebar. */
+export default function CaseList({ cases, selectedCaseId, onSelect, onCreate, variant = 'column' }: CaseListProps) {
+  const isSection = variant === 'section';
   const { t } = useTranslation('office');
   // Whether the inline new-case form is open.
   const [isComposing, setIsComposing] = useState(false);
@@ -48,17 +51,17 @@ export default function CaseList({ cases, selectedCaseId, onSelect, onCreate }: 
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-3">
-        <h2 className="text-sm font-semibold text-foreground">{t('cases.title')}</h2>
-        <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={() => setIsComposing((open) => !open)}>
+    <div className={cn('flex min-h-0 flex-col', !isSection && 'h-full')}>
+      <div className={cn('flex items-center justify-between gap-2', isSection ? 'px-1 pb-1.5' : 'px-3 pb-2 pt-3')}>
+        {!isSection && <h2 className="text-sm font-semibold text-foreground">{t('cases.title')}</h2>}
+        <Button size="sm" variant="ghost" className={cn('h-7 gap-1 px-2 text-xs', isSection && 'w-full justify-start')} onClick={() => setIsComposing((open) => !open)}>
           <Plus className="h-3.5 w-3.5" />
           {t('cases.new')}
         </Button>
       </div>
 
       {isComposing && (
-        <form onSubmit={(event) => void submit(event)} className="mx-3 mb-2 space-y-2 rounded-[12px] border border-border bg-card/70 p-2.5">
+        <form onSubmit={(event) => void submit(event)} className="mx-1 mb-2 space-y-2 rounded-[12px] border border-border bg-card/70 p-2.5">
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
@@ -88,7 +91,7 @@ export default function CaseList({ cases, selectedCaseId, onSelect, onCreate }: 
         </form>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+      <div className={cn(isSection ? 'px-0' : 'min-h-0 flex-1 overflow-y-auto px-2 pb-3')}>
         {cases.length === 0 && !isComposing && (
           <p className="px-1 py-2 text-xs text-muted-foreground">{t('cases.empty')}</p>
         )}

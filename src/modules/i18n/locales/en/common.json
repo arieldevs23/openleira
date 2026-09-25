@@ -25,7 +25,7 @@
     "tasks": "Tasks",
     "browser": "Browser",
     "computer": "Computer",
-    "office": "Office"
+    "office": "Workspace"
   },
   "status": {
     "loading": "Loading...",
@@ -318,7 +318,7 @@
     "browseAllCommits": "Browse all commits ({{count}})",
     "browseAllBranches": "Browse all branches ({{count}})",
     "switchTo": "Switch to: {{name}}",
-    "navOffice": "Go to Office"
+    "navOffice": "Open workspace mode"
   },
   "folderBrowser": {
     "title": "Select Folder",
@@ -403,5 +403,11 @@
     "pickModel": "Choose model",
     "addWorkspace": "Add workspace",
     "activeProvider": "Active provider"
+  },
+  "mode": {
+    "label": "Mode",
+    "normal": "Normal",
+    "workspace": "Workspace",
+    "workspaceTitle": "Workspace"
   }
 }

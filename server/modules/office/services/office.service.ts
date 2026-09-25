@@ -298,6 +298,7 @@ export const officeService = {
       throw conflict('Stop the running case before deleting this workspace.', 'OFFICE_CASE_RUNNING');
     }
     officesDb.deleteOffice(officeId);
+    broadcastOfficeUpdate(officeId, { entity: 'deleted' });
   },
 
   /** The office of a project, or null when it has none yet. */

@@ -8,7 +8,7 @@ import type { ServerEvent, ProjectSession } from '@/shared/types';
 import type { SessionStore } from '@/modules/chat/hooks/useSessionStore';
 
 /**
- * Kantor AI broadcasts `office:update` and `office:log` on the same socket as
+ * Workspace mode broadcasts `office:update`, `office:log` and `office:analysis` on the same socket as
  * chat. They carry no `sessionId`, and the chat handler files a frame without
  * one under the session on screen — so an office frame must be dropped before
  * it reaches the transcript store.
@@ -41,6 +41,7 @@ test('office frames never land in the open chat transcript', () => {
   const dispatch = (event: ServerEvent) => listener?.(event);
   dispatch({ kind: 'office:update', officeId: 'office-1', change: { entity: 'case', id: 'c1', case: null } } as ServerEvent);
   dispatch({ kind: 'office:log', officeId: 'office-1', logSessionId: 'task-session', entry: { id: 'x', type: 'text', text: 'hi' } } as ServerEvent);
+  dispatch({ kind: 'office:analysis', analysis: { id: 'a1', status: 'done', divisions: [] } } as unknown as ServerEvent);
 
   assert.deepEqual(appended, []);
 });

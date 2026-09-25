@@ -25,7 +25,7 @@
     "tasks": "task",
     "browser": "browser",
     "computer": "komputer",
-    "office": "kantor"
+    "office": "workspace"
   },
   "status": {
     "loading": "bentar...",
@@ -317,7 +317,7 @@
     "browseAllCommits": "liat semua commit ({{count}})",
     "browseAllBranches": "liat semua branch ({{count}})",
     "switchTo": "pindah ke: {{name}}",
-    "navOffice": "ke kantor"
+    "navOffice": "buka mode workspace"
   },
   "folderBrowser": {
     "title": "pilih folder",
@@ -362,5 +362,11 @@
     "pickModel": "pilih model",
     "addWorkspace": "tambah workspace",
     "activeProvider": "provider aktif"
+  },
+  "mode": {
+    "label": "mode",
+    "normal": "normal",
+    "workspace": "workspace",
+    "workspaceTitle": "workspace"
   }
 }

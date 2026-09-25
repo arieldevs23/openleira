@@ -1088,15 +1088,6 @@ export function useProjectsState({
     [isMobile, navigate],
   );
 
-  // Opens the Kantor AI page of the selected project; the sidebar's "kantor" entry uses it.
-  const handleOpenOffice = useCallback(() => {
-    setActiveTab('office');
-
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  }, [isMobile]);
-
   const handleSessionDelete = useCallback(
     (sessionIdToDelete: string) => {
       clearSessionAttention(sessionIdToDelete);
@@ -1230,8 +1221,6 @@ export function useProjectsState({
       onSessionSelect: handleSessionSelect,
       onNewSession: handleNewSession,
       onOpenFileBrowser: handleOpenFileBrowser,
-      onOpenOffice: handleOpenOffice,
-      isOfficeOpen: activeTab === 'office',
       onSessionDelete: handleSessionDelete,
       onLoadMoreSessions: loadMoreProjectSessions,
       onProjectDelete: handleProjectDelete,
@@ -1250,8 +1239,6 @@ export function useProjectsState({
       attentionSessionIds,
       handleNewSession,
       handleOpenFileBrowser,
-      handleOpenOffice,
-      activeTab,
       handleProjectDelete,
       handleProjectSelect,
       handleSessionDelete,

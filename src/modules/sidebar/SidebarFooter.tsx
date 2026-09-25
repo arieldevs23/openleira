@@ -1,4 +1,4 @@
-import { Settings, ArrowUpCircle, AlertTriangle, Building2, FolderOpen, Loader2 } from 'lucide-react';
+import { Settings, ArrowUpCircle, AlertTriangle, FolderOpen, Loader2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { IS_PLATFORM } from '@/shared/utils';
@@ -15,15 +15,10 @@ type SidebarFooterProps = {
   /** Opens the home-directory file browser in the main panel. */
   onOpenFiles: () => void;
   isOpeningFiles: boolean;
-  /** Opens the Kantor AI page of the selected project. */
-  onOpenOffice?: () => void;
-  /** False while no project is selected: the office belongs to a project. */
-  canOpenOffice: boolean;
-  isOfficeOpen: boolean;
   t: TFunction;
 };
 
-/** Rendered by SidebarContent at the bottom of the panel for the Kantor AI page, the home file browser, settings, and update status. */
+/** Rendered by SidebarContent at the bottom of the panel for the home file browser, settings, and update status. */
 export default function SidebarFooter({
   updateAvailable,
   restartRequired,
@@ -34,9 +29,6 @@ export default function SidebarFooter({
   onShowSettings,
   onOpenFiles,
   isOpeningFiles,
-  onOpenOffice,
-  canOpenOffice,
-  isOfficeOpen,
   t,
 }: SidebarFooterProps) {
   return (
@@ -110,20 +102,6 @@ export default function SidebarFooter({
 
       {/* Desktop files + settings */}
       <div className="hidden space-y-0.5 px-2 py-1.5 md:block">
-        {onOpenOffice && (
-          <button
-            className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50 ${
-              isOfficeOpen ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
-            }`}
-            onClick={onOpenOffice}
-            disabled={!canOpenOffice}
-            title={canOpenOffice ? undefined : t('office.needsProject')}
-            aria-current={isOfficeOpen ? 'page' : undefined}
-          >
-            <Building2 className="h-3.5 w-3.5" />
-            <span className="text-sm">{t('office.open')}</span>
-          </button>
-        )}
         <button
           className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
           onClick={onOpenFiles}
@@ -153,19 +131,6 @@ export default function SidebarFooter({
 
       {/* Mobile files + settings */}
       <div className="space-y-1 px-3 pb-3 pt-2 md:hidden">
-        {onOpenOffice && (
-          <button
-            className="flex h-10 w-full items-center gap-3 rounded-lg px-3.5 transition-colors active:bg-muted disabled:opacity-50"
-            onClick={onOpenOffice}
-            disabled={!canOpenOffice}
-            aria-current={isOfficeOpen ? 'page' : undefined}
-          >
-            <div className="flex h-7 w-7 items-center justify-center">
-              <Building2 className={`h-4 w-4 ${isOfficeOpen ? 'text-primary' : 'text-muted-foreground'}`} />
-            </div>
-            <span className="text-sm font-normal text-foreground">{t('office.open')}</span>
-          </button>
-        )}
         <button
           className="flex h-10 w-full items-center gap-3 rounded-lg px-3.5 transition-colors active:bg-muted disabled:opacity-60"
           onClick={onOpenFiles}

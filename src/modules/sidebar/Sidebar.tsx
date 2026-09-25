@@ -24,10 +24,6 @@ type SidebarProps = {
   onNewSession: (project: Project) => void;
   /** Selects a project and switches the main panel to its Files tab. */
   onOpenFileBrowser?: (project: Project) => void;
-  /** Switches the main panel to the selected project's Kantor AI page. */
-  onOpenOffice?: () => void;
-  /** Whether the Kantor AI page is the one on screen, to highlight its entry. */
-  isOfficeOpen?: boolean;
   onSessionDelete?: (sessionId: string) => void;
   onLoadMoreSessions?: (projectId: string) => Promise<void> | void;
   // `projectId` is the DB identifier; the sidebar hands it back to the parent
@@ -60,8 +56,6 @@ function Sidebar({
   onSessionSelect,
   onNewSession,
   onOpenFileBrowser,
-  onOpenOffice,
-  isOfficeOpen = false,
   onSessionDelete,
   onLoadMoreSessions,
   onProjectDelete,
@@ -371,9 +365,6 @@ function Sidebar({
             onNewObrolan={() => { void handleNewObrolan(); }}
             onOpenFiles={() => { void handleOpenFiles(); }}
             isOpeningFiles={pendingWorkspace === 'home'}
-            onOpenOffice={onOpenOffice}
-            canOpenOffice={Boolean(selectedProject)}
-            isOfficeOpen={isOfficeOpen}
             t={t}
           />
         </>

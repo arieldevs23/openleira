@@ -1823,6 +1823,7 @@ export type OfficeUpdateChange =
   | { entity: 'office'; office: Office }
   | { entity: 'division'; id: string; division: OfficeDivision | null }
   | { entity: 'flow'; flow: OfficeFlowEdge[] }
+  | { entity: 'deleted' }
   | { entity: 'case'; id: string; case: OfficeCase | null }
   | { entity: 'task'; task: OfficeTask }
   | { entity: 'message'; message: OfficeMessage };

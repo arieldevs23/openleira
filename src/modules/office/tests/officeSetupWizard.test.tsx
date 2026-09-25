@@ -29,6 +29,7 @@ function division(slug: string, provider: LLMProvider | null = null, model: stri
     isCoordinator: false,
     isAudit: false,
     createdAt: NOW,
+    position: null,
     agent: {
       id: `agent-${slug}`,
       divisionId: `div-${slug}`,

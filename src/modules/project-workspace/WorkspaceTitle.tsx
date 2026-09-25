@@ -29,10 +29,6 @@ function getTabTitle(activeTab: AppTab, shouldShowTasksTab: boolean, t: (key: st
     return t('tabs.browser');
   }
 
-  if (activeTab === 'office') {
-    return t('tabs.office');
-  }
-
   return t('misc.projectFallback');
 }
 

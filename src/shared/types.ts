@@ -1809,7 +1809,73 @@ export type OfficeDivision = {
   isCoordinator: boolean;
   isAudit: boolean;
   createdAt: string;
+  /** Where the user dragged the node on the canvas; null means automatic layout. */
+  position: { x: number; y: number } | null;
   agent: OfficeAgent;
+};
+
+/** One flow arrow: work of `toDivisionId` waits for the work of `fromDivisionId`. */
+export type OfficeFlowEdge = { fromDivisionId: string; toDivisionId: string; createdAt: string };
+
+/** One workspace in the workspace sidebar: the office, its project folder and case counts. */
+export type OfficeWorkspaceSummary = {
+  office: Office;
+  projectId: string;
+  projectName: string;
+  activeCases: number;
+  totalCases: number;
+};
+
+/** A division the app analysis proposes; the user edits it before the workspace is created. */
+export type OfficeDivisionProposal = {
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  agentName: string;
+  rolePrompt: string;
+};
+
+/** An "analyse an existing app" run, as returned by the API and the `office:analysis` frame. */
+export type OfficeAnalysis = {
+  id: string;
+  projectId: string;
+  status: 'running' | 'done' | 'failed';
+  summary: string | null;
+  divisions: OfficeDivisionProposal[];
+  sessionId: string | null;
+  error: string | null;
+  createdAt: string;
+};
+
+/** Tokens one session of a case spent. */
+export type OfficeSessionUsage = {
+  sessionId: string;
+  role: 'coordinator' | 'task' | 'audit';
+  taskId: string | null;
+  divisionId: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cacheTokens: number;
+  total: number;
+};
+
+/** Tokens a whole case spent, per session and summed. */
+export type OfficeCaseUsage = {
+  caseId: string;
+  sessions: OfficeSessionUsage[];
+  inputTokens: number;
+  outputTokens: number;
+  cacheTokens: number;
+  total: number;
+};
+
+/** A folder readied for a new workspace by the add-workspace dialog. */
+export type OfficePreparedFolder = {
+  projectId: string;
+  projectPath: string;
+  projectName: string;
+  hasWorkspace: boolean;
 };
 
 /** The user's main request as the office tracks it. */
@@ -1849,6 +1915,8 @@ export type OfficeTask = {
   sessionId: string | null;
   auditSessionId: string | null;
   error: string | null;
+  /** Files the agent wrote or edited, relative to the workspace folder when inside it. */
+  changedFiles: string[];
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -1873,6 +1941,7 @@ export type OfficeMessage = {
 export type OfficeSnapshot = {
   office: Office;
   divisions: OfficeDivision[];
+  flow: OfficeFlowEdge[];
   cases: OfficeCase[];
 };
 
@@ -1891,10 +1960,15 @@ export type OfficeUpdateEvent = {
   change:
     | { entity: 'office'; office: Office }
     | { entity: 'division'; id: string; division: OfficeDivision | null }
+    | { entity: 'flow'; flow: OfficeFlowEdge[] }
+    | { entity: 'deleted' }
     | { entity: 'case'; id: string; case: OfficeCase | null }
     | { entity: 'task'; task: OfficeTask }
     | { entity: 'message'; message: OfficeMessage };
 };
+
+/** The `office:analysis` websocket frame: an app analysis started, finished or failed. */
+export type OfficeAnalysisEvent = { kind: 'office:analysis'; analysis: OfficeAnalysis };
 
 /** One compact transcript line of an office session, live or rebuilt from history. */
 export type OfficeLogEntry = {
@@ -1925,11 +1999,27 @@ export type OfficeActions = {
     permissionMode?: OfficePermissionMode;
     permissionWarningAcknowledged?: boolean;
   }): Promise<Office>;
-  createDivision(input: { name: string; description?: string; color?: string }): Promise<OfficeDivision>;
+  createDivision(input: {
+    name: string;
+    description?: string;
+    color?: string;
+    agentName?: string;
+    rolePrompt?: string;
+    position?: { x: number; y: number } | null;
+  }): Promise<OfficeDivision>;
   updateDivision(
     divisionId: string,
-    changes: { name?: string; description?: string; color?: string; sortOrder?: number },
+    changes: {
+      name?: string;
+      description?: string;
+      color?: string;
+      sortOrder?: number;
+      position?: { x: number; y: number } | null;
+    },
   ): Promise<OfficeDivision>;
+  addFlowEdge(fromDivisionId: string, toDivisionId: string): Promise<void>;
+  deleteFlowEdge(fromDivisionId: string, toDivisionId: string): Promise<void>;
+  deleteOffice(): Promise<void>;
   deleteDivision(divisionId: string): Promise<void>;
   /** `model: null` clears the model; `provider` + `model` set it. */
   updateAgent(agentId: string, changes: Record<string, unknown>): Promise<OfficeDivision>;
@@ -1946,12 +2036,16 @@ export type OfficeModelGroup = { provider: LLMProvider; options: ProviderModelOp
 /** A skill installed for Claude (user or project scope) that an office agent can be given. */
 export type OfficeInstalledSkill = { name: string; description: string; scope: string };
 
+/** A section of the agent panel a context-menu entry jumps to. */
+export type OfficeAgentSection = 'agent' | 'model' | 'role' | 'tools' | 'skills' | 'work';
+
 /** Live state a node in the office tree shows. */
 export type OfficeNodeStatus = 'idle' | 'running' | 'review' | 'done' | 'failed' | 'blocked';
 
 /** What the right-hand panel of the Office page is showing. */
 export type OfficeSelection =
   | { type: 'case' }
-  | { type: 'division'; divisionId: string; taskId?: string }
+  | { type: 'division'; divisionId: string; taskId?: string; focus?: OfficeAgentSection }
+  | { type: 'edge'; fromDivisionId: string; toDivisionId: string }
   | { type: 'messages'; divisionId: string }
   | { type: 'skills' };

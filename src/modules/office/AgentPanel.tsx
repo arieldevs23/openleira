@@ -3,20 +3,23 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ChipMultiSelect from '@/modules/office/ChipMultiSelect';
+import MarkdownPreview from '@/modules/office/MarkdownPreview';
 import ModelSelect from '@/modules/office/ModelSelect';
 import OfficeStatusBadge from '@/modules/office/OfficeStatusBadge';
+import PanelSection from '@/modules/office/PanelSection';
 import TranscriptView from '@/modules/office/TranscriptView';
 import { Button } from '@/shared/ui';
 import type {
   LLMProvider,
   OfficeActions,
+  OfficeAgentSection,
   OfficeCase,
   OfficeDivision,
   OfficeInstalledSkill,
   OfficeModelGroup,
   OfficeTask,
 } from '@/shared/types';
-import { officeTaskTone } from '@/shared/utils';
+import { cn, officeTaskTone } from '@/shared/utils';
 
 /** Claude Code tools an agent can be limited to; none selected means all of them. */
 const TOOL_OPTIONS = [
@@ -37,23 +40,40 @@ type AgentPanelProps = {
   actions: OfficeActions;
   onDeleted: () => void;
   onOpenSession: (sessionId: string) => void;
+  /** The section a canvas menu entry asked for; it opens alone and scrolls into view. */
+  focus?: OfficeAgentSection;
 };
+
+/** Sections open when the panel is opened by a plain click on the node. */
+const DEFAULT_OPEN: OfficeAgentSection[] = ['agent', 'work'];
+
+const isOpen = (section: OfficeAgentSection, focus: OfficeAgentSection | undefined) =>
+  focus ? focus === section : DEFAULT_OPEN.includes(section);
 
 /** Right panel of the office page for one division: its settings, its agent, and the live transcript of its work. */
 export default function AgentPanel(props: AgentPanelProps) {
   const { division } = props;
   // Remounting the form on every server-side change of this division keeps it in sync after a save.
-  const formKey = `${division.id}:${division.agent.updatedAt}:${division.name}:${division.color}:${division.description}`;
+  const formKey = `${division.id}:${division.agent.updatedAt}:${division.name}:${division.color}:${division.description}:${props.focus ?? ''}`;
+  const { t } = useTranslation('office');
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3">
       <DivisionForm key={formKey} {...props} />
-      {/* A new pick in the timeline starts the transcript on that task. */}
-      <DivisionTranscript key={`${division.id}:${props.focusTaskId ?? ''}`} {...props} />
+      <PanelSection
+        key={`work:${division.id}:${props.focus ?? ''}`}
+        title={t('agent.work')}
+        defaultOpen={isOpen('work', props.focus)}
+        focused={props.focus === 'work'}
+        testId="office-agent-section-work"
+      >
+        {/* A new pick in the timeline starts the transcript on that task. */}
+        <DivisionTranscript key={`${division.id}:${props.focusTaskId ?? ''}`} {...props} />
+      </PanelSection>
     </div>
   );
 }
 
-function DivisionForm({ division, modelGroups, skills, actions, onDeleted }: AgentPanelProps) {
+function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus }: AgentPanelProps) {
   const { t } = useTranslation('office');
   const { agent } = division;
   const isProtected = division.isCoordinator || division.isAudit;
@@ -85,6 +105,8 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted }: Age
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Server validation error or success note shown under the buttons.
   const [feedback, setFeedback] = useState<{ tone: 'error' | 'ok'; text: string } | null>(null);
+  // The role prompt shows rendered markdown until the user switches to editing it.
+  const [isEditingRole, setIsEditingRole] = useState(focus === 'role' || !agent.rolePrompt.trim());
 
   const skillOptions = useMemo(
     () => skills.map((skill) => ({ value: skill.name, label: skill.name, description: skill.description })),
@@ -147,8 +169,11 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted }: Age
         {division.isAudit && <span className="text-[10px] text-muted-foreground">{t('division.auditTag')}</span>}
       </header>
 
-      <fieldset className="space-y-2 rounded-[12px] border border-border p-2.5">
-        <legend className="px-1 text-[11px] font-medium text-muted-foreground">{t('division.section')}</legend>
+      <PanelSection title={t('agent.section')} summary={agentName} defaultOpen={isOpen('agent', focus)} focused={focus === 'agent'} testId="office-agent-section-agent">
+        <label className="block space-y-1">
+          <span className="text-[11px] text-muted-foreground">{t('agent.name')}</span>
+          <input value={agentName} onChange={(event) => setAgentName(event.target.value)} maxLength={80} className={`${inputClass} h-8`} />
+        </label>
         <label className="block space-y-1">
           <span className="text-[11px] text-muted-foreground">{t('division.name')}</span>
           <input value={name} onChange={(event) => setName(event.target.value)} maxLength={80} className={`${inputClass} h-8`} />
@@ -162,48 +187,89 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted }: Age
           <input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-7 w-10 cursor-pointer rounded border border-input bg-background" aria-label={t('division.color')} />
           <span className="font-mono text-[11px] text-muted-foreground">{color}</span>
         </label>
-      </fieldset>
-
-      <fieldset className="space-y-2 rounded-[12px] border border-border p-2.5">
-        <legend className="px-1 text-[11px] font-medium text-muted-foreground">{t('agent.section')}</legend>
-        <label className="block space-y-1">
-          <span className="text-[11px] text-muted-foreground">{t('agent.name')}</span>
-          <input value={agentName} onChange={(event) => setAgentName(event.target.value)} maxLength={80} className={`${inputClass} h-8`} />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-[11px] text-muted-foreground">{t('agent.model')}</span>
-          <ModelSelect value={model} groups={modelGroups} onChange={setModel} ariaLabel={t('agent.model')} />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-[11px] text-muted-foreground">{t('agent.rolePrompt')}</span>
-          <textarea
-            value={rolePrompt}
-            onChange={(event) => setRolePrompt(event.target.value)}
-            rows={8}
-            className={`${inputClass} py-1.5 font-mono text-[12px] leading-relaxed`}
-            placeholder={t('agent.rolePromptPlaceholder')}
-          />
-          <span className="block text-[10px] text-muted-foreground">{t('agent.rolePromptHint')}</span>
-        </label>
-        <div className="space-y-1">
-          <span className="block text-[11px] text-muted-foreground">{t('agent.tools')}</span>
-          <ChipMultiSelect options={TOOL_OPTIONS} value={allowedTools} onChange={setAllowedTools} emptyLabel="" ariaLabel={t('agent.tools')} />
-          <span className="block text-[10px] text-muted-foreground">
-            {allowedTools.length === 0 ? t('agent.toolsAll') : t('agent.toolsLimited')}
-            {model && model.provider !== 'claude' ? ` ${t('agent.toolsClaudeOnly')}` : ''}
-          </span>
-        </div>
-        <div className="space-y-1">
-          <span className="block text-[11px] text-muted-foreground">{t('agent.skills')}</span>
-          <ChipMultiSelect options={skillOptions} value={agentSkills} onChange={setAgentSkills} emptyLabel={t('agent.noSkills')} ariaLabel={t('agent.skills')} />
-        </div>
         {!division.isCoordinator && (
           <label className="flex items-center gap-2 text-xs text-foreground">
             <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} className="h-3.5 w-3.5 accent-primary" />
             {division.isAudit ? t('agent.enabledAudit') : t('agent.enabled')}
           </label>
         )}
-      </fieldset>
+      </PanelSection>
+
+      <PanelSection
+        title={t('agent.model')}
+        summary={model ? model.model : t('tree.noModel')}
+        defaultOpen={isOpen('model', focus)}
+        focused={focus === 'model'}
+        testId="office-agent-section-model"
+      >
+        <ModelSelect value={model} groups={modelGroups} onChange={setModel} ariaLabel={t('agent.model')} />
+      </PanelSection>
+
+      <PanelSection
+        title={t('agent.rolePrompt')}
+        summary={rolePrompt.trim() ? t('agent.roleLines', { count: rolePrompt.trim().split('\n').length }) : t('agent.roleEmpty')}
+        defaultOpen={isOpen('role', focus)}
+        focused={focus === 'role'}
+        testId="office-agent-section-role"
+      >
+        <div className="flex justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => setIsEditingRole(false)}
+            aria-pressed={!isEditingRole}
+            className={cn('rounded-md px-2 py-0.5 text-[11px]', !isEditingRole ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}
+          >
+            {t('agent.rolePreview')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsEditingRole(true)}
+            aria-pressed={isEditingRole}
+            className={cn('rounded-md px-2 py-0.5 text-[11px]', isEditingRole ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}
+          >
+            {t('agent.roleEdit')}
+          </button>
+        </div>
+        {isEditingRole ? (
+          <textarea
+            value={rolePrompt}
+            onChange={(event) => setRolePrompt(event.target.value)}
+            rows={10}
+            aria-label={t('agent.rolePrompt')}
+            className={`${inputClass} py-1.5 font-mono text-[12px] leading-relaxed`}
+            placeholder={t('agent.rolePromptPlaceholder')}
+          />
+        ) : (
+          <div className="max-h-72 overflow-y-auto rounded-md border border-border bg-card/50 px-2.5 py-1.5">
+            {rolePrompt.trim() ? <MarkdownPreview markdown={rolePrompt} /> : <p className="text-xs text-muted-foreground">{t('agent.roleEmpty')}</p>}
+          </div>
+        )}
+        <span className="block text-[10px] text-muted-foreground">{t('agent.rolePromptHint')}</span>
+      </PanelSection>
+
+      <PanelSection
+        title={t('agent.tools')}
+        summary={allowedTools.length === 0 ? t('agent.toolsAllShort') : String(allowedTools.length)}
+        defaultOpen={isOpen('tools', focus)}
+        focused={focus === 'tools'}
+        testId="office-agent-section-tools"
+      >
+        <ChipMultiSelect options={TOOL_OPTIONS} value={allowedTools} onChange={setAllowedTools} emptyLabel="" ariaLabel={t('agent.tools')} />
+        <span className="block text-[10px] text-muted-foreground">
+          {allowedTools.length === 0 ? t('agent.toolsAll') : t('agent.toolsLimited')}
+          {model && model.provider !== 'claude' ? ` ${t('agent.toolsClaudeOnly')}` : ''}
+        </span>
+      </PanelSection>
+
+      <PanelSection
+        title={t('agent.skills')}
+        summary={String(agentSkills.length)}
+        defaultOpen={isOpen('skills', focus)}
+        focused={focus === 'skills'}
+        testId="office-agent-section-skills"
+      >
+        <ChipMultiSelect options={skillOptions} value={agentSkills} onChange={setAgentSkills} emptyLabel={t('agent.noSkills')} ariaLabel={t('agent.skills')} />
+      </PanelSection>
 
       {feedback && (
         <p className={feedback.tone === 'error' ? 'text-xs text-red-600 dark:text-red-300' : 'text-xs text-emerald-700 dark:text-emerald-300'}>

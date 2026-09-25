@@ -1,16 +1,18 @@
 {
-  "loading": "bentar, lagi buka kantor...",
-  "loadError": "kantor gagal dibuka: {{message}}",
+  "loading": "bentar, lagi buka workspace...",
+  "loadError": "workspace gagal dibuka: {{message}}",
   "retry": "coba lagi",
   "empty": {
-    "title": "proyek ini belum punya kantor",
-    "body": "kantor AI itu tim agent: koordinator mecah kasus lo jadi tugas buat divisi planner, designer, backend, frontend, security, dan docs, terus lapisan audit ngecek tiap hasil sebelum dianggap selesai.",
-    "create": "bikin kantor",
-    "creating": "lagi bikin kantor..."
+    "title": "belum ada workspace",
+    "body": "workspace itu tim agent AI yang kerja di satu folder aplikasi: koordinator mecah kasus jadi tugas buat tiap divisi, ngikutin flow yang lo gambar, terus lapisan audit ngecek tiap hasil. mulai dari folder baru, atau biar agent baca aplikasi yang udah ada.",
+    "create": "bikin pakai divisi default",
+    "creating": "lagi bikin workspace...",
+    "folderWithout": "folder ini belum punya workspace.",
+    "pick": "pilih workspace di kiri, atau tambah yang baru."
   },
   "toolbar": {
     "models": "model agent",
-    "addDivision": "tambah divisi",
+    "addDivision": "tambah agent",
     "settings": "pengaturan",
     "providers": "provider"
   },
@@ -20,7 +22,11 @@
   },
   "panel": {
     "label": "detail",
-    "backToCase": "balik ke kasus"
+    "backToCase": "balik ke kasus",
+    "caseViews": "tampilan kasus",
+    "result": "hasil",
+    "files": "file",
+    "usage": "token"
   },
   "cases": {
     "title": "kasus",
@@ -62,7 +68,7 @@
     "note": "catatan"
   },
   "tree": {
-    "label": "bagan kantor",
+    "label": "kanvas workspace",
     "caseNode": "kasus",
     "noCase": "pilih atau bikin kasus",
     "layer": "lapisan lintas divisi",
@@ -78,7 +84,9 @@
     "zoomIn": "perbesar",
     "zoomOut": "perkecil",
     "fit": "pas ke layar",
-    "hint": "scroll atau pinch buat zoom · geser latar buat pindah"
+    "hint": "seret agent buat mindahin · tarik titik di bawah agent ke agent lain buat bikin flow · klik kanan buat opsi lain",
+    "dragToConnect": "tarik ke agent lain buat nambah panah flow",
+    "connectHint": "klik agent yang jalan setelah {{name}}"
   },
   "case": {
     "run": "jalanin",
@@ -127,9 +135,11 @@
     "protected": "koordinator dan lapisan audit bisa diedit, tapi ga bisa dihapus.",
     "coordinatorTag": "koordinator",
     "auditTag": "lapisan audit",
-    "addTitle": "tambah divisi",
+    "addTitle": "tambah agent",
     "add": "tambah",
-    "addHint": "divisi baru dapet agent sendiri. atur peran, model, tools, sama skills-nya setelah ditambah."
+    "addHint": "divisi baru dapet agent sendiri. atur peran, model, tools, sama skills-nya setelah ditambah.",
+    "agentNamePlaceholder": "misal Dewi",
+    "deleteBody": "hapus divisi {{name}} beserta agent-nya? tugas lamanya tetap ada di riwayat kasus."
   },
   "agent": {
     "section": "agent",
@@ -152,7 +162,13 @@
     "noTasks": "divisi ini belum dapet task di kasus yang dipilih.",
     "task": "task",
     "result": "hasil",
-    "auditNotes": "catatan audit"
+    "auditNotes": "catatan audit",
+    "work": "kerjaan dan transcript",
+    "roleEdit": "edit",
+    "rolePreview": "pratinjau",
+    "roleEmpty": "perannya belum ditulis.",
+    "roleLines": "{{count}} baris",
+    "toolsAllShort": "semua"
   },
   "messages": {
     "title": "pesan sama {{name}}",
@@ -186,13 +202,13 @@
   },
   "permission": {
     "title": "agent bakal jalan tanpa nanya",
-    "body": "kantor ini jalanin sesinya dengan bypass permission: agent bakal ngedit file dan jalanin command di proyek ini tanpa minta izin lo dulu.",
-    "hint": "bisa ganti ke mode yang lebih ketat di pengaturan kantor. kalau mode ketat, setujui tool call dengan buka sesinya di chat.",
+    "body": "workspace ini jalanin sesinya dengan bypass permission: agent bakal ngedit file dan jalanin command di foldernya tanpa minta izin lo dulu.",
+    "hint": "bisa ganti ke mode yang lebih ketat di pengaturan workspace. kalau mode ketat, setujui tool call dengan buka sesinya di chat.",
     "confirm": "oke, jalanin"
   },
   "settings": {
-    "title": "pengaturan kantor",
-    "name": "nama kantor",
+    "title": "pengaturan workspace",
+    "name": "nama workspace",
     "maxParallel": "sesi yang jalan barengan",
     "maxParallelHint": "gabungan sesi task dan audit, per kasus (1–6).",
     "permissionMode": "mode permission",
@@ -231,10 +247,105 @@
     "notConnected": "belum terhubung",
     "notConnectedShort": "belum terhubung",
     "connect": "hubungkan",
-    "hint": "tombol hubungkan buka terminal di server (misalnya VPS kamu) terus jalanin perintah login provider di sana. login-nya nyimpen di server itu, kantor ga nyimpen API key apa pun.",
+    "hint": "tombol hubungkan buka terminal di server (misalnya VPS lo) terus jalanin perintah login provider di sana. login-nya nyimpen di server itu, workspace ga nyimpen API key apa pun.",
     "recheck": "cek lagi",
     "noneBanner": "belum ada provider AI yang terhubung, jadi agent belum bisa kerja",
     "disconnectedBanner": "ada agent yang pakai provider yang belum terhubung: {{providers}}",
     "connectAction": "hubungkan provider"
+  },
+  "sidebar": {
+    "label": "daftar workspace",
+    "title": "workspace",
+    "workspaces": "workspace",
+    "agents": "agent",
+    "addWorkspace": "tambah workspace",
+    "noWorkspaces": "belum ada workspace.",
+    "open": "buka",
+    "deleteWorkspace": "hapus workspace",
+    "deleteWorkspaceBody": "hapus \"{{name}}\" beserta semua kasusnya? folder {{path}} dan isinya tetap aman, ga ikut kehapus.",
+    "activeCases": "{{count}} kasus lagi jalan",
+    "expandAgent": "liat peran {{name}}",
+    "collapseAgent": "tutup peran {{name}}"
+  },
+  "addWorkspace": {
+    "title": "tambah workspace",
+    "intro": "workspace selalu kerja di satu folder. mau kerja di mana?",
+    "newTitle": "folder baru",
+    "newBody": "mulai aplikasi dari nol di folder baru yang masih kosong, pakai divisi default.",
+    "existingTitle": "aplikasi yang udah ada",
+    "existingBody": "tunjuk foldernya, agent baca kodenya terus ngusulin divisi yang cocok.",
+    "newFolderHint": "ketik path lengkap folder barunya (nanti dibikinin), atau cari folder induknya terus tambahin namanya.",
+    "existingFolderHint": "folder aplikasinya. selama dianalisis, ga ada file yang diubah.",
+    "createFolder": "bikin folder dan workspace",
+    "next": "lanjut",
+    "back": "balik",
+    "alreadyHasWorkspace": "folder ini udah punya workspace.",
+    "openIt": "buka aja",
+    "setupIntro": "tim buat workspace {{name}} mau diisi gimana?",
+    "analyseTitle": "biar agent analisis aplikasinya",
+    "analyseBody": "agent baca repo-nya (cuma baca) terus ngusulin divisi dan peran yang pas buat aplikasi ini. lo cek dulu sebelum dibikin.",
+    "analysisModel": "model buat analisis",
+    "analyse": "analisis",
+    "noProvider": "hubungkan provider dulu biar bisa analisis.",
+    "useDefaults": "lewati analisis, pakai divisi default",
+    "analysing": "lagi baca {{name}}...",
+    "analysingHint": "biasanya satu sampai tiga menit. sesinya juga muncul di riwayat chat proyek.",
+    "analysisFailed": "analisisnya ga selesai.",
+    "reviewIntro": "divisi usulan. ganti nama, edit, hapus, atau tambah dulu sebelum dibikin. koordinator dan lapisan audit ditambahin otomatis.",
+    "summary": "tentang aplikasi (dikasih ke koordinator)",
+    "editRole": "edit peran",
+    "removeDivision": "hapus divisi",
+    "addDivision": "tambah divisi",
+    "create": "bikin workspace"
+  },
+  "menu": {
+    "label": "aksi",
+    "openAgent": "buka agent",
+    "model": "model",
+    "role": "peran (markdown)",
+    "tools": "tools",
+    "skills": "skills",
+    "connectTo": "hubungkan ke…",
+    "messages": "pesan sama koordinator",
+    "enable": "aktifin",
+    "disable": "matiin",
+    "resetPosition": "balikin posisi",
+    "deleteDivision": "hapus divisi",
+    "arrowDetails": "detail",
+    "deleteArrow": "hapus panah",
+    "viewSkills": "liat skills",
+    "addAgentHere": "tambah agent di sini",
+    "autoLayout": "rapiin otomatis"
+  },
+  "flow": {
+    "explain": "kerjaan {{to}} nunggu sampai kerjaan {{from}} di kasus yang sama selesai. divisi di cabang yang beda jalan barengan."
+  },
+  "files": {
+    "savedIn": "hasilnya disimpan di",
+    "copyPath": "salin path",
+    "copied": "kesalin.",
+    "none": "kasus ini belum nulis file apa pun.",
+    "count": "{{count}} file berubah",
+    "tree": "file yang berubah",
+    "outside": "di luar folder"
+  },
+  "usage": {
+    "loading": "lagi baca pemakaian token...",
+    "none": "belum ada sesi yang jalan.",
+    "total": "token terpakai",
+    "tokens": "token",
+    "input": "input",
+    "output": "output",
+    "cache": "cache",
+    "perDivision": "token per divisi",
+    "perSession": "{{count}} sesi",
+    "removedDivision": "(divisi udah dihapus)",
+    "role": {
+      "coordinator": "koord.",
+      "task": "task",
+      "audit": "audit"
+    },
+    "nodeTitle": "{{count}} token kepakai di kasus ini",
+    "note": "diambil dari transcript tiap provider. token cache biasanya jauh lebih murah dari token input."
   }
 }

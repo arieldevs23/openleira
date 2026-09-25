@@ -8,7 +8,6 @@ import type {
   OfficeDivision,
   OfficeSnapshot,
   OfficeUpdateEvent,
-  Project,
 } from '@/shared/types';
 
 type ApiEnvelope<T> = { success: true; data: T };
@@ -27,11 +26,12 @@ async function readData<T>(response: Response): Promise<T> {
 }
 
 /**
- * Loads the office of a project and keeps it live from `office:update`
- * frames on the shared websocket — the page never polls. After a reconnect
- * the snapshot is fetched once to catch up on frames missed while offline.
+ * Loads the workspace (office) of a project folder and keeps it live from
+ * `office:update` frames on the shared websocket — the page never polls.
+ * After a reconnect the snapshot is fetched once to catch up on frames missed
+ * while offline. A null project id means no workspace is selected.
  */
-export function useOffice(project: Project) {
+export function useOffice(projectId: string | null) {
   const { subscribe } = useWebSocket();
   // The office, its divisions and cases; null while loading or when the project has none.
   const [snapshot, setSnapshot] = useState<OfficeSnapshot | null>(null);
@@ -43,8 +43,14 @@ export function useOffice(project: Project) {
 
   const load = useCallback(async () => {
     setLoadError(null);
+    if (!projectId) {
+      officeIdRef.current = null;
+      setSnapshot(null);
+      setLoadState('missing');
+      return;
+    }
     try {
-      const data = await readData<{ office: OfficeSnapshot | null }>(await api.office.forProject(project.projectId));
+      const data = await readData<{ office: OfficeSnapshot | null }>(await api.office.forProject(projectId));
       officeIdRef.current = data.office?.office.id ?? null;
       setSnapshot(data.office);
       setLoadState(data.office ? 'ready' : 'missing');
@@ -52,7 +58,7 @@ export function useOffice(project: Project) {
       setLoadError(error instanceof Error ? error.message : String(error));
       setLoadState('error');
     }
-  }, [project.projectId]);
+  }, [projectId]);
 
   useEffect(() => {
     setSnapshot(null);
@@ -72,14 +78,18 @@ export function useOffice(project: Project) {
     const update = event as unknown as OfficeUpdateEvent;
     const { change } = update;
 
-    // An office created in another tab for this project: pick it up.
+    // A workspace created in another tab for this folder: pick it up.
     if (!officeIdRef.current) {
-      if (change.entity === 'office' && change.office.projectPath === project.fullPath) {
+      if (change.entity === 'office') {
         void load();
       }
       return;
     }
     if (update.officeId !== officeIdRef.current) {
+      return;
+    }
+    if (change.entity === 'deleted') {
+      void load();
       return;
     }
 
@@ -94,6 +104,8 @@ export function useOffice(project: Project) {
           const others = current.divisions.filter((division) => division.id !== change.id);
           return { ...current, divisions: sortDivisions(change.division ? [...others, change.division] : others) };
         }
+        case 'flow':
+          return { ...current, flow: change.flow };
         case 'case': {
           const others = current.cases.filter((caseItem) => caseItem.id !== change.id);
           return { ...current, cases: sortCases(change.case ? [...others, change.case] : others) };
@@ -102,7 +114,7 @@ export function useOffice(project: Project) {
           return current;
       }
     });
-  }), [load, project.fullPath, subscribe]);
+  }), [load, subscribe]);
 
   const officeId = snapshot?.office.id ?? null;
 
@@ -116,7 +128,10 @@ export function useOffice(project: Project) {
 
   const actions: OfficeActions = {
     createOffice: async (locale) => {
-      const created = await readData<OfficeSnapshot>(await api.office.create(project.projectId, locale));
+      if (!projectId) {
+        throw new Error('No workspace folder selected.');
+      }
+      const created = await readData<OfficeSnapshot>(await api.office.create(projectId, locale));
       officeIdRef.current = created.office.id;
       setSnapshot(created);
       setLoadState('ready');
@@ -127,6 +142,18 @@ export function useOffice(project: Project) {
     updateDivision: (divisionId, changes) => call((id) => api.office.updateDivision(id, divisionId, changes)),
     deleteDivision: async (divisionId) => {
       await call((id) => api.office.deleteDivision(id, divisionId));
+    },
+    addFlowEdge: async (fromDivisionId, toDivisionId) => {
+      await call((id) => api.office.addFlowEdge(id, fromDivisionId, toDivisionId));
+    },
+    deleteFlowEdge: async (fromDivisionId, toDivisionId) => {
+      await call((id) => api.office.deleteFlowEdge(id, fromDivisionId, toDivisionId));
+    },
+    deleteOffice: async () => {
+      await call((id) => api.office.remove(id));
+      officeIdRef.current = null;
+      setSnapshot(null);
+      setLoadState('missing');
     },
     updateAgent: (agentId, changes) => call((id) => api.office.updateAgent(id, agentId, changes)),
     assignModels: async (assignments) => {

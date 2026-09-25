@@ -9,10 +9,13 @@ const DEFAULT_COLOR = '#2551BD';
 type DivisionModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (input: { name: string; description: string; color: string }) => Promise<void>;
+  onCreate: (input: { name: string; description: string; color: string; agentName: string; rolePrompt: string }) => Promise<void>;
 };
 
-/** "Add division" dialog of the office page; the agent is configured afterwards in the agent panel. */
+/**
+ * "Add agent" dialog of the workspace page: a custom division with its own
+ * agent name and role; the model and tools are set afterwards in the agent panel.
+ */
 export default function DivisionModal({ open, onOpenChange, onCreate }: DivisionModalProps) {
   const { t } = useTranslation('office');
   // Name of the new division.
@@ -21,6 +24,10 @@ export default function DivisionModal({ open, onOpenChange, onCreate }: Division
   const [description, setDescription] = useState('');
   // Colour of the division on the tree.
   const [color, setColor] = useState(DEFAULT_COLOR);
+  // Name of the division's agent; the division name when left empty.
+  const [agentName, setAgentName] = useState('');
+  // The agent's role instructions (markdown).
+  const [rolePrompt, setRolePrompt] = useState('');
   // Create request in flight.
   const [isSaving, setIsSaving] = useState(false);
   // Server validation error.
@@ -34,10 +41,18 @@ export default function DivisionModal({ open, onOpenChange, onCreate }: Division
     setIsSaving(true);
     setError(null);
     try {
-      await onCreate({ name: name.trim(), description: description.trim(), color });
+      await onCreate({
+        name: name.trim(),
+        description: description.trim(),
+        color,
+        agentName: agentName.trim() || name.trim(),
+        rolePrompt,
+      });
       setName('');
       setDescription('');
       setColor(DEFAULT_COLOR);
+      setAgentName('');
+      setRolePrompt('');
       onOpenChange(false);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : String(createError));
@@ -69,6 +84,26 @@ export default function DivisionModal({ open, onOpenChange, onCreate }: Division
               rows={3}
               maxLength={500}
               className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-[11px] text-muted-foreground">{t('agent.name')}</span>
+            <input
+              value={agentName}
+              onChange={(event) => setAgentName(event.target.value)}
+              maxLength={80}
+              placeholder={name.trim() || t('division.agentNamePlaceholder')}
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-[11px] text-muted-foreground">{t('agent.rolePrompt')}</span>
+            <textarea
+              value={rolePrompt}
+              onChange={(event) => setRolePrompt(event.target.value)}
+              rows={5}
+              placeholder={t('agent.rolePromptPlaceholder')}
+              className="w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[12px] focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </label>
           <label className="flex items-center gap-2">

@@ -133,9 +133,6 @@ type SidebarContentProps = {
   onNewObrolan: () => void;
   onOpenFiles: () => void;
   isOpeningFiles: boolean;
-  onOpenOffice?: () => void;
-  canOpenOffice: boolean;
-  isOfficeOpen: boolean;
   t: TFunction;
 };
 
@@ -188,9 +185,6 @@ export default function SidebarContent({
   onNewObrolan,
   onOpenFiles,
   isOpeningFiles,
-  onOpenOffice,
-  canOpenOffice,
-  isOfficeOpen,
   t,
 }: SidebarContentProps) {
   const showConversationSearch = searchMode === 'conversations' && searchFilter.trim().length >= 2;
@@ -723,9 +717,6 @@ export default function SidebarContent({
           onShowSettings={onShowSettings}
           onOpenFiles={onOpenFiles}
           isOpeningFiles={isOpeningFiles}
-          onOpenOffice={onOpenOffice}
-          canOpenOffice={canOpenOffice}
-          isOfficeOpen={isOfficeOpen}
           t={t}
         />
       )}

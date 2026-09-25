@@ -12,12 +12,15 @@ import { ActionMenu } from '@/shared/ui';
 import { cn, isBuiltInWorkspaceProject } from '@/shared/utils';
 import type { LLMProvider, ProviderModelOption, ProviderModelsDefinition, SettingsMainTab } from '@/shared/types';
 import MobileMenuButton from '@/modules/project-workspace/MobileMenuButton';
+import ModeSwitch from '@/modules/project-workspace/ModeSwitch';
 import { useProjectMainState } from '@/modules/project-workspace/context/ProjectsStateContext';
 
 type WorkspaceWelcomeProps = {
   isMobile: boolean;
   onMenuClick: () => void;
   onShowSettings: (tab?: SettingsMainTab) => void;
+  /** Switches to workspace mode from the header's mode switch. */
+  onOpenWorkspaceMode: () => void;
 };
 
 type StartMode = 'obrolan' | 'project';
@@ -56,7 +59,7 @@ const readStoredModel = (provider: LLMProvider): string => (
  * existing one or the creation wizard, which the sidebar owns and opens on
  * request.
  */
-export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings }: WorkspaceWelcomeProps) {
+export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings, onOpenWorkspaceMode }: WorkspaceWelcomeProps) {
   const { t } = useTranslation();
   const { projects, handleNewSession, handleProjectSelect, requestNewProject, refreshProjectsSilently } = useProjectMainState();
   const { pendingWorkspace, ensureWorkspace } = useBuiltInWorkspaces(projects, refreshProjectsSilently);
@@ -161,11 +164,14 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
             })),
           ]}
         />
+        <div className="ml-auto">
+          <ModeSwitch isWorkspaceMode={false} onChange={(workspaceMode) => { if (workspaceMode) onOpenWorkspaceMode(); }} />
+        </div>
         <button
           type="button"
           onClick={() => onShowSettings()}
           aria-label={t('misc.settings', { defaultValue: 'Settings' })}
-          className="ml-auto rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
         >
           <Settings className="h-5 w-5" />
         </button>

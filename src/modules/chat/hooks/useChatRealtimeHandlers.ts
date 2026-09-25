@@ -129,11 +129,12 @@ export function useChatRealtimeHandlers({
           onWebSocketReconnect?.();
           return;
 
-        // Kantor AI frames share this socket but belong to the office page.
+        // Workspace (office) frames share this socket but belong to the workspace page.
         // They carry no sessionId, so letting them fall through would file
         // them under whichever session is open here.
         case 'office:update':
         case 'office:log':
+        case 'office:analysis':
           return;
 
         case 'history_truncated': {
