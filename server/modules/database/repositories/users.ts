@@ -66,6 +66,12 @@ export const userDb = {
       .get(username) as UserRow | undefined;
   },
 
+  /** Replaces the stored bcrypt hash. Used by Auth for change-password and the CLI reset. */
+  updatePasswordHash(userId: number, passwordHash: string): void {
+    const db = getConnection();
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
+  },
+
   /** Updates the last_login timestamp. Non-fatal — logs but does not throw. */
   updateLastLogin(userId: number): void {
     try {
