@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { cn } from '@/shared/utils';
 import type { QueueItemStatus } from '@/shared/types';
+import { StatusMark } from '@/shared/ui';
 
 /* ─── Context ────────────────────────────────────────────────────── */
 
@@ -83,7 +84,7 @@ export const QueueItemIndicator = React.forwardRef<HTMLDivElement, React.HTMLAtt
           </svg>
         )}
         {status === 'in_progress' && (
-          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+          <StatusMark kind="running" />
         )}
         {status === 'pending' && (
           <svg className="h-3.5 w-3.5 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">

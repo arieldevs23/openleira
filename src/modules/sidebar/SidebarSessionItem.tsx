@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { LLMProviderLogo, Tooltip, buttonVariants } from '@/shared/ui';
+import { LLMProviderLogo, StatusMark, Tooltip, buttonVariants } from '@/shared/ui';
 import { cn } from '@/shared/utils';
 import type { LLMProvider, Project, ProjectSession, SessionWithProvider } from '@/shared/types';
 import { createSessionViewModel, formatCompactAge } from '@/modules/sidebar/utils/sidebarProjectFormatting';
@@ -77,17 +77,9 @@ function SidebarSessionItem({
 
   const statusDot = (showAttentionIndicator || showBackgroundIndicator || showRecentIndicator) && (
     <Tooltip content={indicatorLabel} position="top">
-      <span
-        role="status"
-        aria-label={indicatorLabel}
-        className={cn(
-          'block h-1.5 w-1.5 flex-shrink-0 rounded-full',
-          showAttentionIndicator
-            ? 'bg-warn'
-            : showBackgroundIndicator
-              ? 'bg-primary'
-              : 'bg-ok',
-        )}
+      <StatusMark
+        kind={showAttentionIndicator ? 'warning' : showBackgroundIndicator ? 'running' : 'done'}
+        label={indicatorLabel}
       />
     </Tooltip>
   );
@@ -114,7 +106,7 @@ function SidebarSessionItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <div
-            className="min-w-0 flex-1 truncate text-sm font-normal text-foreground"
+            className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground"
             title={sessionView.sessionName}
           >
             {sessionView.sessionName}
@@ -152,7 +144,7 @@ function SidebarSessionItem({
       {isCompact ? (
         <div
           className={cn(
-            'relative select-none rounded-lg p-2 transition-colors duration-150',
+            'sidebar-item relative select-none rounded-lg p-2 transition-colors duration-150',
             isSelected ? 'sidebar-item-active' : 'active:bg-muted',
           )}
           onClick={selectMobileSession}
@@ -164,8 +156,8 @@ function SidebarSessionItem({
           href={`/session/${session.id}`}
           className={cn(
             buttonVariants({ variant: 'ghost' }),
-            'h-auto w-full justify-start rounded-lg p-2 text-left font-normal transition-colors duration-150',
-            isSelected ? 'sidebar-item-active' : 'hover:bg-muted',
+            'sidebar-item h-auto w-full justify-start rounded-lg p-2 text-left font-normal transition-colors duration-150',
+            isSelected ? 'sidebar-item-active' : 'hover:bg-accent',
           )}
           // Left-click keeps in-app navigation; Ctrl/Cmd/middle-click use the
           // href to open a new tab. Right-click opens the session menu instead.

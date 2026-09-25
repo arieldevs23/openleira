@@ -1,8 +1,7 @@
 import { FolderPlus, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { Button, Input } from '@/shared/ui';
-import { CLOUDCLI_WORDMARK_FONT_FAMILY } from '@/shared/constants';
+import { BrandWordmark, Button, Input, RoseMark } from '@/shared/ui';
 import type { SidebarSearchMode } from '@/shared/types';
 import SidebarModeTabs from '@/modules/sidebar/SidebarModeTabs';
 
@@ -29,16 +28,17 @@ type SidebarHeaderProps = {
   t: TFunction;
 };
 
-/** Module-level, not a nested render function, so the wordmark is not remounted on every SidebarHeader render. */
+/**
+ * Module-level, not a nested render function, so the wordmark is not remounted
+ * on every SidebarHeader render. The rose mark stays at 20px (DESIGN.md §5)
+ * and the wordmark is Playfair Display at 15px (§7).
+ */
 function LogoBlock({ t }: { t: TFunction }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <img src="/logo-64.png" alt="OpenLeira" className="h-7 w-7 flex-shrink-0 rounded-lg" />
-      <h1
-        className="brand-wordmark truncate text-sm text-navy"
-        style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
-      >
-        {t('app.title')}
+    <div className="flex min-w-0 items-center gap-2">
+      <RoseMark size={20} alt="" />
+      <h1 className="truncate text-[15px] leading-none" aria-label={t('app.title')}>
+        <BrandWordmark />
       </h1>
     </div>
   );
@@ -90,7 +90,7 @@ export default function SidebarHeader({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               onClick={onRefresh}
               disabled={isRefreshing}
               title={t('tooltips.refresh')}
@@ -104,7 +104,7 @@ export default function SidebarHeader({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               onClick={onCreateProject}
               title={t('tooltips.createProject')}
             >
@@ -113,7 +113,7 @@ export default function SidebarHeader({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               onClick={onCollapseSidebar}
               title={t('tooltips.hideSidebar')}
             >

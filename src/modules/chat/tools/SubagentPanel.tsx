@@ -7,6 +7,7 @@ import { SubagentTimeline } from '@/modules/chat/tools/SubagentTimeline';
 import { useIsExportingTranscript } from '@/modules/chat/context/TranscriptRenderContext';
 import { MarkdownContent } from '@/modules/chat/tools/ContentRenderers/MarkdownContent';
 import { resolveBackgroundTaskStatus } from '@/modules/chat/utils/backgroundTasks';
+import { StatusMark } from '@/shared/ui';
 
 type SubagentPanelProps = {
   /** Raw tool input of the call that spawned the agent, used for the prompt. */
@@ -136,7 +137,7 @@ export const SubagentPanel = memo(({
         <span className={cn('ml-auto flex flex-shrink-0 items-center gap-1 text-[11px]', STATUS_STYLES[status])}>
           {status === 'running' ? (
             <>
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+              <StatusMark kind="running" />
               running
             </>
           ) : status === 'failed' ? (

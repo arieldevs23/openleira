@@ -171,7 +171,7 @@ export default function SidebarRecentConversations({
                     <div
                       role="status"
                       aria-label={t('tooltips.attentionRequiredIndicator', { defaultValue: 'Session needs attention' })}
-                      className="h-2 w-2 animate-pulse rounded-full bg-warn"
+                      className="status-mark status-mark-warning text-warn"
                     />
                   </Tooltip>
                 </div>
@@ -217,7 +217,7 @@ export default function SidebarRecentConversations({
                           <span
                             role="status"
                             aria-label={t('tooltips.backgroundWorkIndicator', 'Background work running')}
-                            className="h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-primary"
+                            className="status-mark status-mark-running text-run"
                           />
                         </Tooltip>
                       </>

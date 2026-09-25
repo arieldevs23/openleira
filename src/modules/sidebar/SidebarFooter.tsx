@@ -56,7 +56,7 @@ export default function SidebarFooter({
           {/* Desktop update */}
           <div className="hidden px-2 py-1.5 md:block">
             <button
-              className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted"
+              className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-accent"
               onClick={onShowVersionModal}
             >
               <div className="relative flex-shrink-0">
@@ -103,7 +103,7 @@ export default function SidebarFooter({
       {/* Desktop files + settings */}
       <div className="hidden space-y-0.5 px-2 py-1.5 md:block">
         <button
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-60"
           onClick={onOpenFiles}
           disabled={isOpeningFiles}
           title={isOpeningFiles ? t('files.opening') : undefined}
@@ -112,7 +112,7 @@ export default function SidebarFooter({
           <span className="text-sm">{t('files.open')}</span>
         </button>
         <button
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           onClick={onShowSettings}
         >
           <Settings className="h-3.5 w-3.5" />

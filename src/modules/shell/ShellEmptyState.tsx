@@ -18,7 +18,7 @@ export default function ShellEmptyState({ title, description }: ShellEmptyStateP
             />
           </svg>
         </div>
-        <h3 className="mb-2 text-lg font-semibold">{title}</h3>
+        <h3 className="display-title mb-2 text-lg">{title}</h3>
         <p>{description}</p>
       </div>
     </div>

@@ -524,7 +524,7 @@ export default function SidebarContent({
                 return (
                   <section
                     key={project.projectId}
-                    className="group/archive overflow-hidden rounded-lg transition-colors hover:bg-muted/50"
+                    className="group/archive overflow-hidden rounded-lg transition-colors hover:bg-accent"
                   >
                     <div className="flex items-center gap-2.5 px-2.5 py-2.5">
                       <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground">
@@ -546,7 +546,7 @@ export default function SidebarContent({
                         </p>
                       </div>
                       <button
-                        className="flex h-7 flex-shrink-0 items-center gap-1.5 rounded-lg px-2 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex h-7 flex-shrink-0 items-center gap-1.5 rounded-lg px-2 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => onRestoreArchivedProject(project.projectId)}
                         title={t('archived.restoreProject', 'Restore workspace')}
                         aria-label={`${t('archived.restoreProject', 'Restore workspace')}: ${project.displayName}`}
@@ -560,7 +560,7 @@ export default function SidebarContent({
                         {projectSessions.map((session) => (
                           <button
                             key={String(session.id)}
-                            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                             onClick={() => onArchivedSessionClick({
                               sessionId: String(session.id),
                               provider: session.__provider,
@@ -624,7 +624,7 @@ export default function SidebarContent({
               {groupedArchivedSessions.map((group) => (
                 <section
                   key={group.key}
-                  className="group/archive overflow-hidden rounded-lg transition-colors hover:bg-muted/50"
+                  className="group/archive overflow-hidden rounded-lg transition-colors hover:bg-accent"
                 >
                   <div className="flex items-center gap-2.5 px-2.5 py-2.5">
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground">
@@ -650,7 +650,7 @@ export default function SidebarContent({
                     {group.sessions.map((session) => (
                       <div
                         key={session.sessionId}
-                        className="group/session flex items-center gap-1 rounded-lg px-2.5 py-2 hover:bg-muted"
+                        className="group/session flex items-center gap-1 rounded-lg px-2.5 py-2 hover:bg-accent"
                       >
                         <button
                           className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

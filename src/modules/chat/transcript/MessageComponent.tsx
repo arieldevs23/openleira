@@ -5,7 +5,7 @@ import { GitBranchIcon, PencilIcon } from 'lucide-react';
 import type { ChatMessage, ClaudePermissionSuggestion, PermissionGrantResult, LLMProvider,DiffLine,Project } from '@/shared/types';
 import { formatUsageLimitText, stripProposedPlanEnvelope } from '@/modules/chat/utils/chatFormatting';
 import { ToolRenderer, ToolErrorDisplay, SubagentPanel, WorkflowPanel, shouldHideToolResult } from '@/modules/chat/tools';
-import { LLMProviderLogo } from '@/shared/ui';
+import { LLMProviderLogo, StatusMark } from '@/shared/ui';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/modules/chat/transcript/Reasoning';
 import ChatMessageImages from '@/modules/chat/transcript/ChatMessageImages';
 import ChatMessageFiles from '@/modules/chat/transcript/ChatMessageFiles';
@@ -181,14 +181,14 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
         /* A compaction: one row, its numbers, and its summary folded into it */
         <div className="w-full">
           <div className="flex items-center gap-2 py-0.5">
-            <span
-              className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+            <StatusMark
+              kind={
                 message.compact.phase === 'running'
-                  ? 'animate-pulse bg-warn'
+                  ? 'running'
                   : message.compact.phase === 'failed'
-                    ? 'bg-err'
-                    : 'bg-muted-foreground'
-              }`}
+                    ? 'error'
+                    : 'done'
+              }
             />
             <span className="text-xs text-muted-foreground">
               {message.content || t('chat:misc.compacted', 'Compacted')}
@@ -200,7 +200,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                 {t('chat:misc.compactionSummary', 'full summary')}
               </summary>
               <div className="mt-1">
-                <Markdown className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert">
+                <Markdown className="prose prose-sm prose-gray max-w-none dark:prose-invert">
                   {message.compactSummary}
                 </Markdown>
               </div>
@@ -211,7 +211,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
         /* Compact task notification on the left */
         <div className="w-full">
           <div className="flex items-center gap-2 py-0.5">
-            <span className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${message.taskNotificationStatus === 'completed' ? 'bg-ok' : 'bg-warn'}`} />
+            <StatusMark kind={message.taskNotificationStatus === 'completed' ? 'done' : 'warning'} />
             <span className="text-xs text-muted-foreground">{message.content}</span>
           </div>
         </div>
@@ -284,7 +284,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
               <>
                 <div className="flex flex-col">
                   <div className="flex flex-col">
-                    <Markdown className="prose prose-sm max-w-none font-serif dark:prose-invert">
+                    <Markdown className="prose prose-sm max-w-none dark:prose-invert">
                       {String(message.displayText || '')}
                     </Markdown>
                   </div>
@@ -345,7 +345,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                 <ReasoningContent>
                   <div {...bubbleHandlers}>
                     {copyMenu}
-                    <Markdown className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert">
+                    <Markdown className="prose prose-sm prose-gray max-w-none dark:prose-invert">
                       {message.content}
                     </Markdown>
                   </div>
@@ -406,7 +406,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                     <StreamingMarkdown
                       content={content}
                       isStreaming={Boolean(message.isStreaming)}
-                      className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert"
+                      className="prose prose-sm prose-gray max-w-none dark:prose-invert"
                     />
                   ) : (
                     <div className="whitespace-pre-wrap">

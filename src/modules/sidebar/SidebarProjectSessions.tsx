@@ -106,7 +106,7 @@ export default function SidebarProjectSessions({
         <Button
           variant="ghost"
           size="sm"
-          className="flex h-8 w-full justify-start gap-2 bg-transparent px-2 text-xs font-normal text-muted-foreground hover:bg-muted hover:text-muted-foreground"
+          className="flex h-8 w-full justify-start gap-2 bg-transparent px-2 text-xs font-normal text-muted-foreground hover:bg-accent hover:text-muted-foreground"
           onClick={() => onNewSession(project)}
         >
           <Plus className="h-3 w-3" />

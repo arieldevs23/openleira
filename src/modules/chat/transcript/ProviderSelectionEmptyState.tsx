@@ -172,7 +172,7 @@ export default function ProviderSelectionEmptyState({
       <div className="flex h-full items-center justify-center px-4">
         <div className="w-full max-w-[34.25rem]">
           <div className="mb-8 text-center">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            <h2 className="display-title text-lg text-foreground sm:text-xl">
               {t("providerSelection.title")}
             </h2>
             <p className="mt-1 text-[13px] text-muted-foreground">

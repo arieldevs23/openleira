@@ -931,11 +931,6 @@ h1, h2, h3, h4 {
   color: var(--text);
 }
 
-/* Bubble spacing: 4px within one sender's run, 12px when the sender changes. */
-.chat-message + .chat-message.grouped {
-  margin-top: 4px;
-}
-
 /* Prose everywhere follows the tokens rather than Tailwind's grey scale. */
 .prose {
   --tw-prose-body: var(--text);

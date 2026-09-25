@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { LLMProvider } from '@/shared/types';
 import { api } from '@/shared/api';
+import { RoseWindowOrnament } from '@/shared/ui';
 import { ProviderLoginModal, useProviderAuthStatus } from '@/modules/provider-auth';
 import AgentConnectionsStep from '@/modules/onboarding/AgentConnectionsStep';
 import GitConfigurationStep from '@/modules/onboarding/GitConfigurationStep';
@@ -155,17 +156,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   return (
     <>
       <div className="relative h-screen overflow-y-auto bg-background">
-        <div aria-hidden className="pointer-events-none fixed inset-0">
-          <div className="absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -bottom-32 -left-24 h-[26rem] w-[26rem] rounded-full bg-primary/5 blur-3xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(hsl(var(--foreground)/0.04)_1px,transparent_1px)] opacity-60 [background-size:22px_22px]" />
+        {/* Setup is one of the screens where the rose window ornament is allowed (DESIGN.md §5). */}
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
+          <RoseWindowOrnament className="left-1/2 top-1/2 h-[min(56rem,160vw)] w-[min(56rem,160vw)] -translate-x-1/2 -translate-y-1/2" />
         </div>
 
         <div className="relative mx-auto flex min-h-full w-full max-w-2xl items-center justify-center p-4">
           <div className="w-full py-6">
           <OnboardingStepProgress currentStep={currentStep} />
 
-          <div className="rounded-2xl border border-border/70 bg-card/90 p-6 shadow-[0_24px_60px_-20px_hsl(var(--foreground)/0.18)] ring-1 ring-foreground/5 backdrop-blur-xl">
+          <div className="rounded-2xl border border-border bg-card p-6">
             {currentStep === 0 ? (
               <GitConfigurationStep
                 gitName={gitName}
@@ -184,9 +184,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               {errorMessage && (
                 <div
                   role="alert"
-                  className="mt-5 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5"
+                  className="mt-5 rounded-lg border border-err/40 bg-err/10 p-3.5"
                 >
-                  <p className="text-sm text-destructive">{errorMessage}</p>
+                  <p className="text-sm text-err">{errorMessage}</p>
                 </div>
               )}
 

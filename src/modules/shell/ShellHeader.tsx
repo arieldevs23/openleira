@@ -1,4 +1,7 @@
 import { RotateCcw, Shield, ShieldOff, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { StatusMark } from '@/shared/ui';
 
 type ShellHeaderProps = {
   isConnected: boolean;
@@ -46,11 +49,12 @@ export default function ShellHeader({
   bypassLabel,
   bypassTitle,
 }: ShellHeaderProps) {
+  const { t } = useTranslation('settings');
   return (
     <div className="flex-shrink-0 border-b border-border bg-surface-3 px-4 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-ok' : 'bg-err'}`} />
+          <StatusMark kind={isConnected ? 'done' : 'idle'} label={isConnected ? t('mcp.connected') : t('mcp.disconnected')} />
 
           {hasSession && sessionDisplayNameShort && (
             <span className="text-xs text-primary">({sessionDisplayNameShort}...)</span>

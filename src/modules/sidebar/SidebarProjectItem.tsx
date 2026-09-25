@@ -151,7 +151,7 @@ function SidebarProjectItem({
         <div className="bg-card">
           <div
             className={cn(
-              'mx-3 my-1 select-none rounded-lg p-3 transition-colors duration-150',
+              'sidebar-item mx-3 my-1 select-none rounded-lg p-3 transition-colors duration-150',
               isSelected ? 'sidebar-item-active' : 'active:bg-muted',
             )}
             onClick={toggleProject}
@@ -188,7 +188,7 @@ function SidebarProjectItem({
                   ) : (
                     <>
                       <div className="flex min-w-0 flex-1 items-center justify-between">
-                        <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-normal text-foreground">
+                        <h3 className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-foreground">
                           <span className="truncate">{project.displayName}</span>
                           {isStarred && (
                             <Star
@@ -254,8 +254,8 @@ function SidebarProjectItem({
         <Button
           variant="ghost"
           className={cn(
-            'sticky top-0 z-10 flex h-auto w-full justify-between rounded-lg p-2 font-normal',
-            isSelected ? 'sidebar-item-active' : 'bg-card hover:bg-muted',
+            'sidebar-item sticky top-0 z-10 flex h-auto w-full justify-between rounded-lg p-2 font-normal',
+            isSelected ? 'sidebar-item-active' : 'bg-card hover:bg-accent',
           )}
           onClick={selectAndToggleProject}
         >
@@ -285,7 +285,7 @@ function SidebarProjectItem({
                 </div>
               ) : (
                 <div>
-                  <div className="flex min-w-0 items-center gap-1.5 text-sm font-normal text-foreground" title={project.displayName}>
+                  <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-foreground" title={project.displayName}>
                     <span className="truncate">{project.displayName}</span>
                     {isStarred && (
                       <Star

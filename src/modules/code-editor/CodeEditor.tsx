@@ -117,8 +117,7 @@ export default function CodeEditor({
         minimapEnabled,
       })
     ),
-    // isDarkMode re-creates the minimap so it re-reads the --ok token for the new theme.
-    [file, isDarkMode, minimapEnabled, showDiff],
+    [file, minimapEnabled, showDiff],
   );
 
   const scrollToFirstChunkExtension = useMemo(

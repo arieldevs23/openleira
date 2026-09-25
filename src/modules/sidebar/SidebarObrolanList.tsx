@@ -54,7 +54,7 @@ export default function SidebarObrolanList({
       <Button
         variant="ghost"
         size="sm"
-        className="mb-1 flex h-9 w-full justify-start gap-2 rounded-lg px-2.5 text-sm font-normal text-foreground hover:bg-muted"
+        className="sidebar-item mb-1 flex h-9 w-full justify-start gap-2 rounded-lg px-2.5 text-[13px] font-medium text-foreground hover:bg-accent"
         onClick={onNewObrolan}
         disabled={isCreating}
       >

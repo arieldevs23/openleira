@@ -184,7 +184,7 @@ export default function SessionOptions({
           </button>
           <button
             type="button"
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
             onClick={onCancelEditingSession}
             aria-label={t('tooltips.cancel')}
           >

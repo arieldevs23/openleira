@@ -27,6 +27,7 @@ import {
   resolveBackgroundTaskStatus,
 } from '@/modules/chat/utils/backgroundTasks';
 import { parseWorkflowMeta } from '@/modules/chat/utils/workflowScriptMeta';
+import { StatusMark } from '@/shared/ui';
 
 type WorkflowPanelProps = {
   /** Raw tool input of the `Workflow` call: the script (or its path) and a one-line description. */
@@ -457,7 +458,7 @@ export const WorkflowPanel = memo(({ toolInput, toolResult, workflow, taskStatus
         <span className={cn('ml-auto flex flex-shrink-0 items-center gap-1 text-[11px]', STATUS_STYLES[status])}>
           {status === 'running' ? (
             <>
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+              <StatusMark kind="running" />
               {liveSummary || t('workflow.status.running', 'running')}
             </>
           ) : status === 'failed' ? (
