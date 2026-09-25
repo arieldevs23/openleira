@@ -29,7 +29,7 @@ import {
   buildTaskPrompt,
   buildTaskRevisionPrompt,
 } from '@/modules/office/services/office-prompts.service.js';
-import type { PromptSkill } from '@/modules/office/services/office-prompts.service.js';
+import type { PromptRecentCase, PromptSkill } from '@/modules/office/services/office-prompts.service.js';
 import {
   applyAuditVerdict,
   applyFlowOrder,
@@ -52,6 +52,8 @@ import { AppError } from '@/shared/utils.js';
 
 const MAX_NOTE_LENGTH = 5000;
 const MAX_SESSION_TITLE_LENGTH = 90;
+/** How many earlier finished cases the coordinator sees when it plans a new one. */
+const RECENT_CASES_IN_PLAN = 5;
 
 /** User-facing texts the orchestrator writes into cases, tasks and the bus, per office locale. */
 const TEXTS = {
@@ -482,6 +484,18 @@ export function createOfficeOrchestrator(dependencies: {
       : { output: null, error: parsed.error, crashed: false };
   };
 
+  /** The last few finished cases of the workspace, newest first, for the coordinator's plan. */
+  const describeRecentCases = (context: CaseContext): PromptRecentCase[] => officeCasesDb
+    .listCases(context.office.id)
+    .filter((candidate) => candidate.id !== context.caseItem.id && (candidate.status === 'done' || candidate.status === 'failed'))
+    .slice(0, RECENT_CASES_IN_PLAN)
+    .map((candidate) => ({
+      title: candidate.title,
+      status: candidate.status,
+      summary: candidate.finalSummary ?? candidate.error ?? '',
+      changedFiles: [...new Set(officeCasesDb.listTasks(candidate.id).flatMap((task) => task.changedFiles))],
+    }));
+
   /** The workspace flow as `slug -> slug` pairs of enabled divisions, for the coordinator prompts. */
   const describeFlowFor = (context: CaseContext): Array<[string, string]> => officesDb
     .listFlowEdges(context.office.id)
@@ -591,6 +605,8 @@ export function createOfficeOrchestrator(dependencies: {
       notes: notes.filter((note) => !isFailureNote(note)),
       skills,
       flow: describeFlowFor(context),
+      workspace: { name: context.office.name, projectPath: context.office.projectPath },
+      recentCases: describeRecentCases(context),
     });
     const allowedDivisionSlugs = context.workers.map((division) => division.slug);
     const result = await coordinatorJsonTurn(

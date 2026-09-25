@@ -45,6 +45,8 @@ semua subtask selesai ──▶ orchestrator menulis ringkasan akhir ──▶ t
 
 Orchestrator memakai **satu sesi yang sama** untuk semua gilirannya, jadi dia ingat rencananya sendiri.
 
+Setiap task baru dimulai dengan sesi orchestrator yang baru. Supaya dia tetap nyambung, prompt rencananya menyebutkan nama dan folder workspace, plus **5 task terakhir yang sudah selesai atau gagal**: judul, status, ringkasan hasil, dan file yang diubah. Permintaan pendek seperti "tambahin fitur" dianggap lanjutan dari kerjaan itu, dan orchestrator diminta tidak menanyakan proyek mana kalau riwayatnya sudah jelas.
+
 ### Sesi, permission, dan realtime
 
 - Setiap giliran agent adalah **sesi app biasa**: dibuat lewat `sessionsService.createAppSession` dan dijalankan lewat `runDetachedChatTurn` (runner provider, pemetaan id sesi, notifikasi, dan permission yang sama dengan chat). Sesi muncul di sidebar proyek dan bisa dibuka di chat (tombol **buka di chat**).

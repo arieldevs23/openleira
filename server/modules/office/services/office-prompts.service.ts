@@ -9,6 +9,49 @@ import type { OfficeCase, OfficeDivision, OfficeMessage, OfficeTask } from '@/sh
  * text in the office's language.
  */
 
+/**
+ * A case this workspace finished before, told to the coordinator so a short
+ * follow-up ("add a feature") continues that work instead of asking which app.
+ */
+export type PromptRecentCase = {
+  title: string;
+  status: string;
+  summary: string;
+  changedFiles: string[];
+};
+
+const MAX_RECENT_SUMMARY = 700;
+const MAX_RECENT_FILES = 15;
+
+const describeWorkspace = (workspace: { name: string; projectPath: string }, recentCases: PromptRecentCase[]): string => {
+  const lines = [
+    '## This workspace',
+    `Name: ${workspace.name}`,
+    `Folder (your working directory): ${workspace.projectPath}`,
+    'Every case belongs to this workspace and its folder.',
+  ];
+  if (recentCases.length > 0) {
+    lines.push('', '## Earlier cases in this workspace (newest first)');
+    for (const recent of recentCases) {
+      const summary = recent.summary.trim().replace(/\s+/g, ' ');
+      lines.push(`- "${recent.title}" (${recent.status})`);
+      if (summary) {
+        lines.push(`  Result: ${summary.length > MAX_RECENT_SUMMARY ? `${summary.slice(0, MAX_RECENT_SUMMARY)}…` : summary}`);
+      }
+      if (recent.changedFiles.length > 0) {
+        const files = recent.changedFiles.slice(0, MAX_RECENT_FILES);
+        const more = recent.changedFiles.length - files.length;
+        lines.push(`  Files changed: ${files.join(', ')}${more > 0 ? ` (+${more} more)` : ''}`);
+      }
+    }
+    lines.push(
+      'A short or vague request (for example "add a feature", "fix the bug", "make it nicer") continues this earlier work:',
+      'work on the same app and files. Do not ask the user which project or app they mean when the earlier cases point to one.',
+    );
+  }
+  return lines.join('\n');
+};
+
 /** A skill an agent may use, as listed in its prompt. */
 export type PromptSkill = { name: string; description: string; command: string };
 
@@ -113,12 +156,15 @@ export function buildCoordinatorPlanPrompt(input: {
   skills: PromptSkill[];
   /** Workflow arrows as division slug pairs; empty leaves the order to the coordinator. */
   flow?: Array<[string, string]>;
+  workspace?: { name: string; projectPath: string };
+  recentCases?: PromptRecentCase[];
 }): string {
   const notes = describeNotes(input.notes);
   return [
     withRolePrompt(input.coordinator),
     describeSkills(input.skills),
     '',
+    input.workspace ? `${describeWorkspace(input.workspace, input.recentCases ?? [])}\n` : '',
     '## The case from the user',
     describeCase(input.caseItem),
     notes ? `\n## Extra notes from the user\n${notes}` : '',
@@ -133,6 +179,7 @@ export function buildCoordinatorPlanPrompt(input: {
     'A task only sees the results of the tasks it depends on, so list every task whose output it needs in "depends_on".',
     'Independent tasks may run in parallel. Use as few tasks as the case really needs.',
     'If the case is too ambiguous to plan at all, return no tasks and put ONE question for the user in "question".',
+    'Before asking, look at the folder and the earlier cases above: only ask what you really cannot work out from them.',
     languageLine(input.locale),
     '',
     'Reply with ONLY this JSON (no prose before or after it), in a ```json code block:',

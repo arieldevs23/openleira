@@ -205,6 +205,38 @@ test('a case runs plan → tasks by dependency → audit → final summary, stre
   });
 });
 
+test('a new case is planned with the workspace folder and what earlier cases did', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') return { text: PLAN };
+      if (turn.kind === 'task') return { text: `## Summary\nresult of ${turn.ref}` };
+      if (turn.kind === 'audit') return { text: PASS };
+      if (turn.kind === 'final') return { text: 'Calculator built in calculator/index.html.' };
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+
+    const first = officeService.createCase(office.id, { title: 'Kalkulator', description: 'buat kalkulator simple', createdBy: null });
+    orchestrator.startCase(office.id, first.id);
+    await waitFor(first.id, isFinished);
+    const [firstTask] = officeCasesDb.listTasks(first.id);
+    officeCasesDb.updateTask(firstTask.id, { changedFiles: ['calculator/index.html', 'calculator/script.js'] });
+
+    const second = officeService.createCase(office.id, { title: 'tambahin fitur', description: 'fitur kaya iphone', createdBy: null });
+    orchestrator.startCase(office.id, second.id);
+    await waitFor(second.id, isFinished);
+
+    const plans = turns.filter((turn) => turn.kind === 'plan').map((turn) => turn.request.prompt);
+    assert.equal(plans.length, 2);
+    assert.match(plans[0], new RegExp(`Folder \\(your working directory\\): ${office.projectPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    assert.doesNotMatch(plans[0], /Earlier cases in this workspace/, 'the first case has no history');
+    assert.match(plans[1], /Earlier cases in this workspace[\s\S]*"Kalkulator" \(done\)/);
+    assert.match(plans[1], /Result: Calculator built in calculator\/index\.html\./);
+    assert.match(plans[1], /Files changed: calculator\/index\.html, calculator\/script\.js/);
+    assert.match(plans[1], /Do not ask the user which project or app they mean/);
+  });
+});
+
 test('a failed audit re-runs the task in its session with the notes, and passes on the retry', async () => {
   await withOffice(async ({ office }) => {
     let audits = 0;
