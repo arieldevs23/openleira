@@ -96,7 +96,7 @@ export const PromptInputTextarea = React.forwardRef<
     ref={ref}
     data-slot="prompt-input-textarea"
     className={cn(
-      'chat-input-placeholder block max-h-[40vh] w-full resize-none overflow-y-auto bg-transparent px-4 py-2 text-sm leading-6 text-foreground placeholder-muted-foreground/50 focus:outline-none sm:max-h-[300px]',
+      'chat-input-placeholder block max-h-[40vh] w-full resize-none overflow-y-auto bg-transparent px-4 py-2 text-sm leading-6 text-foreground placeholder-muted-foreground focus:outline-none sm:max-h-[300px]',
       className
     )}
     {...props}
@@ -171,7 +171,7 @@ export const PromptInputButton = React.forwardRef<HTMLButtonElement, PromptInput
             tooltip.shortcut ? (
               <span className="flex items-center gap-1.5">
                 {tooltip.content}
-                <kbd className="rounded bg-white/20 px-1 text-[10px]">{tooltip.shortcut}</kbd>
+                <kbd className="rounded bg-background/60 px-1 font-mono text-[10px]">{tooltip.shortcut}</kbd>
               </span>
             ) : (
               tooltip.content

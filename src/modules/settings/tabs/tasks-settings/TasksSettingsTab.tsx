@@ -29,21 +29,21 @@ export default function TasksSettingsTab() {
         ) : (
           <>
             {!isTaskMasterInstalled && (
-              <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-800/50 dark:bg-orange-950/30">
+              <div className="rounded-xl border border-warn/30 bg-warn/10 p-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/50">
-                    <svg className="h-4 w-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-warn/10">
+                    <svg className="h-4 w-4 text-warn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <div className="mb-2 font-medium text-orange-900 dark:text-orange-100">
+                    <div className="mb-2 font-medium text-warn">
                       {t('tasks.notInstalled.title')}
                     </div>
-                    <div className="space-y-3 text-sm text-orange-800 dark:text-orange-200">
+                    <div className="space-y-3 text-sm text-warn">
                       <p>{t('tasks.notInstalled.description')}</p>
 
-                      <div className="rounded-lg bg-orange-100 p-3 font-mono text-sm dark:bg-orange-900/40">
+                      <div className="rounded-lg bg-warn/10 p-3 font-mono text-sm">
                         <code>{t('tasks.notInstalled.installCommand')}</code>
                       </div>
 

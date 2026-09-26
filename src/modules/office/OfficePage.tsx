@@ -565,7 +565,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     if (loadState === 'error') {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-          <p className="text-sm text-red-600 dark:text-red-300">{t('loadError', { message: loadError ?? '' })}</p>
+          <p className="text-sm text-err">{t('loadError', { message: loadError ?? '' })}</p>
           <Button size="sm" variant="outline" onClick={() => void reload()}>{t('retry')}</Button>
         </div>
       );
@@ -582,7 +582,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
             )}
             <Button size="sm" variant="outline" onClick={() => setIsAddOpen(true)}>{t('sidebar.addWorkspace')}</Button>
           </div>
-          {pageError && <p className="text-xs text-red-600 dark:text-red-300">{pageError}</p>}
+          {pageError && <p className="text-xs text-err">{pageError}</p>}
         </div>
       );
     }
@@ -672,7 +672,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     </Button>
   );
 
-  const bannerClass = 'flex flex-wrap items-center gap-2 border-b border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200';
+  const bannerClass = 'flex flex-wrap items-center gap-2 border-b border-warn/30 bg-warn/5 px-3 py-1.5 text-xs text-warn';
 
   return (
     <div className="flex h-full min-h-0" data-testid="office-page">
@@ -736,7 +736,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
           </div>
         ))}
         {pageError && office && (
-          <div className="flex items-center gap-2 border-b border-red-500/30 bg-red-500/5 px-3 py-1.5 text-xs text-red-700 dark:text-red-300">
+          <div className="flex items-center gap-2 border-b border-err/30 bg-err/5 px-3 py-1.5 text-xs text-err">
             <span className="min-w-0 flex-1">{pageError}</span>
             <button type="button" onClick={() => setPageError(null)} aria-label={t('common.close')}><X className="h-3.5 w-3.5" /></button>
           </div>

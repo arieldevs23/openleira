@@ -1,8 +1,7 @@
 import { FolderPlus, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { Button, Input } from '@/shared/ui';
-import { CLOUDCLI_WORDMARK_FONT_FAMILY } from '@/shared/constants';
+import { BrandWordmark, Button, Input, RoseMark } from '@/shared/ui';
 import type { SidebarSearchMode } from '@/shared/types';
 import SidebarModeTabs from '@/modules/sidebar/SidebarModeTabs';
 
@@ -29,16 +28,17 @@ type SidebarHeaderProps = {
   t: TFunction;
 };
 
-/** Module-level, not a nested render function, so the wordmark is not remounted on every SidebarHeader render. */
+/**
+ * Module-level, not a nested render function, so the wordmark is not remounted
+ * on every SidebarHeader render. The rose mark stays at 20px (DESIGN.md §5)
+ * and the wordmark is Playfair Display at 15px (§7).
+ */
 function LogoBlock({ t }: { t: TFunction }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <img src="/logo-64.png" alt="OpenLeira" className="h-7 w-7 flex-shrink-0 rounded-lg" />
-      <h1
-        className="brand-wordmark truncate text-sm text-navy"
-        style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
-      >
-        {t('app.title')}
+    <div className="flex min-w-0 items-center gap-2">
+      <RoseMark size={20} alt="" />
+      <h1 className="truncate text-[15px] leading-none" aria-label={t('app.title')}>
+        <BrandWordmark />
       </h1>
     </div>
   );
@@ -90,7 +90,7 @@ export default function SidebarHeader({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               onClick={onRefresh}
               disabled={isRefreshing}
               title={t('tooltips.refresh')}
@@ -104,7 +104,7 @@ export default function SidebarHeader({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               onClick={onCreateProject}
               title={t('tooltips.createProject')}
             >
@@ -113,7 +113,7 @@ export default function SidebarHeader({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               onClick={onCollapseSidebar}
               title={t('tooltips.hideSidebar')}
             >
@@ -135,13 +135,13 @@ export default function SidebarHeader({
               t={t}
             />
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={searchPlaceholder}
                 value={searchFilter}
                 onChange={(event) => onSearchFilterChange(event.target.value)}
-                className="nav-search-input h-9 rounded-lg border-0 pl-9 pr-14 text-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="nav-search-input h-9 rounded-lg border-0 pl-9 pr-14 text-sm transition-all duration-200 placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               {searchFilter ? (
                 <button
@@ -204,13 +204,13 @@ export default function SidebarHeader({
               t={t}
             />
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={searchPlaceholder}
                 value={searchFilter}
                 onChange={(event) => onSearchFilterChange(event.target.value)}
-                className="nav-search-input h-10 rounded-lg border-0 pl-10 pr-9 text-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="nav-search-input h-10 rounded-lg border-0 pl-10 pr-9 text-sm transition-all duration-200 placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               {searchFilter && (
                 <button

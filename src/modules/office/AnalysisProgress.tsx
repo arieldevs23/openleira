@@ -61,7 +61,7 @@ export default function AnalysisProgress({ analysis, onOpenSession }: AnalysisPr
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3" data-testid="office-analysis-progress" data-stage={stage}>
       <div className="flex items-start gap-2.5">
-        {isRunning ? <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" /> : <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />}
+        {isRunning ? <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" /> : <Check className="mt-0.5 h-5 w-5 shrink-0 text-ok" />}
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-foreground">{t('addWorkspace.analysing', { name: analysis.projectName })}</p>
           <p className="text-[11px] text-muted-foreground">
@@ -106,7 +106,7 @@ export default function AnalysisProgress({ analysis, onOpenSession }: AnalysisPr
         {analysis.steps.map((step) => {
           const Icon = stepIcon(step);
           return (
-            <li key={step.id} className={cn('flex min-w-0 items-start gap-1.5', step.type === 'error' && 'text-red-600 dark:text-red-300')}>
+            <li key={step.id} className={cn('flex min-w-0 items-start gap-1.5', step.type === 'error' && 'text-err')}>
               <Icon className="mt-[2px] h-3 w-3 shrink-0 text-muted-foreground" />
               {step.toolName && <span className="shrink-0 text-primary">{step.toolName}</span>}
               <span className={cn('min-w-0', step.type === 'text' ? 'line-clamp-2 font-sans' : 'truncate')} title={step.text}>{step.text}</span>

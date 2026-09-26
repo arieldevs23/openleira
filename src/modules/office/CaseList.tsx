@@ -79,7 +79,7 @@ export default function CaseList({ cases, selectedCaseId, onSelect, onCreate, va
             rows={4}
             className="w-full resize-y rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+          {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-1.5">
             <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setIsComposing(false)}>
               {t('common.cancel')}
@@ -111,7 +111,7 @@ export default function CaseList({ cases, selectedCaseId, onSelect, onCreate, va
                 <span className="flex items-center gap-1.5">
                   <OfficeStatusBadge tone={officeCaseTone(caseItem.status)} label={t(`status.${caseItem.status}`)} />
                   {caseItem.quickDivisionId && (
-                    <span className="rounded-full bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-700 dark:text-amber-300" data-testid="office-quick-badge">
+                    <span className="rounded-full bg-warn/10 px-1.5 text-[10px] font-medium text-warn" data-testid="office-quick-badge">
                       {t('quickTask.badge')}
                     </span>
                   )}

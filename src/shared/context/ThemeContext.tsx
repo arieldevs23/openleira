@@ -14,6 +14,35 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/** The stored choice, or null when the user never picked one. */
+function readStoredIsDarkMode(): boolean | null {
+  const savedTheme = readUserPreference<string | null>('theme', null);
+  if (savedTheme === 'dark' || savedTheme === 'light') {
+    return savedTheme === 'dark';
+  }
+  return null;
+}
+
+/**
+ * Mirrors the anti-flash script in index.html: `data-theme` drives the design
+ * tokens in src/index.css and the `.dark` class drives Tailwind `dark:`
+ * variants. The status-bar colour is read back from the --bg token.
+ */
+function applyThemeToDocument(isDarkMode: boolean): void {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+  root.classList.toggle('dark', isDarkMode);
+  root.style.colorScheme = isDarkMode ? 'dark' : 'light';
+
+  const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  statusBarMeta?.setAttribute('content', isDarkMode ? 'black-translucent' : 'default');
+
+  const backgroundColor = getComputedStyle(root).getPropertyValue('--bg').trim();
+  if (backgroundColor) {
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', backgroundColor);
+  }
+}
+
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
@@ -24,82 +53,27 @@ export const useTheme = () => {
 
 /** Mounted once by App so every module can read and switch the colour theme through useTheme. */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  // Check for saved theme preference or default to system preference. The
-  // stored theme is read synchronously from the preference mirror so the very
-  // first paint is already the right colour.
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = readUserPreference<string | null>('theme', null);
-    if (savedTheme) {
-      return savedTheme === 'dark';
-    }
+  // Whether the dark mode (the gothic default, DESIGN.md §1) is active. Read
+  // synchronously from the preference mirror so the first render matches what
+  // the anti-flash script in index.html already painted.
+  const [isDarkMode, setIsDarkMode] = useState(() => readStoredIsDarkMode() ?? true);
 
-    // Check system preference
-    if (window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-
-    return false;
-  });
-
-  // The theme now lives in auth.db, so a change made on another device (or in
+  // The theme lives in auth.db, so a change made on another device (or in
   // another tab) arrives through the preference store rather than a re-render.
   useEffect(() => subscribeToUserPreferences(() => {
-    const savedTheme = readUserPreference<string | null>('theme', null);
-    if (savedTheme) {
-      setIsDarkMode(savedTheme === 'dark');
+    const storedIsDarkMode = readStoredIsDarkMode();
+    if (storedIsDarkMode !== null) {
+      setIsDarkMode(storedIsDarkMode);
     }
   }), []);
 
   // Applying the theme to the document and persisting it are deliberately
   // separate. Persisting from here would also fire on mount — before the stored
-  // theme had been fetched — writing this device's system default over the
-  // theme the user actually chose on another one.
+  // theme had been fetched — writing this device's default over the theme the
+  // user actually chose on another one.
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-
-      // Update iOS status bar style and theme color for dark mode
-      const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-      if (statusBarMeta) {
-        statusBarMeta.setAttribute('content', 'black-translucent');
-      }
-
-      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeColorMeta) {
-        themeColorMeta.setAttribute('content', '#141414'); // Dark background color (hsl(0 0% 8%))
-      }
-    } else {
-      document.documentElement.classList.remove('dark');
-
-      // Update iOS status bar style and theme color for light mode
-      const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-      if (statusBarMeta) {
-        statusBarMeta.setAttribute('content', 'default');
-      }
-
-      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeColorMeta) {
-        themeColorMeta.setAttribute('content', '#f6f4ef'); // Light background color (warm cream)
-      }
-    }
+    applyThemeToDocument(isDarkMode);
   }, [isDarkMode]);
-
-  // Listen for system theme changes
-  useEffect(() => {
-    if (!window.matchMedia) return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      // Only update if user hasn't manually set a preference
-      const savedTheme = readUserPreference<string | null>('theme', null);
-      if (!savedTheme) {
-        setIsDarkMode(e.matches);
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   // The only writer: a theme is stored because the user picked it, never
   // because this device happened to start on one.

@@ -39,7 +39,7 @@ export default function SidebarProjectsState({
             </p>
             {loadingProgress.currentProject && (
               <p
-                className="mx-auto max-w-[200px] truncate text-xs text-muted-foreground/70"
+                className="mx-auto max-w-[200px] truncate text-xs text-muted-foreground"
                 title={loadingProgress.currentProject}
               >
                 {loadingProgress.currentProject.split('-').slice(-2).join('/')}

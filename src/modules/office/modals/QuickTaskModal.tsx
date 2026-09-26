@@ -68,7 +68,7 @@ export default function QuickTaskModal({ agentName, onCancel, onSubmit }: QuickT
             rows={4}
             className="resize-y rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
-          {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+          {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={onCancel}>{t('common.cancel')}</Button>
             <Button type="submit" size="sm" className="h-8 px-3 text-xs" disabled={isBusy || !title.trim()}>

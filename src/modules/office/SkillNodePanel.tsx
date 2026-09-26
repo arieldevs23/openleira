@@ -28,7 +28,7 @@ export default function SkillNodePanel({ node, divisions, installedSkills, onSel
     <div className="space-y-3" data-testid="office-skill-panel">
       <header className="space-y-1">
         <h2 className="flex items-center gap-1.5 text-base font-semibold text-foreground">
-          <Sparkles className="h-4 w-4 text-violet-500" />
+          <Sparkles className="h-4 w-4 text-info" />
           {node.skillName}
         </h2>
         {installed ? (
@@ -37,7 +37,7 @@ export default function SkillNodePanel({ node, divisions, installedSkills, onSel
             <span className="ml-1 text-[10px] uppercase tracking-wide">· {installed.scope}</span>
           </p>
         ) : (
-          <p className="text-xs text-amber-700 dark:text-amber-300">{t('skills.notInstalled')}</p>
+          <p className="text-xs text-warn">{t('skills.notInstalled')}</p>
         )}
       </header>
 
@@ -54,7 +54,7 @@ export default function SkillNodePanel({ node, divisions, installedSkills, onSel
               <button
                 type="button"
                 onClick={() => onUnlink(division.id)}
-                className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-red-600"
+                className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-err"
                 aria-label={t('skills.unlink', { name: division.agent.name })}
                 title={t('skills.unlink', { name: division.agent.name })}
               >
@@ -71,7 +71,7 @@ export default function SkillNodePanel({ node, divisions, installedSkills, onSel
           <Copy className="h-3.5 w-3.5" />
           {t('menu.copySkill')}
         </Button>
-        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-red-600 hover:text-red-700 dark:text-red-300" onClick={onDelete}>
+        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-err hover:text-err/80" onClick={onDelete}>
           <Trash2 className="h-3.5 w-3.5" />
           {t('menu.deleteSkill')}
         </Button>

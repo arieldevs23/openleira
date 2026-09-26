@@ -42,17 +42,6 @@ export const OFFICE_COLLAPSED_PANELS_STORAGE_KEY = 'office-collapsed-panels';
 
 // ---------------------------
 
-//----------------- BRANDING ------------
-
-/**
- * Font stack used to render the OpenLeira wordmark consistently wherever the brand name
- * appears as text. Apply it inline so the wordmark does not inherit a themed font.
- */
-export const CLOUDCLI_WORDMARK_FONT_FAMILY =
-  '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
-
-// ---------------------------
-
 //----------------- APPLICATION VERSION ------------
 
 /**

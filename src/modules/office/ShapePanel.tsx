@@ -137,7 +137,7 @@ export default function ShapePanel({ shape, onChange, onDelete }: ShapePanelProp
         <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5 text-xs" onClick={() => onChange({ stack: 'back' })}>
           <ArrowDownToLine className="h-3.5 w-3.5" />{t('shapes.menu.back')}
         </Button>
-        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5 text-xs text-red-600 dark:text-red-300" onClick={onDelete}>
+        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5 text-xs text-err" onClick={onDelete}>
           <Trash2 className="h-3.5 w-3.5" />{t('shapes.menu.delete')}
         </Button>
       </div>

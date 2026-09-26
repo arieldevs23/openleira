@@ -5,7 +5,7 @@ import { GitBranchIcon, PencilIcon } from 'lucide-react';
 import type { ChatMessage, ClaudePermissionSuggestion, PermissionGrantResult, LLMProvider,DiffLine,Project } from '@/shared/types';
 import { formatUsageLimitText, stripProposedPlanEnvelope } from '@/modules/chat/utils/chatFormatting';
 import { ToolRenderer, ToolErrorDisplay, SubagentPanel, WorkflowPanel, shouldHideToolResult } from '@/modules/chat/tools';
-import { LLMProviderLogo } from '@/shared/ui';
+import { LLMProviderLogo, StatusMark } from '@/shared/ui';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/modules/chat/transcript/Reasoning';
 import ChatMessageImages from '@/modules/chat/transcript/ChatMessageImages';
 import ChatMessageFiles from '@/modules/chat/transcript/ChatMessageFiles';
@@ -133,19 +133,19 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                 <div dir="auto" className="break-words text-sm">
                   <Markdown
                     breaks
-                    className="prose prose-sm prose-invert max-w-none text-white"
+                    className="prose prose-sm max-w-none text-primary-foreground"
                   >
                     {message.content}
                   </Markdown>
                 </div>
-                <div className="mt-1 flex items-center justify-end gap-1 text-xs text-white/70">
+                <div className="mt-1 flex items-center justify-end gap-1 text-xs text-primary-foreground/70">
                   {onEditMessage && message.transcriptAnchorId && (
                     <button
                       type="button"
                       onClick={() => onEditMessage(message)}
                       title={t('message.editAndResend')}
                       aria-label={t('message.editAndResend')}
-                      className="rounded p-1 opacity-0 transition-opacity hover:bg-white/15 focus-visible:opacity-100 group-hover:opacity-100"
+                      className="rounded p-1 opacity-0 transition-opacity hover:bg-primary-foreground/15 focus-visible:opacity-100 group-hover:opacity-100"
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
                     </button>
@@ -156,7 +156,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                       onClick={() => onForkFromMessage(message)}
                       title={t('message.forkFromHere')}
                       aria-label={t('message.forkFromHere')}
-                      className="rounded p-1 opacity-0 transition-opacity hover:bg-white/15 focus-visible:opacity-100 group-hover:opacity-100"
+                      className="rounded p-1 opacity-0 transition-opacity hover:bg-primary-foreground/15 focus-visible:opacity-100 group-hover:opacity-100"
                     >
                       <GitBranchIcon className="h-3.5 w-3.5" />
                     </button>
@@ -181,26 +181,26 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
         /* A compaction: one row, its numbers, and its summary folded into it */
         <div className="w-full">
           <div className="flex items-center gap-2 py-0.5">
-            <span
-              className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+            <StatusMark
+              kind={
                 message.compact.phase === 'running'
-                  ? 'animate-pulse bg-amber-400 dark:bg-amber-500'
+                  ? 'running'
                   : message.compact.phase === 'failed'
-                    ? 'bg-red-400 dark:bg-red-500'
-                    : 'bg-gray-400 dark:bg-gray-500'
-              }`}
+                    ? 'error'
+                    : 'done'
+              }
             />
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-muted-foreground">
               {message.content || t('chat:misc.compacted', 'Compacted')}
             </span>
           </div>
           {message.compactSummary && (
             <details className="ml-3.5 mt-0.5">
-              <summary className="cursor-pointer text-xs text-gray-500 hover:text-foreground dark:text-gray-400">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
                 {t('chat:misc.compactionSummary', 'full summary')}
               </summary>
               <div className="mt-1">
-                <Markdown className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert">
+                <Markdown className="prose prose-sm prose-gray max-w-none dark:prose-invert">
                   {message.compactSummary}
                 </Markdown>
               </div>
@@ -211,8 +211,8 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
         /* Compact task notification on the left */
         <div className="w-full">
           <div className="flex items-center gap-2 py-0.5">
-            <span className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${message.taskNotificationStatus === 'completed' ? 'bg-green-400 dark:bg-green-500' : 'bg-amber-400 dark:bg-amber-500'}`} />
-            <span className="text-xs text-gray-500 dark:text-gray-400">{message.content}</span>
+            <StatusMark kind={message.taskNotificationStatus === 'completed' ? 'done' : 'warning'} />
+            <span className="text-xs text-muted-foreground">{message.content}</span>
           </div>
         </div>
       ) : (
@@ -221,11 +221,11 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
           {!isGrouped && (
             <div className="mb-2 flex items-center space-x-3">
               {message.type === 'error' ? (
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-sm text-white">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-err text-sm text-on-status">
                   !
                 </div>
               ) : message.type === 'tool' ? (
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 text-sm text-white dark:bg-gray-700">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-muted-foreground text-sm text-background">
                   🔧
                 </div>
               ) : (
@@ -233,7 +233,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                   <LLMProviderLogo provider={provider} className="h-full w-full" />
                 </div>
               )}
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className="text-sm font-medium text-foreground">
                 {message.type === 'error'
                   ? t('messageTypes.error')
                   : message.type === 'tool'
@@ -284,7 +284,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
               <>
                 <div className="flex flex-col">
                   <div className="flex flex-col">
-                    <Markdown className="prose prose-sm max-w-none font-serif dark:prose-invert">
+                    <Markdown className="prose prose-sm max-w-none dark:prose-invert">
                       {String(message.displayText || '')}
                     </Markdown>
                   </div>
@@ -345,7 +345,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                 <ReasoningContent>
                   <div {...bubbleHandlers}>
                     {copyMenu}
-                    <Markdown className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert">
+                    <Markdown className="prose prose-sm prose-gray max-w-none dark:prose-invert">
                       {message.content}
                     </Markdown>
                   </div>
@@ -406,7 +406,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
                     <StreamingMarkdown
                       content={content}
                       isStreaming={Boolean(message.isStreaming)}
-                      className="prose prose-sm prose-gray max-w-none font-serif dark:prose-invert"
+                      className="prose prose-sm prose-gray max-w-none dark:prose-invert"
                     />
                   ) : (
                     <div className="whitespace-pre-wrap">
@@ -424,7 +424,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
             )}
 
             {(shouldShowAssistantCopyControl || !isGrouped) && (
-              <div className="mt-1 flex w-full items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
+              <div className="mt-1 flex w-full items-center gap-2 text-[11px] text-muted-foreground">
                 {shouldShowAssistantCopyControl && (
                   <MessageSpeakControl content={assistantCopyContent} />
                 )}

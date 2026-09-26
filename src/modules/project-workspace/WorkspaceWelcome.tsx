@@ -5,10 +5,10 @@ import { useTranslation } from 'react-i18next';
 
 import { api } from '@/shared/api';
 import { setPendingComposerSubmit } from '@/shared/composerHandoff';
-import { CLOUDCLI_WORDMARK_FONT_FAMILY, OBROLAN_DEFAULT_CLAUDE_MODEL, OBROLAN_MODEL_STORAGE_KEY } from '@/shared/constants';
+import { OBROLAN_DEFAULT_CLAUDE_MODEL, OBROLAN_MODEL_STORAGE_KEY } from '@/shared/constants';
 import { useBuiltInWorkspaces } from '@/shared/hooks/useBuiltInWorkspaces';
 import { PROVIDERS, providerModelStorageKey, readSelectedProvider, writeSelectedProvider } from '@/shared/selectedProvider';
-import { ActionMenu } from '@/shared/ui';
+import { ActionMenu, OgivalArchOrnament, RoseMark } from '@/shared/ui';
 import { cn, isBuiltInWorkspaceProject } from '@/shared/utils';
 import type { LLMProvider, ProviderModelOption, ProviderModelsDefinition, SettingsMainTab } from '@/shared/types';
 import MobileMenuButton from '@/modules/project-workspace/MobileMenuButton';
@@ -130,11 +130,7 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
   ];
 
   return (
-    <div className="nebula relative flex h-full flex-col overflow-hidden">
-      <div aria-hidden className="nebula-layers">
-        <div className="nebula-layer" />
-        <div className="nebula-layer nebula-layer-2" />
-      </div>
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
 
       <div className="pwa-header-safe relative flex flex-shrink-0 items-center gap-1 px-3 py-2">
         {isMobile && <MobileMenuButton onMenuClick={onMenuClick} compact />}
@@ -145,7 +141,7 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
           size="sm"
           portal
           align="left"
-          triggerClassName="h-9 gap-1 rounded-full px-3 text-[15px] hover:bg-accent/60 [&_svg]:order-last [&_svg]:size-4 [&_svg]:text-muted-foreground"
+          triggerClassName="h-9 gap-1 rounded-lg px-3 text-[13px] font-medium hover:bg-accent [&_svg]:order-last [&_svg]:size-4 [&_svg]:text-muted-foreground"
           menuClassName="max-h-[70vh] overflow-y-auto"
           items={[
             ...PROVIDERS.map((option) => ({
@@ -171,22 +167,24 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
           type="button"
           onClick={() => onShowSettings()}
           aria-label={t('misc.settings', { defaultValue: 'Settings' })}
-          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <Settings className="h-5 w-5" />
         </button>
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-5 pb-6">
-        <img src="/logo-256.png" alt="" className="h-14 w-14 rounded-2xl bg-white shadow-md ring-1 ring-black/5" />
-        <h1
-          className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground"
-          style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
-        >
-          {t('welcome.title')}
-        </h1>
+        {/* Empty state (DESIGN.md §7): one faint ogival arch behind the mark and
+            title only, never behind the project list below. */}
+        <div className="relative flex flex-col items-center">
+          <OgivalArchOrnament className="-top-10 left-1/2 h-40 w-32 -translate-x-1/2" />
+          <RoseMark size={56} alt="" className="relative" />
+          <h1 className="display-title relative mt-4 text-center text-2xl text-foreground">
+            {t('welcome.title')}
+          </h1>
+        </div>
 
-        <div className="glass-surface mt-6 flex w-full max-w-sm rounded-full p-1" role="tablist">
+        <div className="glass-surface mt-6 flex w-full max-w-sm rounded-lg p-1" role="tablist">
           {modes.map((option) => (
             <button
               key={option.id}
@@ -195,8 +193,8 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
               aria-selected={mode === option.id}
               onClick={() => setMode(option.id)}
               className={cn(
-                'flex-1 rounded-full py-2 text-sm font-medium transition-colors',
-                mode === option.id ? 'bg-foreground/90 text-background shadow-sm' : 'text-muted-foreground',
+                'flex-1 rounded-md py-2 text-[13px] font-medium transition-colors',
+                mode === option.id ? 'bg-surface-3 text-foreground' : 'text-muted-foreground hover:bg-accent',
               )}
             >
               {option.label}
@@ -211,7 +209,7 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
                 event.preventDefault();
                 void startObrolan();
               }}
-              className="glass-surface-strong flex items-end gap-2 rounded-[1.75rem] py-2 pl-4 pr-2"
+              className="glass-surface-strong flex items-end gap-2 rounded-xl py-2 pl-4 pr-2"
             >
               <textarea
                 ref={textareaRef}
@@ -221,13 +219,13 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
                 rows={1}
                 placeholder={t('welcome.placeholder')}
                 enterKeyHint="send"
-                className="max-h-32 min-h-10 flex-1 resize-none bg-transparent py-2 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
+                className="max-h-32 min-h-10 flex-1 resize-none bg-transparent py-2 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground"
               />
               <button
                 type="submit"
                 disabled={!canSend}
                 aria-label={t('welcome.send')}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity disabled:opacity-30"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-30"
               >
                 <ArrowUp className="h-4 w-4" />
               </button>
@@ -237,13 +235,13 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
               <button
                 type="button"
                 onClick={requestNewProject}
-                className="glass-surface-strong flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-medium text-foreground"
+                className="glass-surface-strong flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-medium text-foreground hover:bg-accent"
               >
                 <FolderPlus className="h-4 w-4" />
                 {t('welcome.addWorkspace')}
               </button>
               {listedProjects.length > 0 && (
-                <div className="glass-surface mt-3 overflow-hidden rounded-2xl">
+                <div className="glass-surface mt-3 overflow-hidden rounded-xl">
                   {listedProjects.map((project, index) => (
                     <button
                       key={project.projectId}
@@ -255,7 +253,7 @@ export default function WorkspaceWelcome({ isMobile, onMenuClick, onShowSettings
                       )}
                     >
                       <span className="truncate">{project.displayName || project.fullPath}</span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                     </button>
                   ))}
                 </div>

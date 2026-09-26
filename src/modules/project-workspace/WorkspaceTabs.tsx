@@ -118,7 +118,7 @@ export default function WorkspaceTabs({
       aria-label={t('tabs.views', { defaultValue: 'Workspace views' })}
       aria-orientation={orientation}
       className={cn(
-        'border border-border/40 bg-muted/50 shadow-inner shadow-black/[0.025] dark:shadow-black/10',
+        'border border-border/40 bg-muted/50 shadow-inner',
         isVertical ? 'flex-col' : 'min-w-max',
       )}
     >

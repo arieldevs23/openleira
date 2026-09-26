@@ -23,36 +23,36 @@ type AgentVisualConfig = {
 const agentConfig: Record<AgentProvider, AgentVisualConfig> = {
   claude: {
     name: 'Claude',
-    bgClass: 'bg-blue-50 dark:bg-blue-900/20',
-    borderClass: 'border-blue-200 dark:border-blue-800',
-    textClass: 'text-blue-900 dark:text-blue-100',
-    subtextClass: 'text-blue-700 dark:text-blue-300',
-    buttonClass: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800',
+    bgClass: 'bg-primary/10',
+    borderClass: 'border-primary/30',
+    textClass: 'text-primary',
+    subtextClass: 'text-primary',
+    buttonClass: 'bg-primary text-primary-foreground hover:bg-primary/90',
   },
   cursor: {
     name: 'Cursor',
-    bgClass: 'bg-purple-50 dark:bg-purple-900/20',
-    borderClass: 'border-purple-200 dark:border-purple-800',
-    textClass: 'text-purple-900 dark:text-purple-100',
-    subtextClass: 'text-purple-700 dark:text-purple-300',
-    buttonClass: 'bg-purple-600 hover:bg-purple-700 active:bg-purple-800',
+    bgClass: 'bg-primary/10',
+    borderClass: 'border-primary/30',
+    textClass: 'text-primary',
+    subtextClass: 'text-primary',
+    buttonClass: 'bg-primary text-primary-foreground hover:bg-primary/90',
   },
   codex: {
     name: 'Codex',
     bgClass: 'bg-muted/50',
-    borderClass: 'border-gray-300 dark:border-gray-600',
-    textClass: 'text-gray-900 dark:text-gray-100',
-    subtextClass: 'text-gray-700 dark:text-gray-300',
-    buttonClass: 'bg-gray-800 hover:bg-gray-900 active:bg-gray-950 dark:bg-gray-700 dark:hover:bg-gray-600 dark:active:bg-gray-500',
+    borderClass: 'border-border',
+    textClass: 'text-foreground',
+    subtextClass: 'text-foreground',
+    buttonClass: 'bg-primary text-primary-foreground hover:bg-primary/90',
   },
   opencode: {
     name: 'OpenCode',
     description: 'OpenCode CLI assistant',
-    bgClass: 'bg-zinc-50 dark:bg-zinc-900/20',
-    borderClass: 'border-zinc-200 dark:border-zinc-700',
-    textClass: 'text-zinc-900 dark:text-zinc-100',
-    subtextClass: 'text-zinc-700 dark:text-zinc-300',
-    buttonClass: 'bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 dark:bg-zinc-700 dark:hover:bg-zinc-600',
+    bgClass: 'bg-muted',
+    borderClass: 'border-border',
+    textClass: 'text-foreground',
+    subtextClass: 'text-foreground',
+    buttonClass: 'bg-primary text-primary-foreground hover:bg-primary/90',
   },
 };
 
@@ -100,11 +100,11 @@ export default function AccountContent({ agent, authStatus, onLogin }: AccountCo
                   {t('agents.authStatus.checking')}
                 </Badge>
               ) : authStatus.authenticated ? (
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                <Badge variant="secondary" className="bg-ok/10 text-ok">
                   {t('agents.authStatus.connected')}
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                <Badge variant="secondary" className="bg-muted text-foreground">
                   {t('agents.authStatus.disconnected')}
                 </Badge>
               )}
@@ -126,7 +126,7 @@ export default function AccountContent({ agent, authStatus, onLogin }: AccountCo
                 </div>
                 <Button
                   onClick={onLogin}
-                  className={`${config.buttonClass} text-white`}
+                  className={config.buttonClass}
                   size="sm"
                 >
                   <LogIn className="mr-2 h-4 w-4" />
@@ -138,7 +138,7 @@ export default function AccountContent({ agent, authStatus, onLogin }: AccountCo
 
           {authStatus.error && (
             <div className="border-t border-border/50 pt-4">
-              <div className="text-sm text-red-600 dark:text-red-400">
+              <div className="text-sm text-err">
                 {t('agents.error', { error: authStatus.error })}
               </div>
             </div>

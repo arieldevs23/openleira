@@ -1,3 +1,9 @@
+/**
+ * Maps a design token (a full CSS colour in src/index.css) onto a Tailwind
+ * colour that still supports opacity modifiers such as `bg-card/90`.
+ */
+const token = (name) => `color-mix(in srgb, var(--${name}) calc(<alpha-value> * 100%), transparent)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ["class"],
@@ -14,57 +20,102 @@ export default {
       },
     },
     extend: {
+      // Font roles from docs/DESIGN.md §3. `font-serif` is Playfair Display and
+      // is reserved for the wordmark and page/modal titles; `font-display` is
+      // Cinzel for login/setup/splash/empty-state titles only. Everything
+      // functional stays on `font-sans` (Inter).
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
-        // OpenLeira uses one system stack everywhere; `font-serif` call sites follow it.
-        serif: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+        sans: ['var(--font-sans)'],
+        serif: ['var(--font-serif)'],
+        display: ['var(--font-display)'],
+        mono: ['var(--font-mono)'],
       },
+      // The existing semantic colour names resolve to the gothic design tokens
+      // defined once in src/index.css (dark on :root, light on
+      // [data-theme="light"]). No palette lives here: every entry is a token.
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        border: {
+          DEFAULT: token('border'),
+          strong: token('border-strong'),
+        },
+        input: token('border'),
+        ring: token('accent'),
+        background: token('bg'),
+        foreground: {
+          DEFAULT: token('text'),
+          dim: token('text-dim'),
+        },
+        surface: {
+          DEFAULT: token('surface'),
+          2: token('surface-2'),
+          3: token('surface-3'),
+        },
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: token('accent'),
+          foreground: token('on-accent'),
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: token('surface-2'),
+          foreground: token('text'),
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: token('err'),
+          foreground: token('on-status'),
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: token('surface-2'),
+          foreground: token('muted'),
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: token('accent-dim'),
+          foreground: token('text'),
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: token('surface'),
+          foreground: token('text'),
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: token('surface'),
+          foreground: token('text'),
         },
-        navy: "hsl(var(--navy))",
+        navy: token('text-dim'),
+        // Status tokens (§2). Pair every use with a shape or text.
+        ok: token('ok'),
+        run: token('run'),
+        warn: token('warn'),
+        err: token('err'),
+        info: token('info'),
+        'on-status': token('on-status'),
       },
       letterSpacing: {
-        heading: "-0.02em",
+        heading: "-0.01em",
       },
       borderRadius: {
-        // One radius everywhere: rounded-xl collapses onto the 8px base.
-        xl: "var(--radius)",
+        // §4: --radius-s 4px (badge, chip), --radius 6px (button, input, card),
+        // --radius-l 10px (modal, floating panel). No full pills except round
+        // status indicators, which keep rounded-full.
+        '3xl': "var(--radius-l)",
+        '2xl': "var(--radius-l)",
+        xl: "var(--radius-l)",
         pill: "9999px",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "var(--radius)",
+        DEFAULT: "var(--radius-s)",
+        sm: "var(--radius-s)",
+      },
+      transitionTimingFunction: {
+        DEFAULT: "var(--ease)",
+        out: "var(--ease)",
+        'in-out': "var(--ease)",
+      },
+      boxShadow: {
+        // §4: only floating layers carry a shadow; cards rely on borders.
+        sm: "none",
+        DEFAULT: "none",
+        md: "var(--shadow-float)",
+        lg: "var(--shadow-float)",
+        xl: "var(--shadow-float)",
+        '2xl': "var(--shadow-float)",
       },
       spacing: {
         'safe-area-inset-bottom': 'env(safe-area-inset-bottom)',
@@ -90,9 +141,9 @@ export default {
       },
       animation: {
         shimmer: 'shimmer 2s linear infinite',
-        'dialog-overlay-show': 'dialog-overlay-show 150ms ease-out',
-        'dialog-content-show': 'dialog-content-show 180ms ease-out',
-        'bottom-sheet-content-show': 'bottom-sheet-content-show 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+        'dialog-overlay-show': 'dialog-overlay-show 200ms var(--ease)',
+        'dialog-content-show': 'dialog-content-show 200ms var(--ease)',
+        'bottom-sheet-content-show': 'bottom-sheet-content-show 220ms var(--ease)',
       },
     },
   },

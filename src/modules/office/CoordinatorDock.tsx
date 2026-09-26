@@ -132,7 +132,7 @@ const CoordinatorDock = forwardRef<HTMLTextAreaElement, CoordinatorDockProps>(fu
                     className={cn(
                       'max-w-[85%] rounded-[12px] px-3 py-2 text-[13px] shadow-sm',
                       fromUser ? 'ml-auto bg-primary text-primary-foreground' : 'mr-auto border border-white/10 bg-card text-foreground',
-                      message.kind === 'question' && 'border-amber-400/60',
+                      message.kind === 'question' && 'border-warn/60',
                     )}
                   >
                     <span className={cn('mb-0.5 block text-[10.5px]', fromUser ? 'text-primary-foreground/75' : 'text-muted-foreground')}>

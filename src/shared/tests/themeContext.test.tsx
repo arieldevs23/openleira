@@ -28,6 +28,7 @@ beforeEach(() => {
   // outlives localStorage.clear() and would leak one test's writes into the next.
   resetUserPreferences();
   document.documentElement.classList.remove('dark');
+  document.documentElement.removeAttribute('data-theme');
 });
 
 test('mounting stores no theme for a user who has never chosen one', () => {
@@ -57,17 +58,26 @@ test('a stored theme is applied on the first render', () => {
   assert.ok(document.documentElement.classList.contains('dark'));
 });
 
+test('dark is the default and is applied to the document', () => {
+  const { result } = renderHook(() => useTheme(), { wrapper });
+
+  assert.equal(result.current.isDarkMode, true);
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'dark');
+  assert.ok(document.documentElement.classList.contains('dark'));
+});
+
 test('toggling stores the theme the user picked', () => {
   const { result } = renderHook(() => useTheme(), { wrapper });
-  assert.equal(result.current.isDarkMode, false);
+  assert.equal(result.current.isDarkMode, true);
 
   act(() => {
     result.current.toggleDarkMode();
   });
 
-  assert.equal(result.current.isDarkMode, true);
-  assert.equal(readUserPreference('theme', null), 'dark');
-  assert.ok(document.documentElement.classList.contains('dark'));
+  assert.equal(result.current.isDarkMode, false);
+  assert.equal(readUserPreference('theme', null), 'light');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'light');
+  assert.ok(!document.documentElement.classList.contains('dark'));
 });
 
 test('a theme arriving from the store is applied without being written back', () => {
@@ -75,9 +85,9 @@ test('a theme arriving from the store is applied without being written back', ()
 
   act(() => {
     // Stands in for a hydrate delivering the theme chosen on another device.
-    writeUserPreference('theme', 'dark');
+    writeUserPreference('theme', 'light');
   });
 
-  assert.equal(result.current.isDarkMode, true);
-  assert.equal(readUserPreference('theme', null), 'dark');
+  assert.equal(result.current.isDarkMode, false);
+  assert.equal(readUserPreference('theme', null), 'light');
 });

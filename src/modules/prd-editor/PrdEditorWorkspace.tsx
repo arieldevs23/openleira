@@ -59,7 +59,7 @@ export default function PrdEditorWorkspace({
     >
       <div
         className={cn(
-          'bg-white dark:bg-gray-900 shadow-2xl flex flex-col',
+          'bg-card shadow-2xl flex flex-col',
           'w-full h-full md:rounded-lg md:shadow-2xl',
           isFullscreen
             ? 'md:w-full md:h-full md:rounded-none'
@@ -67,7 +67,7 @@ export default function PrdEditorWorkspace({
         )}
       >
         {loadError && (
-          <div className="border-b border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+          <div className="border-b border-warn/30 bg-warn/10 px-4 py-3 text-sm text-warn">
             {loadError}
           </div>
         )}

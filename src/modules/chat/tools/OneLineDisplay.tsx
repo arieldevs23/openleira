@@ -77,12 +77,12 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
   const renderCopyButton = () => (
     <button
       onClick={handleAction}
-      className="ml-1 flex-shrink-0 text-muted-foreground/40 opacity-0 transition-all hover:text-muted-foreground group-hover:opacity-100"
+      className="ml-1 flex-shrink-0 text-muted-foreground opacity-0 transition-all hover:text-muted-foreground group-hover:opacity-100"
       title={t('chat:misc.copyToClipboard')}
       aria-label={t('chat:misc.copyToClipboard')}
     >
       {copied ? (
-        <svg className="h-3 w-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-3 w-3 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       ) : (

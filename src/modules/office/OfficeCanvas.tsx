@@ -96,12 +96,12 @@ const FOCUS_OUTLINE = 'focus-visible:outline focus-visible:outline-2 focus-visib
 
 /** Border colour per status, set inline because glass surfaces own their border colour. */
 const STATUS_BORDER: Record<OfficeNodeStatus, string> = {
-  idle: 'hsl(var(--border))',
-  running: 'hsl(var(--primary))',
-  review: 'hsl(var(--navy))',
-  done: 'rgb(16 185 129 / 0.55)',
-  failed: 'rgb(239 68 68 / 0.6)',
-  blocked: 'rgb(245 158 11 / 0.6)',
+  idle: 'var(--border)',
+  running: 'var(--accent)',
+  review: 'var(--text-dim)',
+  done: 'color-mix(in srgb, var(--ok) 55%, transparent)',
+  failed: 'color-mix(in srgb, var(--err) 60%, transparent)',
+  blocked: 'color-mix(in srgb, var(--warn) 60%, transparent)',
 };
 
 type DivisionState = { status: OfficeNodeStatus; queued: number };
@@ -1498,7 +1498,7 @@ export default function OfficeCanvas({
           <span
             className={cn(
               'max-w-[76px] truncate rounded-md border px-1 py-0.5 font-mono text-[9.5px] leading-none',
-              hasModel ? 'border-border text-muted-foreground' : 'border-amber-400/60 text-amber-700 dark:text-amber-300',
+              hasModel ? 'border-border text-muted-foreground' : 'border-warn/60 text-warn',
             )}
             title={hasModel ? `${agent.provider} · ${agent.model}` : t('tree.noModel')}
           >
@@ -1593,7 +1593,7 @@ export default function OfficeCanvas({
           <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={1} height={1} aria-hidden>
             <defs>
               <marker id={`office-arrow-${officeId}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--muted-foreground))" />
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)" />
               </marker>
             </defs>
 
@@ -1604,7 +1604,7 @@ export default function OfficeCanvas({
                 y1={casePoint.y + CASE_HEIGHT}
                 x2={coordinatorPoint.x + NODE_WIDTH / 2}
                 y2={coordinatorPoint.y}
-                stroke={caseItem?.coordinatorBusy ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
+                stroke={caseItem?.coordinatorBusy ? 'var(--accent)' : 'var(--border)'}
                 strokeWidth={1.5}
                 className={cn(caseItem?.coordinatorBusy && 'office-edge-flow')}
               />
@@ -1621,7 +1621,7 @@ export default function OfficeCanvas({
                   <path
                     d={path}
                     fill="none"
-                    stroke={active || selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
+                    stroke={active || selected ? 'var(--accent)' : 'var(--border)'}
                     strokeWidth={selected ? 3 : active ? 1.75 : 1.5}
                     strokeDasharray={flowEdges.length > 0 ? '5 4' : undefined}
                     className={cn(active && 'office-edge-flow')}
@@ -1657,7 +1657,7 @@ export default function OfficeCanvas({
                   <path
                     d={path}
                     fill="none"
-                    stroke={active || selected ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground) / 0.7)'}
+                    stroke={active || selected ? 'var(--accent)' : 'color-mix(in srgb, var(--muted) 70%, transparent)'}
                     strokeWidth={selected ? 3 : 1.75}
                     markerEnd={`url(#office-arrow-${officeId})`}
                     className={cn(active && 'office-edge-flow')}
@@ -1687,7 +1687,7 @@ export default function OfficeCanvas({
                   key={`audit-${division.id}`}
                   d={connectorPath(positionOf(division), nodeSize, positionOf(audit), nodeSize)}
                   fill="none"
-                  stroke="hsl(var(--navy))"
+                  stroke="var(--text-dim)"
                   strokeWidth={1.25}
                   strokeDasharray="4 4"
                   className="office-edge-flow"
@@ -1767,7 +1767,7 @@ export default function OfficeCanvas({
                   y1={start.y}
                   x2={connectingTo.point.x}
                   y2={connectingTo.point.y}
-                  stroke="hsl(var(--primary))"
+                  stroke="var(--accent)"
                   strokeWidth={2}
                   strokeDasharray="6 4"
                   markerEnd={`url(#office-arrow-${officeId})`}
@@ -1894,20 +1894,20 @@ export default function OfficeCanvas({
                 onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(skillKey(node.id)) ? { kind: 'marked' } : { kind: 'skill', nodeId: node.id })}
                 title={installed?.description || undefined}
                 className={cn(
-                  'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col justify-center gap-0.5 rounded-[12px] border border-violet-400/50 px-2.5 text-left hover:bg-card/80',
+                  'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col justify-center gap-0.5 rounded-[12px] border border-info/50 px-2.5 text-left hover:bg-card/80',
                   FOCUS_OUTLINE,
                   selected && SELECTED_OUTLINE,
                   draggingId === `skill:${node.id}` && 'cursor-grabbing shadow-lg',
-                  connectSource?.kind === 'division' && 'outline-dashed outline-1 outline-violet-500/60',
+                  connectSource?.kind === 'division' && 'outline-dashed outline-1 outline-info/60',
                 )}
                 style={{ left: point.x, top: point.y, width: SKILL_WIDTH, height: SKILL_HEIGHT, ...(selected ? selectedOutlineStyle : {}) }}
               >
                 {marked.has(skillKey(node.id)) && <MarkedFrame />}
                 <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-semibold text-foreground">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-info" />
                   <span className="truncate">{node.skillName}</span>
                 </span>
-                <span className={cn('truncate text-[10.5px]', installed || installedSkills.length === 0 ? 'text-muted-foreground' : 'text-amber-700 dark:text-amber-300')}>
+                <span className={cn('truncate text-[10.5px]', installed || installedSkills.length === 0 ? 'text-muted-foreground' : 'text-warn')}>
                   {installed || installedSkills.length === 0 ? t('tree.skillAgents', { count: node.divisionIds.length }) : t('tree.skillMissing')}
                 </span>
                 <span
@@ -1916,11 +1916,11 @@ export default function OfficeCanvas({
                   role="presentation"
                   title={t('tree.dragSkillToAgent')}
                   className={cn(
-                    'absolute -top-2 left-1/2 flex h-4 w-4 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 border-violet-500 bg-background opacity-0 transition-opacity group-hover:opacity-100',
+                    'absolute -top-2 left-1/2 flex h-4 w-4 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 border-info bg-background opacity-0 transition-opacity group-hover:opacity-100',
                     selected && 'opacity-100',
                   )}
                 >
-                  <span className="h-1 w-1 rounded-full bg-violet-500" />
+                  <span className="h-1 w-1 rounded-full bg-info" />
                 </span>
               </div>
             );
@@ -1951,7 +1951,7 @@ export default function OfficeCanvas({
           data-canvas-control
           data-testid="office-question-chip"
           onClick={() => setIsQuestionFolded(false)}
-          className="absolute z-20 flex items-center gap-1.5 rounded-full border-2 border-amber-400/70 bg-background px-2.5 py-1 text-[11px] font-medium text-amber-700 shadow-sm dark:text-amber-300"
+          className="absolute z-20 flex items-center gap-1.5 rounded-full border-2 border-warn/70 bg-background px-2.5 py-1 text-[11px] font-medium text-warn shadow-sm"
           style={{
             left: Math.max(12, view.x + (coordinatorPoint.x + NODE_WIDTH + 12) * view.zoom),
             top: Math.max(12, view.y + coordinatorPoint.y * view.zoom),
@@ -1967,7 +1967,7 @@ export default function OfficeCanvas({
           data-testid="office-question-bubble"
           role="group"
           aria-label={t('question.label')}
-          className="glass-surface-strong absolute z-20 w-[min(320px,calc(100%-24px))] rounded-[14px] border-2 border-amber-400/70 p-3 shadow-lg"
+          className="glass-surface-strong absolute z-20 w-[min(320px,calc(100%-24px))] rounded-[14px] border-2 border-warn/70 p-3 shadow-lg"
           style={{
             left: Math.min(
               Math.max(12, view.x + (coordinatorPoint.x + NODE_WIDTH + 18) * view.zoom),
@@ -1977,7 +1977,7 @@ export default function OfficeCanvas({
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+          <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-warn">
             <MessageSquare className="h-3.5 w-3.5" />
             <span className="flex-1">{t('question.title', { name: coordinator.agent.name })}</span>
             <button
@@ -2035,7 +2035,7 @@ export default function OfficeCanvas({
         </div>
       )}
       {canvasError && (
-        <div className="absolute left-3 top-3 z-30 flex max-w-sm items-start gap-2 rounded-[10px] border border-red-500/30 bg-background/95 px-3 py-2 text-xs text-red-700 shadow-sm dark:text-red-300" role="alert">
+        <div className="absolute left-3 top-3 z-30 flex max-w-sm items-start gap-2 rounded-[10px] border border-err/30 bg-background/95 px-3 py-2 text-xs text-err shadow-sm" role="alert">
           <span className="min-w-0 flex-1">{canvasError}</span>
           <button type="button" className="shrink-0 text-muted-foreground hover:text-foreground" onClick={() => setCanvasError(null)} aria-label={t('common.close')}>×</button>
         </div>

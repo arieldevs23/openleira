@@ -35,17 +35,17 @@ export default function CommitGraphStrip({ row }: CommitGraphStripProps) {
           <path
             key={`pass-${lane}`}
             d={`M ${laneX(lane)} 0 V ${NODE_ZONE_HEIGHT}`}
-            stroke={laneColor(lane)}
+            style={{ stroke: laneColor(lane) }}
             strokeWidth={STROKE_WIDTH}
           />
         ))}
 
         {/* The node's own lane arriving from above / continuing below */}
         {row.hasTopContinuation && (
-          <path d={`M ${nodeX} 0 V ${NODE_Y}`} stroke={nodeColor} strokeWidth={STROKE_WIDTH} />
+          <path d={`M ${nodeX} 0 V ${NODE_Y}`} style={{ stroke: nodeColor }} strokeWidth={STROKE_WIDTH} />
         )}
         {row.hasParentContinuation && (
-          <path d={`M ${nodeX} ${NODE_Y} V ${NODE_ZONE_HEIGHT}`} stroke={nodeColor} strokeWidth={STROKE_WIDTH} />
+          <path d={`M ${nodeX} ${NODE_Y} V ${NODE_ZONE_HEIGHT}`} style={{ stroke: nodeColor }} strokeWidth={STROKE_WIDTH} />
         )}
 
         {/* Extra children merging into the node from the row above */}
@@ -53,7 +53,7 @@ export default function CommitGraphStrip({ row }: CommitGraphStripProps) {
           <path
             key={`in-${lane}`}
             d={`M ${laneX(lane)} 0 Q ${laneX(lane)} ${NODE_Y} ${nodeX} ${NODE_Y}`}
-            stroke={laneColor(lane)}
+            style={{ stroke: laneColor(lane) }}
             strokeWidth={STROKE_WIDTH}
           />
         ))}
@@ -63,7 +63,7 @@ export default function CommitGraphStrip({ row }: CommitGraphStripProps) {
           <path
             key={`out-${lane}`}
             d={`M ${nodeX} ${NODE_Y} Q ${laneX(lane)} ${NODE_Y} ${laneX(lane)} ${NODE_ZONE_HEIGHT}`}
-            stroke={laneColor(lane)}
+            style={{ stroke: laneColor(lane) }}
             strokeWidth={STROKE_WIDTH}
           />
         ))}
@@ -73,7 +73,7 @@ export default function CommitGraphStrip({ row }: CommitGraphStripProps) {
           cx={nodeX}
           cy={NODE_Y}
           r={row.inbound.length > 0 || row.outbound.length > 0 ? NODE_RADIUS + 0.5 : NODE_RADIUS}
-          fill={nodeColor}
+          style={{ fill: nodeColor }}
         />
       </svg>
 

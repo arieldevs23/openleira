@@ -48,7 +48,7 @@ export default function AuthInputField({
       </label>
       <div className="group relative">
         {Icon && (
-          <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
+          <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
         )}
         <input
           id={id}
@@ -57,7 +57,7 @@ export default function AuthInputField({
           autoComplete={autoComplete}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={`w-full rounded-xl border border-border bg-background/60 py-2.5 text-foreground shadow-sm transition-colors placeholder:text-muted-foreground/60 hover:border-foreground/20 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60 ${
+          className={`w-full rounded-lg border border-border bg-muted py-2.5 text-foreground transition-colors placeholder:text-muted-foreground hover:border-border-strong focus:border-border-strong focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60 ${
             Icon ? 'pl-10' : 'pl-3.5'
           } ${isPasswordField ? 'pr-11' : 'pr-3.5'}`}
           placeholder={placeholder}

@@ -32,3 +32,7 @@ export { PillBar, Pill } from '@/shared/ui/PillBar';
 export { ScrollArea } from '@/shared/ui/ScrollArea';
 export { Shimmer } from '@/shared/ui/Shimmer';
 export { Tooltip } from '@/shared/ui/Tooltip';
+export { StatusMark } from '@/shared/ui/StatusMark';
+export type { StatusMarkKind } from '@/shared/ui/StatusMark';
+export { BrandWordmark, RoseMark } from '@/shared/ui/Brand';
+export { OgivalArchOrnament, RoseWindowOrnament } from '@/shared/ui/GothicOrnament';

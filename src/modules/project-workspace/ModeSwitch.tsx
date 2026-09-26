@@ -24,7 +24,7 @@ export default function ModeSwitch({ isWorkspaceMode, onChange }: ModeSwitchProp
     <PillBar
       role="radiogroup"
       aria-label={t('mode.label')}
-      className="min-w-max border border-border/40 bg-muted/50 shadow-inner shadow-black/[0.025] dark:shadow-black/10"
+      className="min-w-max border border-border/40 bg-muted/50 shadow-inner"
     >
       {modes.map((mode) => {
         const isActive = mode.workspace === isWorkspaceMode;

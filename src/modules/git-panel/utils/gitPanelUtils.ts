@@ -9,9 +9,9 @@ const FILE_STATUS_LABELS: Record<FileStatusCode, string> = {
 };
 
 const FILE_STATUS_BADGE_CLASSES: Record<FileStatusCode, string> = {
-  M: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800/50',
-  A: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800/50',
-  D: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800/50',
+  M: 'bg-warn/10 text-warn border-warn/30',
+  A: 'bg-ok/10 text-ok border-ok/30',
+  D: 'bg-err/10 text-err border-err/30',
   U: 'bg-muted text-muted-foreground border-border',
 };
 

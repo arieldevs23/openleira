@@ -7,6 +7,7 @@ import { SubagentTimeline } from '@/modules/chat/tools/SubagentTimeline';
 import { useIsExportingTranscript } from '@/modules/chat/context/TranscriptRenderContext';
 import { MarkdownContent } from '@/modules/chat/tools/ContentRenderers/MarkdownContent';
 import { resolveBackgroundTaskStatus } from '@/modules/chat/utils/backgroundTasks';
+import { StatusMark } from '@/shared/ui';
 
 type SubagentPanelProps = {
   /** Raw tool input of the call that spawned the agent, used for the prompt. */
@@ -58,10 +59,10 @@ function readResultText(content: unknown): string {
 }
 
 const STATUS_STYLES: Record<SubagentInfo['status'], string> = {
-  running: 'text-purple-600 dark:text-purple-300',
+  running: 'text-primary',
   completed: 'text-muted-foreground',
-  failed: 'text-red-600 dark:text-red-400',
-  stopped: 'text-muted-foreground/70',
+  failed: 'text-err',
+  stopped: 'text-muted-foreground',
 };
 
 /**
@@ -114,7 +115,7 @@ export const SubagentPanel = memo(({
   const prompt = String(parsedInput.prompt ?? '');
 
   return (
-    <div className="my-1 border-l-2 border-l-purple-500 py-0.5 pl-3 dark:border-l-purple-400">
+    <div className="my-1 border-l-2 border-l-primary py-0.5 pl-3">
       <button
         type="button"
         aria-expanded={isOpen}
@@ -122,21 +123,21 @@ export const SubagentPanel = memo(({
         className="flex w-full select-none items-center gap-1.5 py-0.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight className={cn('h-3 w-3 flex-shrink-0 transition-transform duration-150', isOpen && 'rotate-90')} />
-        <Bot className="h-3.5 w-3.5 flex-shrink-0 text-purple-500 dark:text-purple-400" />
+        <Bot className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
         <span className="flex-shrink-0 font-medium text-foreground">{label || 'Agent'}</span>
         {description && (
           <>
-            <span className="flex-shrink-0 text-[10px] text-muted-foreground/40">/</span>
+            <span className="flex-shrink-0 text-[10px] text-muted-foreground">/</span>
             <span className="min-w-0 flex-1 truncate">{description}</span>
           </>
         )}
         {nickname && (
-          <span className="flex-shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground/70">{nickname}</span>
+          <span className="flex-shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground">{nickname}</span>
         )}
         <span className={cn('ml-auto flex flex-shrink-0 items-center gap-1 text-[11px]', STATUS_STYLES[status])}>
           {status === 'running' ? (
             <>
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500 dark:bg-purple-400" />
+              <StatusMark kind="running" />
               running
             </>
           ) : status === 'failed' ? (
@@ -163,12 +164,12 @@ export const SubagentPanel = memo(({
       {showTimeline && (
         <div className="mt-1.5 space-y-2 pl-[18px]">
           {subagent?.model && (
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/50">{subagent.model}</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{subagent.model}</div>
           )}
 
           {prompt && (
             <div className="rounded border border-border/40 bg-muted/40 p-2 text-xs text-muted-foreground">
-              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">Task</div>
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Task</div>
               <div className="line-clamp-6 whitespace-pre-wrap break-words">{prompt}</div>
             </div>
           )}
@@ -183,7 +184,7 @@ export const SubagentPanel = memo(({
 
           {resultText && (
             <div className="rounded border border-border/40 bg-muted/30 p-2">
-              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">Result</div>
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Result</div>
               <MarkdownContent content={resultText} className="prose prose-sm max-w-none dark:prose-invert" />
             </div>
           )}

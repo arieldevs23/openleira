@@ -7,19 +7,19 @@ import type { ToolStatus } from '@/shared/types';
 const STATUS_CONFIG: Record<ToolStatus, { label: string; className: string }> = {
   running: {
     label: 'running',
-    className: 'text-blue-600/80 dark:text-blue-300/80',
+    className: 'text-primary/80',
   },
   completed: {
     label: 'done',
-    className: 'text-muted-foreground/70',
+    className: 'text-muted-foreground',
   },
   error: {
     label: 'error',
-    className: 'text-red-600/80 dark:text-red-400/80',
+    className: 'text-err/80',
   },
   denied: {
     label: 'denied',
-    className: 'text-orange-600/80 dark:text-orange-300/80',
+    className: 'text-warn/80',
   },
 };
 

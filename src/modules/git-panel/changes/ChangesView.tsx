@@ -185,7 +185,7 @@ export default function ChangesView({
         ) : gitStatus?.hasCommits === false && hasChangedFiles(gitStatus) ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50">
-              <GitBranch className="h-7 w-7 text-muted-foreground/50" />
+              <GitBranch className="h-7 w-7 text-muted-foreground" />
             </div>
             <h3 className="mb-2 text-lg font-medium text-foreground">{t('git:changes.noCommitsTitle')}</h3>
             <p className="mb-6 max-w-md text-sm text-muted-foreground">

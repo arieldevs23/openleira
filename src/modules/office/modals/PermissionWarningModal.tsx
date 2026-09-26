@@ -35,7 +35,7 @@ export default function PermissionWarningModal({ open, onOpenChange, onConfirm }
       <DialogContent className="max-w-md p-5">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-amber-600" />
+            <ShieldAlert className="h-5 w-5 text-warn" />
             <DialogTitle className="not-sr-only text-base font-semibold text-foreground">{t('permission.title')}</DialogTitle>
           </div>
           <p className="text-sm text-foreground">{t('permission.body')}</p>

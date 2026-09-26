@@ -130,7 +130,7 @@ export default function ModelWizardModal({
                     {status.loading ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
                     ) : status.authenticated ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-ok" />
                     ) : (
                       <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
                     )}
@@ -219,10 +219,10 @@ export default function ModelWizardModal({
             </ul>
 
             {missing.length > 0 && (
-              <p className="text-[11px] text-amber-700 dark:text-amber-300">{t('wizard.stillMissing', { count: missing.length })}</p>
+              <p className="text-[11px] text-warn">{t('wizard.stillMissing', { count: missing.length })}</p>
             )}
             {groups.length === 0 && <p className="text-[11px] text-muted-foreground">{t('wizard.noModels')}</p>}
-            {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+            {error && <p className="text-xs text-err">{error}</p>}
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => onOpenChange(false)}>

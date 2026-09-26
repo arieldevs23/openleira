@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Dialog, DialogContent, DialogTitle } from '@/shared/ui';
 
-/** Default colour of a new division: the palette primary. */
+/** Default colour of a new team. Team colours are user data picked with a colour input, so they stay hex. */
 const DEFAULT_COLOR = '#2551BD';
 
 type DivisionModalProps = {
@@ -112,7 +112,7 @@ export default function DivisionModal({ open, onOpenChange, onCreate }: Division
             <span className="font-mono text-[11px] text-muted-foreground">{color}</span>
           </label>
           <p className="text-[11px] text-muted-foreground">{t('division.addHint')}</p>
-          {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+          {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}

@@ -100,7 +100,7 @@ function SidebarProjectItem({
         <div className="bg-card">
           <div
             className={cn(
-              'mx-3 my-1 select-none rounded-lg p-3 transition-colors duration-150',
+              'sidebar-item mx-3 my-1 select-none rounded-lg p-3 transition-colors duration-150',
               isSelected ? 'sidebar-item-active' : 'active:bg-muted',
             )}
             onClick={openProject}
@@ -137,12 +137,12 @@ function SidebarProjectItem({
                   ) : (
                     <>
                       <div className="flex min-w-0 flex-1 items-center justify-between">
-                        <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-normal text-foreground">
+                        <h3 className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-foreground">
                           <span className="truncate">{project.displayName}</span>
                           {isStarred && (
                             <Star
                               aria-label={t('contextMenu.starred', 'Starred')}
-                              className="h-2.5 w-2.5 flex-shrink-0 fill-current text-yellow-600 dark:text-yellow-400"
+                              className="h-2.5 w-2.5 flex-shrink-0 fill-current text-warn"
                             />
                           )}
                         </h3>
@@ -199,8 +199,8 @@ function SidebarProjectItem({
         <Button
           variant="ghost"
           className={cn(
-            'sticky top-0 z-10 flex h-auto w-full justify-between rounded-lg p-2 font-normal',
-            isSelected ? 'sidebar-item-active' : 'bg-card hover:bg-muted',
+            'sidebar-item sticky top-0 z-10 flex h-auto w-full justify-between rounded-lg p-2 font-normal',
+            isSelected ? 'sidebar-item-active' : 'bg-card hover:bg-accent',
           )}
           onClick={openProject}
         >
@@ -230,17 +230,17 @@ function SidebarProjectItem({
                 </div>
               ) : (
                 <div>
-                  <div className="flex min-w-0 items-center gap-1.5 text-sm font-normal text-foreground" title={project.displayName}>
+                  <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-foreground" title={project.displayName}>
                     <span className="truncate">{project.displayName}</span>
                     {isStarred && (
                       <Star
                         aria-label={t('contextMenu.starred', 'Starred')}
-                        className="h-2.5 w-2.5 flex-shrink-0 fill-current text-yellow-600 dark:text-yellow-400"
+                        className="h-2.5 w-2.5 flex-shrink-0 fill-current text-warn"
                       />
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    <span className="opacity-60" title={project.fullPath}>
+                    <span title={project.fullPath}>
                       {project.fullPath.length > 32 ? `...${project.fullPath.slice(-29)}` : project.fullPath}
                     </span>
                   </div>
@@ -253,7 +253,7 @@ function SidebarProjectItem({
             {isEditing ? (
               <>
                 <div
-                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-green-600 transition-colors hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-900/20"
+                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-ok transition-colors hover:bg-ok/10 hover:text-ok"
                   onClick={(event) => {
                     event.stopPropagation();
                     saveProjectName();
@@ -262,7 +262,7 @@ function SidebarProjectItem({
                   <Check className="h-3 w-3" />
                 </div>
                 <div
-                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-800"
+                  className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   onClick={(event) => {
                     event.stopPropagation();
                     onCancelEditingProject();

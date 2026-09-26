@@ -66,7 +66,7 @@ export default function SkillPickerModal({ skills, placedNames, onCancel, onPick
                 onClick={() => void pick(skill.name)}
                 className="flex w-full items-start gap-2 rounded-[10px] px-2.5 py-2 text-left hover:bg-muted/70 disabled:opacity-60"
               >
-                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-500" />
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-foreground">
                     {skill.name}
@@ -79,7 +79,7 @@ export default function SkillPickerModal({ skills, placedNames, onCancel, onPick
           ))}
           {matches.length === 0 && <li className="px-2 py-1 text-xs text-muted-foreground">{skills.length === 0 ? t('agent.noSkills') : t('skills.noMatch')}</li>}
         </ul>
-        {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+        {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-between gap-2">
           <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={onCancel}>{t('common.cancel')}</Button>
           {query.trim() && !skills.some((skill) => skill.name === query.trim()) && (

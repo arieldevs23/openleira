@@ -230,7 +230,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
 
         {/* Desktop header */}
         <div className="hidden flex-shrink-0 items-center justify-between border-b border-border px-4 py-3 md:flex md:px-5">
-          <h2 className="text-base font-semibold text-foreground">{t('title')}</h2>
+          <h2 className="page-title text-foreground">{t('title')}</h2>
           <div className="flex items-center gap-2">
             {saveStatus === 'success' && (
               <span className="animate-in fade-in text-xs text-muted-foreground">{t('saveStatus.success')}</span>

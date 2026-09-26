@@ -141,7 +141,7 @@ describe('a workflow card', () => {
 
     expect(screen.getByText('failed')).toBeTruthy();
     expect(screen.queryByText('running')).toBeNull();
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('.status-mark-running')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { expanded: false }));
     expect(screen.getByText(/Invalid workflow script/)).toBeTruthy();
@@ -255,7 +255,7 @@ describe('the agents of a workflow card', () => {
     expect(screen.getByText('1 of 3 agents finished')).toBeTruthy();
     // Where the run is, not "· audit:sidebar" as if it were a tool name.
     expect(screen.getByText('32 tool uses · 3m 30s · current: audit:sidebar')).toBeTruthy();
-    expect(document.querySelectorAll('.animate-pulse')).toHaveLength(2);
+    expect(document.querySelectorAll('.status-mark-running')).toHaveLength(2);
   });
 
   it('names the current agent from the task description when the stream has not listed agents yet', () => {
@@ -287,7 +287,8 @@ describe('the agents of a workflow card', () => {
       'audit:sidebar· Auditfailed',
       'synthesize· Synthesizeno result',
     ]);
-    expect(rows[1]?.querySelector('.text-red-600')?.textContent).toBe('audit:sidebar');
+    expect(rows[1]?.querySelector('.text-err:not(.status-mark)')?.textContent).toBe('audit:sidebar');
+    expect(rows[1]?.querySelector('.status-mark-error')).toBeTruthy();
     expect(screen.getByText('2 of 3 agents finished · 1 failed')).toBeTruthy();
     expect(screen.getByText('40 tool uses · 5m 0s')).toBeTruthy();
   });
@@ -311,7 +312,7 @@ describe('the agents of a workflow card', () => {
       'audit:chat· AuditdoneThree large hooks carry most of the module.',
     ]);
     expect(screen.getByText('1 of 1 agent finished')).toBeTruthy();
-    expect(document.querySelectorAll('.animate-pulse')).toHaveLength(0);
+    expect(document.querySelectorAll('.status-mark-running')).toHaveLength(0);
   });
 
   it('shows an agent\'s phase from the stream when the journal has none for it', () => {

@@ -85,22 +85,22 @@ export default function CodeEditorHeader({
       <div className="flex min-w-0 flex-1 shrink items-center gap-2">
         <div className="min-w-0 shrink">
           <div className="flex min-w-0 items-center gap-2">
-            <h3 className="truncate text-sm font-medium text-gray-900 dark:text-white">{file.name}</h3>
+            <h3 className="truncate text-sm font-medium text-foreground">{file.name}</h3>
             {file.diffInfo && (
-              <span className="shrink-0 whitespace-nowrap rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+              <span className="shrink-0 whitespace-nowrap rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
                 {labels.showingChanges}
               </span>
             )}
           </div>
           <div className="flex min-w-0 items-center gap-1">
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400" title={file.path}>{file.path}</p>
+            <p className="truncate text-xs text-muted-foreground" title={file.path}>{file.path}</p>
             <button
               type="button"
               onClick={handleCopyPath}
               className={`flex shrink-0 items-center justify-center rounded p-0.5 transition-colors ${
                 pathCopied
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200'
+                  ? 'text-ok'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
               title={pathCopied ? labels.pathCopied : labels.copyPath}
               aria-label={pathCopied ? labels.pathCopied : labels.copyPath}
@@ -119,8 +119,8 @@ export default function CodeEditorHeader({
             onClick={onToggleMarkdownPreview}
             className={`flex items-center justify-center rounded-md p-1.5 transition-colors ${
               markdownPreview
-                ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             }`}
             title={markdownPreview ? labels.editMarkdown : labels.previewMarkdown}
           >
@@ -132,7 +132,7 @@ export default function CodeEditorHeader({
           <button
             type="button"
             onClick={onOpenHtmlPreview}
-            className="flex items-center justify-center rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             title={labels.previewHtml}
           >
             <Eye className="h-4 w-4" />
@@ -142,7 +142,7 @@ export default function CodeEditorHeader({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="flex items-center justify-center rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
           title={labels.settings}
         >
           <SettingsIcon className="h-4 w-4" />
@@ -151,7 +151,7 @@ export default function CodeEditorHeader({
         <button
           type="button"
           onClick={onDownload}
-          className="flex items-center justify-center rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
           title={labels.download}
         >
           <Download className="h-4 w-4" />
@@ -163,8 +163,8 @@ export default function CodeEditorHeader({
           disabled={saving}
           className={`flex items-center justify-center rounded-md p-1.5 transition-colors disabled:opacity-50 ${
             saveSuccess
-              ? 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'
+              ? 'bg-ok/10 text-ok'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
           }`}
           title={saveTitle}
         >
@@ -181,7 +181,7 @@ export default function CodeEditorHeader({
           <button
             type="button"
             onClick={onToggleFullscreen}
-            className="flex items-center justify-center rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             title={isFullscreen ? labels.exitFullscreen : labels.fullscreen}
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -191,7 +191,7 @@ export default function CodeEditorHeader({
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center justify-center rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
           title={labels.close}
         >
           <X className="h-4 w-4" />

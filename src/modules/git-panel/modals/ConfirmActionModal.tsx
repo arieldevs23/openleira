@@ -27,25 +27,25 @@ const CONFIRMATION_ACTION_LABELS: Record<ConfirmActionType, string> = {
 };
 
 const CONFIRMATION_BUTTON_CLASSES: Record<ConfirmActionType, string> = {
-  discard: 'bg-red-600 hover:bg-red-700',
-  delete: 'bg-red-600 hover:bg-red-700',
-  commit: 'bg-primary hover:bg-primary/90',
-  pull: 'bg-green-600 hover:bg-green-700',
-  push: 'bg-orange-600 hover:bg-orange-700',
-  publish: 'bg-purple-600 hover:bg-purple-700',
-  revertLocalCommit: 'bg-yellow-600 hover:bg-yellow-700',
-  deleteBranch: 'bg-red-600 hover:bg-red-700',
+  discard: 'bg-err text-on-status hover:bg-err/90',
+  delete: 'bg-err text-on-status hover:bg-err/90',
+  commit: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  pull: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  push: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  publish: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  revertLocalCommit: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  deleteBranch: 'bg-err text-on-status hover:bg-err/90',
 };
 
 const CONFIRMATION_ICON_CONTAINER_CLASSES: Record<ConfirmActionType, string> = {
-  discard: 'bg-red-100 dark:bg-red-900/30',
-  delete: 'bg-red-100 dark:bg-red-900/30',
-  commit: 'bg-yellow-100 dark:bg-yellow-900/30',
-  pull: 'bg-yellow-100 dark:bg-yellow-900/30',
-  push: 'bg-yellow-100 dark:bg-yellow-900/30',
-  publish: 'bg-yellow-100 dark:bg-yellow-900/30',
-  revertLocalCommit: 'bg-yellow-100 dark:bg-yellow-900/30',
-  deleteBranch: 'bg-red-100 dark:bg-red-900/30',
+  discard: 'bg-err/10',
+  delete: 'bg-err/10',
+  commit: 'bg-warn/10',
+  pull: 'bg-warn/10',
+  push: 'bg-warn/10',
+  publish: 'bg-warn/10',
+  revertLocalCommit: 'bg-warn/10',
+  deleteBranch: 'bg-err/10',
 };
 
 type ConfirmActionModalProps = {
@@ -174,7 +174,7 @@ export default function ConfirmActionModal({ action, onCancel, onConfirm }: Conf
           </button>
           <button
             onClick={handleConfirm}
-            className={`flex items-center space-x-2 rounded-lg px-4 py-2 text-sm text-white transition-colors ${CONFIRMATION_BUTTON_CLASSES[action.type]}`}
+            className={`flex items-center space-x-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${CONFIRMATION_BUTTON_CLASSES[action.type]}`}
           >
             {renderConfirmActionIcon(action.type)}
             <span>

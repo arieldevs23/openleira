@@ -90,17 +90,17 @@ ${styles}
 <style>
   /* Export-only: the app styles above assume a fixed-height flex shell. */
   html, body { height: auto; overflow: visible; }
-  body { background: hsl(var(--background)); color: hsl(var(--foreground)); margin: 0; }
+  body { background: var(--bg); color: var(--text); margin: 0; }
   .chat-export-shell { max-width: 60rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
   .chat-export-header {
     display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-    border-bottom: 1px solid hsl(var(--border)); padding-bottom: 1rem; margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 2rem;
   }
   .chat-export-title { font-size: 1.25rem; font-weight: 600; margin: 0; }
-  .chat-export-meta { font-size: 0.75rem; color: hsl(var(--muted-foreground)); margin: 0.25rem 0 0; }
+  .chat-export-meta { font-size: 0.75rem; color: var(--muted); margin: 0.25rem 0 0; }
   .chat-export-theme-toggle {
-    border: 1px solid hsl(var(--border)); background: transparent; color: inherit;
-    border-radius: 0.5rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: inherit;
+    border-radius: var(--radius); padding: 0.375rem 0.75rem; font-size: 0.75rem; cursor: pointer;
   }
   /* Off-screen skipping is a scrolling optimisation; in a printed document it
      leaves blank pages. */

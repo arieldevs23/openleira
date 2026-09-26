@@ -292,8 +292,8 @@ export default function ChatComposer({
       />
 
       {isEditingSentMessage && (
-        <div className="mx-auto mb-2 flex max-w-[54.25rem] items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
-          <PencilIcon className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+        <div className="mx-auto mb-2 flex max-w-[54.25rem] items-center gap-2 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs text-foreground">
+          <PencilIcon className="h-3.5 w-3.5 shrink-0 text-warn" />
           <span className="min-w-0 flex-1">
             {t('composer.editing.title')}
             {' — '}
@@ -531,7 +531,7 @@ export default function ChatComposer({
           </div>
 
           <div
-            className={`order-last hidden basis-full px-2 text-center text-xs leading-4 text-muted-foreground/50 transition-opacity duration-200 lg:block ${
+            className={`order-last hidden basis-full px-2 text-center text-xs leading-4 text-muted-foreground transition-opacity duration-200 lg:block ${
               input.trim() && !canQueueDraft ? 'opacity-0' : 'opacity-100'
             }`}
           >

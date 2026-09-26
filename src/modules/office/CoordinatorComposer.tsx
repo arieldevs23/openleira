@@ -47,7 +47,7 @@ const CoordinatorComposer = forwardRef<HTMLTextAreaElement, CoordinatorComposerP
 
   return (
     <form onSubmit={(event) => void send(event)} className="space-y-1" data-testid="office-composer">
-      {error && <p className="text-[11px] text-red-600 dark:text-red-300">{error}</p>}
+      {error && <p className="text-[11px] text-err">{error}</p>}
       <div className="flex items-end gap-1.5">
         <textarea
           ref={ref}

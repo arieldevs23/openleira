@@ -224,13 +224,13 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
             <Download className="h-3.5 w-3.5" />
           </button>
         </div>
-        {copied && <span className="text-[10px] text-emerald-700 dark:text-emerald-300">{t('files.copied')}</span>}
+        {copied && <span className="text-[10px] text-ok">{t('files.copied')}</span>}
         <span className="mt-1 block text-[10px] text-muted-foreground">{t('files.rightClickHint')}</span>
       </div>
       {download.busy && (
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />{t('files.preparing')}</p>
       )}
-      {download.error && <p className="text-[11px] text-red-600 dark:text-red-300">{download.error}</p>}
+      {download.error && <p className="text-[11px] text-err">{download.error}</p>}
       {menu && menuItems.length > 0 && (
         <ContextMenu position={{ x: menu.x, y: menu.y }} items={menuItems} ariaLabel={t('files.menu')} onClose={() => setMenu(null)} />
       )}
@@ -258,7 +258,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
           {isLoading ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('loading')}</div>
           ) : preview?.error ? (
-            <p className="text-xs text-red-600 dark:text-red-300">{preview.error}</p>
+            <p className="text-xs text-err">{preview.error}</p>
           ) : (
             <pre className="max-h-80 overflow-auto rounded-[10px] border border-border bg-muted/40 p-2 text-[11px] leading-relaxed" data-testid="office-file-preview">
               {preview?.content ?? ''}

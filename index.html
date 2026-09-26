@@ -2,10 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
-    <title>OpenLeira UI</title>
+    <title>OpenLeira</title>
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" crossorigin="use-credentials"  />
@@ -17,19 +18,46 @@
     
     <!-- iOS Safari Icons -->
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     
     <!-- Theme Color -->
-    <meta name="theme-color" content="#ffffff" />
-    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="theme-color" content="#0A0A0B" />
+    <meta name="msapplication-TileColor" content="#0A0A0B" />
     
     <!-- Prevent zoom on iOS -->
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- Painted before any stylesheet loads, so the PWA never opens on a black frame. -->
+    <!-- Anti-flash: resolve the stored theme before the first paint. Reads the
+         same localStorage mirror as src/shared/userSettings.ts (key
+         "user-preferences", legacy key "theme"); dark is the default. It sets
+         data-theme (the design tokens) and the .dark class (Tailwind dark:
+         variants) exactly as ThemeContext does after hydration. -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          var mirror = JSON.parse(localStorage.getItem('user-preferences') || 'null');
+          if (mirror && (mirror.theme === 'light' || mirror.theme === 'dark')) theme = mirror.theme;
+          if (!theme) {
+            var legacy = localStorage.getItem('theme');
+            if (legacy === 'light' || legacy === 'dark') theme = legacy;
+          }
+        } catch (e) {}
+        theme = theme || 'dark';
+        var root = document.documentElement;
+        root.setAttribute('data-theme', theme);
+        root.classList.toggle('dark', theme === 'dark');
+        root.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0A0A0B' : '#F2F2F0');
+      })();
+    </script>
+
+    <!-- Painted before any stylesheet loads, so the PWA never opens on a wrong
+         frame. Values mirror --bg in src/index.css. -->
     <style>
-      html { background: #f8f8f6; }
-      html.dark { background: #141414; }
+      html { background: #0A0A0B; }
+      html[data-theme="light"] { background: #F2F2F0; }
     </style>
   </head>
   <body>
