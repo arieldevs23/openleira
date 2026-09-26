@@ -1708,7 +1708,7 @@ export default function OfficeCanvas({
                   <path
                     d={path}
                     fill="none"
-                    stroke="color-mix(in srgb, var(--accent) 70%, transparent)"
+                    stroke="rgb(139 92 246 / 0.7)"
                     strokeWidth={selected ? 2.5 : 1.25}
                     strokeDasharray="3 4"
                     data-testid={`office-skill-link-${node.skillName}-${division.slug}`}
@@ -1741,7 +1741,7 @@ export default function OfficeCanvas({
                   y1={start.y}
                   x2={end.x}
                   y2={end.y}
-                  stroke="var(--accent)"
+                  stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   strokeDasharray="6 4"
                   markerEnd={`url(#office-arrow-${officeId})`}
@@ -1828,8 +1828,8 @@ export default function OfficeCanvas({
                       data-edge-from={from.id}
                       data-edge-to={to.id}
                       data-testid={`office-flow-end-${end}-${from.slug}-${to.slug}`}
-                      fill="var(--bg)"
-                      stroke="var(--accent)"
+                      fill="hsl(var(--background))"
+                      stroke="hsl(var(--primary))"
                       strokeWidth={2}
                       style={{ pointerEvents: 'all', cursor: 'move' }}
                     >
@@ -1894,17 +1894,17 @@ export default function OfficeCanvas({
                 onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(skillKey(node.id)) ? { kind: 'marked' } : { kind: 'skill', nodeId: node.id })}
                 title={installed?.description || undefined}
                 className={cn(
-                  'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col justify-center gap-0.5 rounded-[12px] border border-primary/50 px-2.5 text-left hover:bg-card/80',
+                  'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col justify-center gap-0.5 rounded-[12px] border border-info/50 px-2.5 text-left hover:bg-card/80',
                   FOCUS_OUTLINE,
                   selected && SELECTED_OUTLINE,
                   draggingId === `skill:${node.id}` && 'cursor-grabbing shadow-lg',
-                  connectSource?.kind === 'division' && 'outline-dashed outline-1 outline-primary/60',
+                  connectSource?.kind === 'division' && 'outline-dashed outline-1 outline-info/60',
                 )}
                 style={{ left: point.x, top: point.y, width: SKILL_WIDTH, height: SKILL_HEIGHT, ...(selected ? selectedOutlineStyle : {}) }}
               >
                 {marked.has(skillKey(node.id)) && <MarkedFrame />}
                 <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-semibold text-foreground">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-info" />
                   <span className="truncate">{node.skillName}</span>
                 </span>
                 <span className={cn('truncate text-[10.5px]', installed || installedSkills.length === 0 ? 'text-muted-foreground' : 'text-warn')}>
@@ -1916,11 +1916,11 @@ export default function OfficeCanvas({
                   role="presentation"
                   title={t('tree.dragSkillToAgent')}
                   className={cn(
-                    'absolute -top-2 left-1/2 flex h-4 w-4 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 border-primary bg-background opacity-0 transition-opacity group-hover:opacity-100',
+                    'absolute -top-2 left-1/2 flex h-4 w-4 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 border-info bg-background opacity-0 transition-opacity group-hover:opacity-100',
                     selected && 'opacity-100',
                   )}
                 >
-                  <span className="h-1 w-1 rounded-full bg-primary" />
+                  <span className="h-1 w-1 rounded-full bg-info" />
                 </span>
               </div>
             );

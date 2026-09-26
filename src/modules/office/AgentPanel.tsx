@@ -268,7 +268,7 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus
               <li
                 key={name}
                 title={skills.find((skill) => skill.name === name)?.description || undefined}
-                className="rounded-full border border-primary/50 bg-primary/5 px-2 py-0.5 text-[11px] text-foreground"
+                className="rounded-full border border-info/50 bg-info/5 px-2 py-0.5 text-[11px] text-foreground"
               >
                 {name}
               </li>

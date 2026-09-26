@@ -399,7 +399,7 @@ export default function AddWorkspaceModal({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-3 text-xs text-err hover:text-err"
+                  className="h-8 px-3 text-xs text-err hover:text-err/80"
                   disabled={isBusy}
                   onClick={() => void run(async () => { await readApiJson(await api.office.cancelAnalysis(analysis.id)); })}
                 >

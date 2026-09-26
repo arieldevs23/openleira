@@ -66,7 +66,7 @@ export default function SkillPickerModal({ skills, placedNames, onCancel, onPick
                 onClick={() => void pick(skill.name)}
                 className="flex w-full items-start gap-2 rounded-[10px] px-2.5 py-2 text-left hover:bg-muted/70 disabled:opacity-60"
               >
-                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-foreground">
                     {skill.name}
