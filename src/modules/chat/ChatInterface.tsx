@@ -8,6 +8,7 @@ import PermissionContext from '@/modules/chat/context/PermissionContext';
 import { MarkdownWorkspaceContext } from '@/modules/chat/context/MarkdownWorkspaceContext';
 import { TranscriptSessionContext } from '@/modules/chat/context/TranscriptSessionContext';
 import { api } from '@/shared/api';
+import { isObrolanProject } from '@/shared/utils';
 import type {
   ChatMessage,
   Project,
@@ -46,6 +47,8 @@ type ChatInterfaceProps = {
   newSessionTrigger?: number;
   onTaskClick?: (...args: unknown[]) => void;
   onShowAllTasks?: (() => void) | null;
+  /** Opens the workspace canvas: the only place a project's agents are prompted. */
+  onOpenCanvas?: () => void;
 };
 
 /**
@@ -69,10 +72,13 @@ function ChatInterface({
   externalMessageUpdate,
   newSessionTrigger,
   onShowAllTasks,
+  onOpenCanvas,
 }: ChatInterfaceProps) {
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings();
   const { subscribe } = useWebSocket();
   const { t } = useTranslation('chat');
+  // Projects are prompted only through the canvas; only the free-chat workspace has a message box.
+  const isCanvasOnly = Boolean(selectedProject && !isObrolanProject(selectedProject));
   const processingSessions = useProcessingSessions();
   const {
     markSessionProcessing: onSessionProcessing,
@@ -511,79 +517,94 @@ function ChatInterface({
             </div>
           )}
 
-          <ChatComposer
-          pendingPermissionRequests={pendingPermissionRequests}
-          handlePermissionDecision={handlePermissionDecision}
-          handleGrantToolPermission={handleGrantToolPermission}
-          activity={sessionActivity}
-          isLoading={isProcessing}
-          onAbortSession={handleAbortSession}
-          permissionMode={permissionMode}
-          availablePermissionModes={availablePermissionModes}
-          onSelectPermissionMode={selectPermissionMode}
-          providerLabel={selectedProviderLabel}
-          effort={currentProviderEffort}
-          availableEffortOptions={currentProviderEffortOptions}
-          onSelectEffort={handleSelectComposerEffort}
-          model={currentProviderModel}
-          availableModelOptions={currentProviderModelOptions}
-          onSelectModel={handleSelectComposerModel}
-          modelsLoading={providerModelsLoading}
-          tokenBudget={tokenBudget}
-          onShowTokenUsage={showCostModal}
-          isEditingSentMessage={Boolean(editingAnchorId)}
-          onCancelEditMessage={cancelEditMessage}
-          scheduledMessages={scheduledMessages}
-          onScheduleMessage={handleScheduleMessage}
-          onCancelScheduledMessage={cancelScheduledMessage}
-          slashCommandsCount={slashCommandsCount}
-          onToggleCommandMenu={handleToggleCommandMenu}
-          hasInput={Boolean(input.trim())}
-          onClearInput={handleClearInput}
-          onSubmit={handleSubmit}
-          isDragActive={isDragActive}
-          queuedDrafts={queuedDrafts}
-          onEditQueuedDraft={editQueuedDraft}
-          onDeleteQueuedDraft={deleteQueuedDraft}
-          onMoveQueuedDraft={moveQueuedDraft}
-          onSendQueuedDraftNow={(id) => void sendQueuedDraftNow(id)}
-          attachedFiles={attachedFiles}
-          onRemoveAttachment={(index) =>
-            setAttachedFiles((previous) =>
-              previous.filter((_, currentIndex) => currentIndex !== index),
-            )
-          }
-          fileErrors={fileErrors}
-          showFileDropdown={showFileDropdown}
-          filteredFiles={filteredFiles}
-          selectedFileIndex={selectedFileIndex}
-          onSelectFile={selectFile}
-          filteredCommands={filteredCommands}
-          selectedCommandIndex={selectedCommandIndex}
-          onCommandSelect={handleCommandSelect}
-          onCloseCommandMenu={resetCommandMenuState}
-          isCommandMenuOpen={showCommandMenu}
-          frequentCommands={commandQuery ? [] : frequentCommands}
-          getRootProps={getRootProps as (...args: unknown[]) => Record<string, unknown>}
-          getInputProps={getInputProps as (...args: unknown[]) => Record<string, unknown>}
-          openAttachmentPicker={openAttachmentPicker}
-          inputHighlightRef={inputHighlightRef}
-          renderInputWithMentions={renderInputWithMentions}
-          textareaRef={textareaRef}
-          input={input}
-          onVoiceTranscript={handleVoiceTranscript}
-          onInputChange={handleInputChange}
-          onTextareaClick={handleTextareaClick}
-          onTextareaKeyDown={handleKeyDown}
-          onTextareaPaste={handlePaste}
-          onTextareaScrollSync={syncInputOverlayScroll}
-          onTextareaInput={handleTextareaInput}
-          isInputFocused={isInputFocused}
-          onInputFocusChange={handleInputFocusChange}
-          placeholder={t('input.placeholder', { provider: selectedProviderLabel })}
-          isTextareaExpanded={isTextareaExpanded}
-          sendByCtrlEnter={sendByCtrlEnter}
-        />
+          {isCanvasOnly ? (
+            <div className="border-t border-border/60 px-4 py-3" data-testid="chat-canvas-only">
+              <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 rounded-[12px] border border-border bg-muted/40 px-3 py-2.5 text-sm">
+                <span className="min-w-0 flex-1 text-muted-foreground">
+                  {t('canvasOnly.body', { defaultValue: 'Agents in this project are prompted through the workspace canvas.' })}
+                </span>
+                {onOpenCanvas && (
+                  <button type="button" onClick={onOpenCanvas} className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+                    {t('canvasOnly.open', { defaultValue: 'Open canvas' })}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <ChatComposer
+              pendingPermissionRequests={pendingPermissionRequests}
+              handlePermissionDecision={handlePermissionDecision}
+              handleGrantToolPermission={handleGrantToolPermission}
+              activity={sessionActivity}
+              isLoading={isProcessing}
+              onAbortSession={handleAbortSession}
+              permissionMode={permissionMode}
+              availablePermissionModes={availablePermissionModes}
+              onSelectPermissionMode={selectPermissionMode}
+              providerLabel={selectedProviderLabel}
+              effort={currentProviderEffort}
+              availableEffortOptions={currentProviderEffortOptions}
+              onSelectEffort={handleSelectComposerEffort}
+              model={currentProviderModel}
+              availableModelOptions={currentProviderModelOptions}
+              onSelectModel={handleSelectComposerModel}
+              modelsLoading={providerModelsLoading}
+              tokenBudget={tokenBudget}
+              onShowTokenUsage={showCostModal}
+              isEditingSentMessage={Boolean(editingAnchorId)}
+              onCancelEditMessage={cancelEditMessage}
+              scheduledMessages={scheduledMessages}
+              onScheduleMessage={handleScheduleMessage}
+              onCancelScheduledMessage={cancelScheduledMessage}
+              slashCommandsCount={slashCommandsCount}
+              onToggleCommandMenu={handleToggleCommandMenu}
+              hasInput={Boolean(input.trim())}
+              onClearInput={handleClearInput}
+              onSubmit={handleSubmit}
+              isDragActive={isDragActive}
+              queuedDrafts={queuedDrafts}
+              onEditQueuedDraft={editQueuedDraft}
+              onDeleteQueuedDraft={deleteQueuedDraft}
+              onMoveQueuedDraft={moveQueuedDraft}
+              onSendQueuedDraftNow={(id) => void sendQueuedDraftNow(id)}
+              attachedFiles={attachedFiles}
+              onRemoveAttachment={(index) =>
+                setAttachedFiles((previous) =>
+                  previous.filter((_, currentIndex) => currentIndex !== index),
+                )
+              }
+              fileErrors={fileErrors}
+              showFileDropdown={showFileDropdown}
+              filteredFiles={filteredFiles}
+              selectedFileIndex={selectedFileIndex}
+              onSelectFile={selectFile}
+              filteredCommands={filteredCommands}
+              selectedCommandIndex={selectedCommandIndex}
+              onCommandSelect={handleCommandSelect}
+              onCloseCommandMenu={resetCommandMenuState}
+              isCommandMenuOpen={showCommandMenu}
+              frequentCommands={commandQuery ? [] : frequentCommands}
+              getRootProps={getRootProps as (...args: unknown[]) => Record<string, unknown>}
+              getInputProps={getInputProps as (...args: unknown[]) => Record<string, unknown>}
+              openAttachmentPicker={openAttachmentPicker}
+              inputHighlightRef={inputHighlightRef}
+              renderInputWithMentions={renderInputWithMentions}
+              textareaRef={textareaRef}
+              input={input}
+              onVoiceTranscript={handleVoiceTranscript}
+              onInputChange={handleInputChange}
+              onTextareaClick={handleTextareaClick}
+              onTextareaKeyDown={handleKeyDown}
+              onTextareaPaste={handlePaste}
+              onTextareaScrollSync={syncInputOverlayScroll}
+              onTextareaInput={handleTextareaInput}
+              isInputFocused={isInputFocused}
+              onInputFocusChange={handleInputFocusChange}
+              placeholder={t('input.placeholder', { provider: selectedProviderLabel })}
+              isTextareaExpanded={isTextareaExpanded}
+              sendByCtrlEnter={sendByCtrlEnter}
+            />
+          )}
         </div>
       </div>
 

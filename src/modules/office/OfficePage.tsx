@@ -1,15 +1,36 @@
-import { ArrowRight, Building2, Cpu, FolderPlus, Loader2, Menu, PanelRight, Plug, Plus, Settings2, Trash2, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Building2,
+  Cpu,
+  FolderPlus,
+  Loader2,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRight,
+  PanelRightClose,
+  PanelRightOpen,
+  Plug,
+  Plus,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AgentPanel from '@/modules/office/AgentPanel';
 import CasePanel from '@/modules/office/CasePanel';
+import CoordinatorDock, { type CoordinatorDockMode } from '@/modules/office/CoordinatorDock';
 import MessagesPanel from '@/modules/office/MessagesPanel';
 import OfficeCanvas from '@/modules/office/OfficeCanvas';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
-import SkillsPanel from '@/modules/office/SkillsPanel';
+import ShapePanel from '@/modules/office/ShapePanel';
+import SkillNodePanel from '@/modules/office/SkillNodePanel';
 import UsagePanel from '@/modules/office/UsagePanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
+import { useAnalyses } from '@/modules/office/hooks/useAnalyses';
 import { useCaseDetail } from '@/modules/office/hooks/useCaseDetail';
 import { useCaseUsage } from '@/modules/office/hooks/useCaseUsage';
 import { useInstalledSkills } from '@/modules/office/hooks/useInstalledSkills';
@@ -23,9 +44,12 @@ import DivisionModal from '@/modules/office/modals/DivisionModal';
 import ModelWizardModal from '@/modules/office/modals/ModelWizardModal';
 import OfficeSettingsModal from '@/modules/office/modals/OfficeSettingsModal';
 import PermissionWarningModal from '@/modules/office/modals/PermissionWarningModal';
+import QuickTaskModal from '@/modules/office/modals/QuickTaskModal';
+import SkillPickerModal from '@/modules/office/modals/SkillPickerModal';
 import type { CanvasPoint } from '@/modules/office/utils/officeCanvasLayout';
 import { ProviderLoginModal } from '@/modules/provider-auth';
 import { api, readApiJson } from '@/shared/api';
+import { OFFICE_CHAT_DOCK_STORAGE_KEY, OFFICE_COLLAPSED_PANELS_STORAGE_KEY } from '@/shared/constants';
 import { Button } from '@/shared/ui';
 import type { LLMProvider, OfficeDivision, OfficeSelection, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
 import { cn } from '@/shared/utils';
@@ -33,6 +57,28 @@ import { cn } from '@/shared/utils';
 /** Below this width the sidebar and the right panel turn into drawers. */
 const NARROW_LAYOUT_QUERY = '(max-width: 899px)';
 const SELECTED_WORKSPACE_KEY = 'office-selected-project';
+const COLLAPSED_PANELS_KEY = OFFICE_COLLAPSED_PANELS_STORAGE_KEY;
+const CHAT_DOCK_KEY = OFFICE_CHAT_DOCK_STORAGE_KEY;
+
+const readDockMode = (): CoordinatorDockMode => {
+  try {
+    const stored = window.localStorage.getItem(CHAT_DOCK_KEY);
+    return stored === 'hidden' || stored === 'expanded' ? stored : 'collapsed';
+  } catch {
+    return 'collapsed';
+  }
+};
+
+type CollapsedPanels = { left: boolean; right: boolean };
+
+const readCollapsedPanels = (): CollapsedPanels => {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(COLLAPSED_PANELS_KEY) ?? '{}') as Partial<CollapsedPanels>;
+    return { left: stored.left === true, right: stored.right === true };
+  } catch {
+    return { left: false, right: false };
+  }
+};
 
 type CaseTab = 'result' | 'files' | 'usage';
 
@@ -67,8 +113,14 @@ const readStoredWorkspace = (): string | null => {
 };
 
 type OfficePageProps = {
-  /** The project open in normal mode; its workspace is shown first when it has one. */
+  /**
+   * The project the user opened (a project is prompted only through its
+   * canvas). It is shown even before it has a workspace, with the offer to
+   * make one; null falls back to the last workspace on screen.
+   */
   initialProjectId: string | null;
+  /** Tells the app which project the canvas shows, so files and terminal in normal mode follow it. */
+  onProjectChange?: (projectId: string) => void;
   /** Opens a workspace session in the regular chat view. */
   onOpenSession: (sessionId: string) => void;
 };
@@ -79,33 +131,62 @@ type OfficePageProps = {
  * case result, files, tokens or the picked agent on the right. Rendered by
  * the project-workspace module in place of the project sidebar and tabs.
  */
-export default function OfficePage({ initialProjectId, onOpenSession }: OfficePageProps) {
+export default function OfficePage({ initialProjectId, onProjectChange, onOpenSession }: OfficePageProps) {
   const { t, i18n } = useTranslation('office');
   const { workspaces, error: workspacesError } = useWorkspaces();
+  const { analyses, forgetProject } = useAnalyses();
   const isNarrow = useIsNarrowLayout();
 
   // The workspace on screen, by its project folder id.
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => readStoredWorkspace() ?? initialProjectId);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => initialProjectId ?? readStoredWorkspace());
 
-  // Falls back to a listed workspace when the remembered one is gone (or none was remembered).
+  // A project opened from elsewhere in the app takes over the canvas.
+  useEffect(() => {
+    if (initialProjectId) {
+      setSelectedProjectId(initialProjectId);
+    }
+  }, [initialProjectId]);
+
+  // Falls back to a listed workspace when the remembered one is gone (or none was remembered);
+  // the project the user opened stays, even without a workspace yet.
   useEffect(() => {
     if (!workspaces || workspaces.length === 0) {
       return;
     }
-    if (!selectedProjectId || !workspaces.some((workspace) => workspace.projectId === selectedProjectId)) {
-      const preferred = workspaces.find((workspace) => workspace.projectId === initialProjectId) ?? workspaces[0];
-      setSelectedProjectId(preferred.projectId);
+    const isKnown = selectedProjectId !== null
+      && (selectedProjectId === initialProjectId || workspaces.some((workspace) => workspace.projectId === selectedProjectId));
+    if (!isKnown) {
+      setSelectedProjectId(workspaces[0].projectId);
     }
   }, [initialProjectId, selectedProjectId, workspaces]);
 
+  // Keeps the app's selected project on the canvas's one. Read through a ref:
+  // reporting back when the opened project changes would undo that pick.
+  const initialProjectIdRef = useRef(initialProjectId);
+  useEffect(() => {
+    initialProjectIdRef.current = initialProjectId;
+  }, [initialProjectId]);
+  useEffect(() => {
+    if (selectedProjectId && selectedProjectId !== initialProjectIdRef.current) {
+      onProjectChange?.(selectedProjectId);
+    }
+  }, [selectedProjectId, onProjectChange]);
+
   const selectWorkspace = (projectId: string) => {
     setSelectedProjectId(projectId);
+  };
+
+  // Remembers the workspace on screen however it was picked (sidebar, or a project opened elsewhere), so a reload comes back to it.
+  useEffect(() => {
+    if (!selectedProjectId) {
+      return;
+    }
     try {
-      window.localStorage.setItem(SELECTED_WORKSPACE_KEY, projectId);
+      window.localStorage.setItem(SELECTED_WORKSPACE_KEY, selectedProjectId);
     } catch {
       // Not remembered in private windows.
     }
-  };
+  }, [selectedProjectId]);
 
   const { snapshot, loadState, loadError, reload, actions } = useOffice(selectedProjectId);
   const modelCatalog = useProviderModelCatalog();
@@ -133,8 +214,30 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Whether the add-workspace dialog is open.
   const [isAddOpen, setIsAddOpen] = useState(false);
+  // The background analysis the add-workspace dialog reopens, if it was opened from the sidebar.
+  const [resumeAnalysisId, setResumeAnalysisId] = useState<string | null>(null);
   // The case waiting on the one-time bypass-permissions warning before it starts.
   const [pendingStartCaseId, setPendingStartCaseId] = useState<string | null>(null);
+  // Which side columns are folded away to give the canvas room (desktop only); remembered per browser.
+  const [collapsed, setCollapsed] = useState<CollapsedPanels>(readCollapsedPanels);
+  // The skill copied with Ctrl+C on the canvas; kept here so it can be pasted into another workspace.
+  const [skillClipboard, setSkillClipboard] = useState<string | null>(null);
+  // "Add skill here": where on the canvas the picked skill goes; undefined while the picker is closed.
+  const [skillPickerAt, setSkillPickerAt] = useState<CanvasPoint | undefined>(undefined);
+  // The team a quick task is being written for; null while that dialog is closed.
+  const [quickTaskDivision, setQuickTaskDivision] = useState<OfficeDivision | null>(null);
+  // How much of the coordinator chat is shown over the canvas; remembered per browser.
+  const [dockMode, setDockModeState] = useState<CoordinatorDockMode>(readDockMode);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const setDockMode = (mode: CoordinatorDockMode) => {
+    setDockModeState(mode);
+    try {
+      window.localStorage.setItem(CHAT_DOCK_KEY, mode);
+    } catch {
+      // Not remembered in private windows.
+    }
+  };
   // A delete waiting for confirmation.
   const [pendingDelete, setPendingDelete] = useState<
     { kind: 'workspace'; workspace: OfficeWorkspaceSummary } | { kind: 'division'; division: OfficeDivision } | null
@@ -210,9 +313,33 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     openWizard('providers');
   };
 
+  const setPanelCollapsed = (side: 'left' | 'right', value: boolean) => {
+    setCollapsed((current) => {
+      const next = { ...current, [side]: value };
+      try {
+        window.localStorage.setItem(COLLAPSED_PANELS_KEY, JSON.stringify(next));
+      } catch {
+        // Not remembered in private windows.
+      }
+      return next;
+    });
+  };
+
+  // Picking something on the canvas brings the right panel back if it was folded away.
   const select = (next: OfficeSelection) => {
     setSelection(next);
     setIsPanelOpen(true);
+    if (collapsed.right) {
+      setPanelCollapsed('right', false);
+    }
+  };
+
+  /** "Message the coordinator": brings the chat dock up and puts the cursor in its message box. */
+  const focusComposer = () => {
+    if (dockMode === 'hidden') {
+      setDockMode('collapsed');
+    }
+    window.setTimeout(() => composerRef.current?.focus(), 60);
   };
 
   const selectTask = (task: OfficeTask) => {
@@ -237,15 +364,29 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     }
   };
 
-  const startCase = async () => {
-    if (!office || !caseItem) {
+  const startCaseById = async (caseId: string) => {
+    if (!office) {
       return;
     }
     if (office.permissionMode === 'bypassPermissions' && !office.permissionWarningAcknowledged) {
-      setPendingStartCaseId(caseItem.id);
+      setPendingStartCaseId(caseId);
       return;
     }
-    await actions.caseAction(caseItem.id, 'start');
+    await actions.caseAction(caseId, 'start');
+  };
+
+  const startCase = async () => {
+    if (caseItem) {
+      await startCaseById(caseItem.id);
+    }
+  };
+
+  const submitQuickTask = async (division: OfficeDivision, input: { title: string; description: string }) => {
+    const created = await actions.createCase({ ...input, quickDivisionId: division.id });
+    setSelectedCaseId(created.id);
+    setSelection({ type: 'case' });
+    setQuickTaskDivision(null);
+    await startCaseById(created.id).catch(reportError);
   };
 
   const confirmPermissionAndStart = async () => {
@@ -271,14 +412,35 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     if (!office) {
       return null;
     }
-    if (selection.type === 'skills') {
-      return (
-        <SkillsPanel
-          divisions={divisions}
-          skills={installedSkills}
-          onSelectDivision={(divisionId) => select({ type: 'division', divisionId, focus: 'skills' })}
-        />
-      );
+    if (selection.type === 'shape') {
+      const shape = snapshot?.shapes?.find((candidate) => candidate.id === selection.shapeId);
+      if (shape) {
+        return (
+          <ShapePanel
+            shape={shape}
+            onChange={(changes) => { actions.updateShape(shape.id, changes).catch(reportError); }}
+            onDelete={() => { actions.deleteShape(shape.id).then(() => setSelection({ type: 'case' })).catch(reportError); }}
+          />
+        );
+      }
+    }
+    if (selection.type === 'skill') {
+      const node = snapshot?.skillNodes.find((candidate) => candidate.id === selection.nodeId);
+      if (node) {
+        return (
+          <SkillNodePanel
+            node={node}
+            divisions={divisions}
+            installedSkills={installedSkills}
+            onSelectDivision={(divisionId) => select({ type: 'division', divisionId, focus: 'skills' })}
+            onUnlink={(divisionId) => { actions.unlinkSkill(node.id, divisionId).catch(reportError); }}
+            onCopy={() => setSkillClipboard(node.skillName)}
+            onDelete={() => {
+              actions.deleteSkillNode(node.id).then(() => setSelection({ type: 'case' })).catch(reportError);
+            }}
+          />
+        );
+      }
     }
     if (selection.type === 'messages' && selectedDivision) {
       return <MessagesPanel division={selectedDivision} divisions={divisions} messages={messages} />;
@@ -440,6 +602,15 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
         actions={actions}
         onAddDivisionAt={(position) => setNewDivisionAt(position)}
         onDeleteDivision={(division) => setPendingDelete({ kind: 'division', division })}
+        skillNodes={snapshot?.skillNodes ?? []}
+        shapes={snapshot?.shapes ?? []}
+        installedSkills={installedSkills}
+        onAddSkillAt={(position) => setSkillPickerAt(position)}
+        skillClipboard={skillClipboard}
+        onCopySkill={setSkillClipboard}
+        onAnswerQuestion={caseItem ? async (text) => { await actions.postNote(caseItem.id, text); } : undefined}
+        onMessageCoordinator={caseItem?.quickDivisionId ? undefined : focusComposer}
+        onQuickTask={(division) => setQuickTaskDivision(division)}
       />
     );
   };
@@ -455,7 +626,16 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
         setSelection({ type: 'case' });
         setIsSidebarOpen(false);
       }}
-      onAddWorkspace={() => setIsAddOpen(true)}
+      onAddWorkspace={() => { setResumeAnalysisId(null); setIsAddOpen(true); }}
+      analyses={analyses}
+      onOpenAnalysis={(analysisId) => {
+        setResumeAnalysisId(analysisId);
+        setIsAddOpen(true);
+        setIsSidebarOpen(false);
+      }}
+      onDismissAnalysis={(analysisId) => {
+        api.office.dismissAnalysis(analysisId).then(readApiJson).catch(reportError);
+      }}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onDeleteWorkspace={(workspace) => setPendingDelete({ kind: 'workspace', workspace })}
       cases={cases}
@@ -486,13 +666,29 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
     </Button>
   );
 
+  const railButton = (label: string, Icon: typeof Plug, onClick: () => void, testId?: string): ReactNode => (
+    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onClick} title={label} aria-label={label} data-testid={testId}>
+      <Icon className="h-4 w-4" />
+    </Button>
+  );
+
   const bannerClass = 'flex flex-wrap items-center gap-2 border-b border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200';
 
   return (
     <div className="flex h-full min-h-0" data-testid="office-page">
-      {!isNarrow && (
-        <aside className="w-[248px] shrink-0 border-r border-border/60">{sidebar}</aside>
-      )}
+      {!isNarrow && (collapsed.left ? (
+        <aside className="flex w-10 shrink-0 flex-col items-center gap-1 border-r border-border/60 py-2" aria-label={t('sidebar.label')} data-testid="office-left-rail">
+          {railButton(t('panel.showSidebar'), PanelLeftOpen, () => setPanelCollapsed('left', false), 'office-show-left')}
+          {railButton(t('sidebar.addWorkspace'), FolderPlus, () => { setResumeAnalysisId(null); setIsAddOpen(true); })}
+        </aside>
+      ) : (
+        <aside className="relative flex w-[248px] shrink-0 flex-col border-r border-border/60">
+          <div className="flex justify-end px-1.5 pt-1">
+            {railButton(t('panel.hideSidebar'), PanelLeftClose, () => setPanelCollapsed('left', true), 'office-hide-left')}
+          </div>
+          <div className="min-h-0 flex-1">{sidebar}</div>
+        </aside>
+      ))}
       {isNarrow && isSidebarOpen && (
         <>
           <button type="button" aria-label={t('common.close')} className="fixed inset-0 z-30 bg-black/30" onClick={() => setIsSidebarOpen(false)} />
@@ -547,15 +743,33 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
         )}
 
         <div className="flex min-h-0 flex-1">
-          <main className="min-h-0 min-w-0 flex-1">{renderMain()}</main>
+          <main className="relative min-h-0 min-w-0 flex-1">
+            {renderMain()}
+            {office && caseItem && !caseItem.quickDivisionId && (
+              <CoordinatorDock
+                ref={composerRef}
+                caseItem={caseItem}
+                messages={messages}
+                coordinator={divisions.find((division) => division.isCoordinator) ?? null}
+                mode={dockMode}
+                onModeChange={setDockMode}
+                onSend={async (text) => { await actions.postNote(caseItem.id, text); }}
+              />
+            )}
+          </main>
 
           {office && isNarrow && isPanelOpen && (
             <button type="button" aria-label={t('common.close')} className="fixed inset-0 z-30 bg-black/30 backdrop-blur-[1px]" onClick={() => setIsPanelOpen(false)} />
           )}
-          {office && (
+          {office && !isNarrow && collapsed.right && (
+            <aside className="flex w-10 shrink-0 flex-col items-center gap-1 border-l border-border/60 py-2" aria-label={t('panel.label')} data-testid="office-right-rail">
+              {railButton(t('panel.showPanel'), PanelRightOpen, () => setPanelCollapsed('right', false), 'office-show-right')}
+            </aside>
+          )}
+          {office && (isNarrow || !collapsed.right) && (
             <aside
               className={cn(
-                'overflow-y-auto p-4',
+                'flex min-h-0 flex-col',
                 isNarrow
                   ? cn(
                     'glass-surface-strong fixed inset-y-0 right-0 z-40 w-[min(420px,92vw)] border-l transition-transform duration-200 ease-out',
@@ -566,19 +780,18 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
               aria-label={t('panel.label')}
               aria-hidden={isNarrow && !isPanelOpen ? true : undefined}
             >
-              {isNarrow && (
-                <div className="mb-2 flex justify-end">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsPanelOpen(false)} aria-label={t('common.close')}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-              {selection.type !== 'case' && caseItem && (
-                <button type="button" onClick={() => setSelection({ type: 'case' })} className="mb-3 text-[11px] text-primary hover:underline">
-                  {t('panel.backToCase')}
-                </button>
-              )}
-              {renderPanel()}
+              <div className="flex items-center gap-1 px-2 pt-1.5">
+                {selection.type !== 'case' && caseItem && (
+                  <button type="button" onClick={() => setSelection({ type: 'case' })} className="px-2 text-[11px] text-primary hover:underline">
+                    {t('panel.backToCase')}
+                  </button>
+                )}
+                <span className="flex-1" />
+                {isNarrow
+                  ? railButton(t('common.close'), X, () => setIsPanelOpen(false))
+                  : railButton(t('panel.hidePanel'), PanelRightClose, () => setPanelCollapsed('right', true), 'office-hide-right')}
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">{renderPanel()}</div>
             </aside>
           )}
         </div>
@@ -624,12 +837,17 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
       )}
       {isAddOpen && (
         <AddWorkspaceModal
+          key={resumeAnalysisId ?? 'new'}
           open
           onOpenChange={setIsAddOpen}
+          analyses={analyses}
+          resumeAnalysisId={resumeAnalysisId}
+          onOpenSession={(sessionId) => { setIsAddOpen(false); onOpenSession(sessionId); }}
           locale={i18n.language || 'id'}
           groups={modelGroups}
           onConnectProviders={() => { setIsAddOpen(false); openWizard('providers'); }}
           onReady={(projectId) => {
+            forgetProject(projectId);
             selectWorkspace(projectId);
             setSelectedCaseId(null);
             setSelection({ type: 'case' });
@@ -637,6 +855,28 @@ export default function OfficePage({ initialProjectId, onOpenSession }: OfficePa
               void reload();
             }
           }}
+        />
+      )}
+      {skillPickerAt !== undefined && (
+        <SkillPickerModal
+          skills={installedSkills}
+          placedNames={(snapshot?.skillNodes ?? []).map((node) => node.skillName)}
+          onCancel={() => setSkillPickerAt(undefined)}
+          onPick={async (skillName) => {
+            const node = await actions.addSkillNode({
+              skillName,
+              position: { x: Math.round(skillPickerAt.x), y: Math.round(skillPickerAt.y) },
+            });
+            setSkillPickerAt(undefined);
+            select({ type: 'skill', nodeId: node.id });
+          }}
+        />
+      )}
+      {quickTaskDivision && (
+        <QuickTaskModal
+          agentName={quickTaskDivision.agent.name || quickTaskDivision.name}
+          onCancel={() => setQuickTaskDivision(null)}
+          onSubmit={(input) => submitQuickTask(quickTaskDivision, input)}
         />
       )}
       {pendingStartCaseId && (

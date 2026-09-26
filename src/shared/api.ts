@@ -5,6 +5,7 @@ import {
 } from '@/shared/authToken';
 import { IS_PLATFORM } from '@/shared/utils';
 import { readVoiceConfig, voiceConfigHeaders } from '@/shared/voiceConfig';
+import type { OfficeShape, OfficeShapePatch } from '@/shared/types';
 
 // Headers are a plain record rather than the full `HeadersInit` union so the
 // defaults below can be merged with a caller's headers by spreading.
@@ -435,10 +436,30 @@ export const api = {
     startAnalysis: (input: { projectId: string; provider: string; model: string; locale: string }) =>
       post('/api/office/analyses', input),
     analysis: (analysisId: string) => get(`/api/office/analyses/${encodeURIComponent(analysisId)}`),
+    analyses: () => get('/api/office/analyses'),
+    cancelAnalysis: (analysisId: string) => post(`/api/office/analyses/${encodeURIComponent(analysisId)}/cancel`),
+    dismissAnalysis: (analysisId: string) => del(`/api/office/analyses/${encodeURIComponent(analysisId)}`),
     addFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
       post(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
     deleteFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
       del(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
+    addSkillNode: (officeId: string, input: { skillName: string; position?: { x: number; y: number } | null }) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/skills`, input),
+    moveSkillNode: (officeId: string, nodeId: string, position: { x: number; y: number } | null) =>
+      patch(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}`, { position }),
+    addShape: (officeId: string, input: OfficeShapePatch & Pick<OfficeShape, 'kind' | 'x' | 'y' | 'width' | 'height'>) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/shapes`, input),
+    // `stack` moves the shape to the front or the back of the others.
+    updateShape: (officeId: string, shapeId: string, changes: OfficeShapePatch & { stack?: 'front' | 'back' }) =>
+      patch(`/api/office/${encodeURIComponent(officeId)}/shapes/${encodeURIComponent(shapeId)}`, changes),
+    deleteShape: (officeId: string, shapeId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/shapes/${encodeURIComponent(shapeId)}`),
+    deleteSkillNode: (officeId: string, nodeId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}`),
+    linkSkill: (officeId: string, nodeId: string, divisionId: string) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}/links`, { divisionId }),
+    unlinkSkill: (officeId: string, nodeId: string, divisionId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/skills/${encodeURIComponent(nodeId)}/links/${encodeURIComponent(divisionId)}`),
     caseUsage: (officeId: string, caseId: string) =>
       get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/usage`),
     update: (
@@ -459,13 +480,13 @@ export const api = {
       patch(`/api/office/${encodeURIComponent(officeId)}/agents/${encodeURIComponent(agentId)}`, changes),
     assignModels: (officeId: string, assignments: Array<{ agentId: string; provider: string; model: string }>) =>
       put(`/api/office/${encodeURIComponent(officeId)}/agents/models`, { assignments }),
-    createCase: (officeId: string, input: { title: string; description: string }) =>
+    createCase: (officeId: string, input: { title: string; description: string; quickDivisionId?: string }) =>
       post(`/api/office/${encodeURIComponent(officeId)}/cases`, input),
     caseDetail: (officeId: string, caseId: string) =>
       get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
     deleteCase: (officeId: string, caseId: string) =>
       del(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
-    caseAction: (officeId: string, caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel') =>
+    caseAction: (officeId: string, caseId: string, action: 'start' | 'pause' | 'resume' | 'retry' | 'cancel') =>
       post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/${action}`),
     postNote: (officeId: string, caseId: string, text: string) =>
       post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/notes`, { text }),

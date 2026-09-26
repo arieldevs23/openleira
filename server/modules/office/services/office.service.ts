@@ -4,7 +4,7 @@ import { officeCasesDb, officesDb, projectsDb } from '@/modules/database/index.j
 import { createProject } from '@/modules/projects/index.js';
 import { providerAuthService, providerModelsService, providerTokenUsageService } from '@/modules/providers/index.js';
 import { broadcastOfficeUpdate } from '@/modules/office/services/office-events.service.js';
-import { buildDefaultDivisions, buildDivisionsFromProposals, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
+import { buildDefaultDivisions, buildDefaultFlow, buildDivisionsFromProposals, resolveSeedLocale } from '@/modules/office/services/office-seed.service.js';
 import type {
   LLMProvider,
   Office,
@@ -17,6 +17,10 @@ import type {
   OfficePermissionMode,
   OfficeWorkspaceSummary,
   OfficeSessionUsage,
+  OfficeShape,
+  OfficeShapeKind,
+  OfficeShapePatch,
+  OfficeSkillNode,
   OfficeSnapshot,
   ProviderAuthStatus,
 } from '@/shared/types.js';
@@ -217,6 +221,136 @@ const defaultFolderDependencies: FolderDependencies = {
   },
 };
 
+const MAX_SKILL_NAME_LENGTH = 120;
+
+/**
+ * Makes the canvas the source of an agent's skills: every skill an agent has
+ * is linked to a skill node (one is placed when missing, which also carries
+ * skills from before skill nodes existed onto the canvas), and every link a
+ * division has that its skill list no longer names is removed.
+ */
+function reconcileSkillNodes(officeId: string, onlyDivisionId?: string): void {
+  let nodes = officesDb.listSkillNodes(officeId);
+  for (const division of officesDb.listDivisions(officeId)) {
+    if (onlyDivisionId && division.id !== onlyDivisionId) {
+      continue;
+    }
+    const wanted = new Set(division.agent.skills);
+    for (const node of nodes) {
+      if (node.divisionIds.includes(division.id) && !wanted.has(node.skillName)) {
+        officesDb.unlinkSkill(node.id, division.id);
+      }
+    }
+    for (const skillName of wanted) {
+      const linked = nodes.some((node) => node.skillName === skillName && node.divisionIds.includes(division.id));
+      if (!linked) {
+        const nodeId = nodes.find((node) => node.skillName === skillName)?.id
+          ?? officesDb.createSkillNode(officeId, skillName, null);
+        officesDb.linkSkill(nodeId, division.id);
+      }
+    }
+    nodes = officesDb.listSkillNodes(officeId);
+  }
+}
+
+/** Rewrites the skill list of each given division from the skill nodes it is linked to. */
+function syncAgentSkills(officeId: string, divisionIds: Iterable<string>): void {
+  const nodes = officesDb.listSkillNodes(officeId);
+  for (const divisionId of new Set(divisionIds)) {
+    const division = officesDb.getDivision(divisionId);
+    if (!division || division.officeId !== officeId) {
+      continue;
+    }
+    const skills = [...new Set(nodes.filter((node) => node.divisionIds.includes(divisionId)).map((node) => node.skillName))];
+    if (skills.join('|') === division.agent.skills.join('|')) {
+      continue;
+    }
+    const updated = officesDb.updateAgent(division.agent.id, { skills });
+    if (updated) {
+      broadcastOfficeUpdate(officeId, { entity: 'division', id: updated.id, division: updated });
+    }
+  }
+}
+
+function requireSkillNode(officeId: string, nodeId: string): OfficeSkillNode {
+  const node = officesDb.listSkillNodes(officeId).find((candidate) => candidate.id === nodeId);
+  if (!node) {
+    throw notFound('Skill node not found.', 'OFFICE_SKILL_NODE_NOT_FOUND');
+  }
+  return node;
+}
+
+// ----- drawn shapes -----
+
+const SHAPE_KINDS: OfficeShapeKind[] = ['rect', 'rounded', 'ellipse', 'diamond', 'text'];
+const MIN_SHAPE_SIZE = 8;
+const MAX_SHAPE_SIZE = 5000;
+const MAX_SHAPE_TEXT = 5000;
+const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+const readShapeColor = (value: string | null | undefined, field: string): string | null | undefined => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!COLOR_PATTERN.test(value)) {
+    throw badRequest(`${field} must be a #rrggbb colour or null.`);
+  }
+  return value.toLowerCase();
+};
+
+const readShapeNumber = (value: number | undefined, field: string, min: number, max: number): number | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Number.isFinite(value) || value < min || value > max) {
+    throw badRequest(`${field} must be between ${min} and ${max}.`);
+  }
+  return Math.round(value);
+};
+
+/** Validates and normalises every field of a shape patch that is present. */
+function readShapePatch(patch: OfficeShapePatch): OfficeShapePatch {
+  if (patch.kind !== undefined && !SHAPE_KINDS.includes(patch.kind)) {
+    throw badRequest(`kind must be one of ${SHAPE_KINDS.join(', ')}.`);
+  }
+  if (patch.text !== undefined && (typeof patch.text !== 'string' || patch.text.length > MAX_SHAPE_TEXT)) {
+    throw badRequest(`text must be at most ${MAX_SHAPE_TEXT} characters.`);
+  }
+  return {
+    kind: patch.kind,
+    x: readShapeNumber(patch.x, 'x', -MAX_CANVAS_COORDINATE, MAX_CANVAS_COORDINATE),
+    y: readShapeNumber(patch.y, 'y', -MAX_CANVAS_COORDINATE, MAX_CANVAS_COORDINATE),
+    width: readShapeNumber(patch.width, 'width', MIN_SHAPE_SIZE, MAX_SHAPE_SIZE),
+    height: readShapeNumber(patch.height, 'height', MIN_SHAPE_SIZE, MAX_SHAPE_SIZE),
+    text: patch.text,
+    fill: readShapeColor(patch.fill, 'fill'),
+    stroke: readShapeColor(patch.stroke, 'stroke'),
+    textColor: readShapeColor(patch.textColor, 'textColor'),
+    fontSize: readShapeNumber(patch.fontSize, 'fontSize', 8, 96),
+    z: readShapeNumber(patch.z, 'z', -1_000_000, 1_000_000),
+  };
+}
+
+function requireShape(officeId: string, shapeId: string): OfficeShape {
+  const shape = officesDb.getShape(shapeId);
+  if (!shape || shape.officeId !== officeId) {
+    throw notFound('Shape not found.', 'OFFICE_SHAPE_NOT_FOUND');
+  }
+  return shape;
+}
+
+const broadcastShapes = (officeId: string): OfficeShape[] => {
+  const shapes = officesDb.listShapes(officeId);
+  broadcastOfficeUpdate(officeId, { entity: 'shapes', shapes });
+  return shapes;
+};
+
+const broadcastSkillNodes = (officeId: string): OfficeSkillNode[] => {
+  const skillNodes = officesDb.listSkillNodes(officeId);
+  broadcastOfficeUpdate(officeId, { entity: 'skills', skillNodes });
+  return skillNodes;
+};
+
 /** Agent fields the UI may change; each is optional. */
 type AgentUpdateInput = {
   name?: string;
@@ -239,10 +373,13 @@ export const officeService = {
 
   getSnapshot(officeId: string): OfficeSnapshot {
     const office = requireOffice(officeId);
+    reconcileSkillNodes(office.id);
     return {
       office,
       divisions: officesDb.listDivisions(office.id),
       flow: officesDb.listFlowEdges(office.id),
+      skillNodes: officesDb.listSkillNodes(office.id),
+      shapes: officesDb.listShapes(office.id),
       cases: officeCasesDb.listCases(office.id),
     };
   },
@@ -342,6 +479,12 @@ export const officeService = {
         ? buildDivisionsFromProposals(locale, proposals, input.appSummary ?? null)
         : buildDefaultDivisions(locale),
     });
+    // Coordinator → planner → teams, not everyone at once.
+    const workers = officesDb.listDivisions(office.id).filter((division) => !division.isCoordinator && !division.isAudit);
+    const bySlug = new Map(workers.map((division) => [division.slug, division.id]));
+    for (const [from, to] of buildDefaultFlow(workers.map((division) => division.slug))) {
+      officesDb.addFlowEdge(office.id, bySlug.get(from) as string, bySlug.get(to) as string);
+    }
     broadcastOfficeUpdate(office.id, { entity: 'office', office });
     return this.getSnapshot(office.id);
   },
@@ -523,7 +666,91 @@ export const officeService = {
       throw notFound('Agent not found.', 'OFFICE_AGENT_NOT_FOUND');
     }
     broadcastOfficeUpdate(officeId, { entity: 'division', id: division.id, division });
+    if (input.skills !== undefined) {
+      reconcileSkillNodes(officeId, division.id);
+      broadcastSkillNodes(officeId);
+    }
     return division;
+  },
+
+  /** Places a skill on the canvas; divisions get it by being linked to the node. */
+  addSkillNode(officeId: string, input: { skillName: string; position?: { x: number; y: number } | null }): OfficeSkillNode {
+    requireOffice(officeId);
+    const skillName = input.skillName.trim();
+    if (!skillName || skillName.length > MAX_SKILL_NAME_LENGTH) {
+      throw badRequest(`skillName must be 1 to ${MAX_SKILL_NAME_LENGTH} characters.`);
+    }
+    const nodeId = officesDb.createSkillNode(officeId, skillName, readPosition(input.position ?? null));
+    return broadcastSkillNodes(officeId).find((node) => node.id === nodeId) as OfficeSkillNode;
+  },
+
+  /** Draws a shape on the canvas, on top of the others. Text shapes default to no fill and no border. */
+  addShape(officeId: string, input: OfficeShapePatch & { kind: OfficeShapeKind; x: number; y: number; width: number; height: number }): OfficeShape {
+    requireOffice(officeId);
+    const shape = readShapePatch(input);
+    const isText = shape.kind === 'text';
+    const shapeId = officesDb.createShape(officeId, {
+      kind: shape.kind as OfficeShapeKind,
+      x: shape.x as number,
+      y: shape.y as number,
+      width: shape.width as number,
+      height: shape.height as number,
+      text: shape.text ?? '',
+      fill: shape.fill === undefined ? null : shape.fill,
+      stroke: shape.stroke === undefined ? (isText ? null : '#8a8a90') : shape.stroke,
+      textColor: shape.textColor ?? null,
+      fontSize: shape.fontSize ?? (isText ? 16 : 14),
+    });
+    return broadcastShapes(officeId).find((candidate) => candidate.id === shapeId) as OfficeShape;
+  },
+
+  updateShape(officeId: string, shapeId: string, patch: OfficeShapePatch & { stack?: 'front' | 'back' }): OfficeShape {
+    requireShape(officeId, shapeId);
+    const { stack, ...fields } = patch;
+    const clean = readShapePatch(fields);
+    if (stack) {
+      clean.z = officesDb.shapeStackEdge(officeId, stack === 'front' ? 'top' : 'bottom');
+    }
+    officesDb.updateShape(shapeId, clean);
+    return broadcastShapes(officeId).find((candidate) => candidate.id === shapeId) as OfficeShape;
+  },
+
+  deleteShape(officeId: string, shapeId: string): OfficeShape[] {
+    requireShape(officeId, shapeId);
+    officesDb.deleteShape(shapeId);
+    return broadcastShapes(officeId);
+  },
+
+  moveSkillNode(officeId: string, nodeId: string, position: { x: number; y: number } | null): OfficeSkillNode[] {
+    requireSkillNode(officeId, nodeId);
+    officesDb.moveSkillNode(nodeId, readPosition(position));
+    return broadcastSkillNodes(officeId);
+  },
+
+  /** Removes a skill node; divisions linked only through it lose the skill. */
+  deleteSkillNode(officeId: string, nodeId: string): OfficeSkillNode[] {
+    const node = requireSkillNode(officeId, nodeId);
+    officesDb.deleteSkillNode(nodeId);
+    const skillNodes = broadcastSkillNodes(officeId);
+    syncAgentSkills(officeId, node.divisionIds);
+    return skillNodes;
+  },
+
+  linkSkill(officeId: string, nodeId: string, divisionId: string): OfficeSkillNode[] {
+    requireSkillNode(officeId, nodeId);
+    requireDivision(officeId, divisionId);
+    officesDb.linkSkill(nodeId, divisionId);
+    const skillNodes = broadcastSkillNodes(officeId);
+    syncAgentSkills(officeId, [divisionId]);
+    return skillNodes;
+  },
+
+  unlinkSkill(officeId: string, nodeId: string, divisionId: string): OfficeSkillNode[] {
+    requireSkillNode(officeId, nodeId);
+    officesDb.unlinkSkill(nodeId, divisionId);
+    const skillNodes = broadcastSkillNodes(officeId);
+    syncAgentSkills(officeId, [divisionId]);
+    return skillNodes;
   },
 
   /**
@@ -596,10 +823,13 @@ export const officeService = {
   async requireConnectedProviders(
     officeId: string,
     getStatus: (provider: LLMProvider) => Promise<ProviderAuthStatus> = (provider) => providerAuthService.getProviderAuthStatus(provider),
+    /** Only these divisions will run (a quick task); omitted means every enabled one. */
+    onlyDivisionIds?: string[],
   ): Promise<void> {
     requireOffice(officeId);
     const providers = [...new Set(officesDb
       .listDivisions(officeId)
+      .filter((division) => !onlyDivisionIds || onlyDivisionIds.includes(division.id))
       .filter((division) => division.agent.enabled && division.agent.provider)
       .map((division) => division.agent.provider as LLMProvider))];
     const statuses = await Promise.all(providers.map(async (provider) => {
@@ -673,13 +903,28 @@ export const officeService = {
     };
   },
 
-  createCase(officeId: string, input: { title: string; description?: string; createdBy: string | null }): OfficeCase {
+  /**
+   * Creates a task (case). With `quickDivisionId` it is a quick task: it goes
+   * straight to that team's agent, without the orchestrator's plan, the audit
+   * or a summary turn.
+   */
+  createCase(
+    officeId: string,
+    input: { title: string; description?: string; createdBy: string | null; quickDivisionId?: string | null },
+  ): OfficeCase {
     requireOffice(officeId);
+    if (input.quickDivisionId) {
+      const division = requireDivision(officeId, input.quickDivisionId);
+      if (division.isCoordinator || division.isAudit) {
+        throw badRequest('A quick task goes to a working team, not to the orchestrator or the audit layer.', 'OFFICE_QUICK_TARGET');
+      }
+    }
     const caseItem = officeCasesDb.createCase({
       officeId,
       title: readBoundedText(input.title, 'title', LIMITS.caseTitle, true),
       description: readBoundedText(input.description ?? '', 'description', LIMITS.caseDescription, false),
       createdBy: input.createdBy,
+      quickDivisionId: input.quickDivisionId ?? null,
     });
     broadcastOfficeUpdate(officeId, { entity: 'case', id: caseItem.id, case: caseItem });
     return caseItem;

@@ -10,9 +10,11 @@ import {
   toOfficeLogEntry,
 } from '@/modules/office/services/office-events.service.js';
 import {
+  detectProviderLimit,
   extractResultSummary,
   parseAuditVerdict,
   parseCoordinatorOutput,
+  scopeResultToDivision,
 } from '@/modules/office/services/office-plan-parser.service.js';
 import type {
   AuditVerdict,
@@ -29,7 +31,7 @@ import {
   buildTaskPrompt,
   buildTaskRevisionPrompt,
 } from '@/modules/office/services/office-prompts.service.js';
-import type { PromptSkill } from '@/modules/office/services/office-prompts.service.js';
+import type { PromptRecentCase, PromptSkill } from '@/modules/office/services/office-prompts.service.js';
 import {
   applyAuditVerdict,
   applyFlowOrder,
@@ -52,6 +54,8 @@ import { AppError } from '@/shared/utils.js';
 
 const MAX_NOTE_LENGTH = 5000;
 const MAX_SESSION_TITLE_LENGTH = 90;
+/** How many earlier finished cases the coordinator sees when it plans a new one. */
+const RECENT_CASES_IN_PLAN = 5;
 
 /** User-facing texts the orchestrator writes into cases, tasks and the bus, per office locale. */
 const TEXTS = {
@@ -70,6 +74,7 @@ const TEXTS = {
     cancelled: 'dibatalkan oleh user',
     someTasksFailed: 'selesai, tapi ada task yang gagal',
     auditSkipped: 'audit dimatikan, hasil langsung diterima',
+    providerLimit: 'limit provider {provider} habis: {message}',
   },
   en: {
     coordinatorFailed: 'the coordinator failed to run: {error}',
@@ -86,6 +91,7 @@ const TEXTS = {
     cancelled: 'cancelled by the user',
     someTasksFailed: 'finished, but some tasks failed',
     auditSkipped: 'audit is disabled, the result was accepted as is',
+    providerLimit: 'the {provider} provider limit was reached: {message}',
   },
 } as const;
 
@@ -127,6 +133,8 @@ export type OfficeOrchestrator = {
   startCase(officeId: string, caseId: string): OfficeCase;
   pauseCase(officeId: string, caseId: string): OfficeCase;
   resumeCase(officeId: string, caseId: string): OfficeCase;
+  /** Runs a failed case again: its failed and blocked subtasks go back to the queue, finished ones stay. */
+  retryCase(officeId: string, caseId: string): OfficeCase;
   cancelCase(officeId: string, caseId: string): Promise<OfficeCase>;
   postNote(officeId: string, caseId: string, noteText: string): OfficeMessage;
   recoverInterruptedCases(): number;
@@ -328,7 +336,7 @@ export function createOfficeOrchestrator(dependencies: {
     }
 
     let logSessionId = input.sessionId ?? '';
-    return dependencies.runner.runTurn({
+    const result = await dependencies.runner.runTurn({
       sessionId: input.sessionId,
       sessionTitle: clipTitle(input.sessionTitle),
       projectPath: context.office.projectPath,
@@ -369,6 +377,35 @@ export function createOfficeOrchestrator(dependencies: {
         }
       },
     });
+
+    // Out of quota is not a bad answer: the turn is dropped like a cancelled one
+    // (every caller stops on `handle.cancelled`) and the case waits for the user.
+    const limitMessage = detectProviderLimit(result.text) ?? (result.failed ? detectProviderLimit(result.error) : null);
+    if (limitMessage && !handle.cancelled) {
+      handle.cancelled = true;
+      parkForProviderLimit(context, handle, model.provider, limitMessage);
+    }
+    return result;
+  };
+
+  /**
+   * Parks a case whose provider ran out of quota. The interrupted work goes
+   * back to where it was (a task to the queue, an audit stays in review, a
+   * coordinator step stays in its phase), so "resume" after the reset redoes
+   * only that turn and no audit retry is spent.
+   */
+  const parkForProviderLimit = (context: CaseContext, handle: RunHandle, provider: LLMProvider, message: string): void => {
+    if (handle.kind === 'task' && handle.taskId) {
+      saveTask(context.office.id, handle.taskId, { status: 'queued', error: null, startedAt: null });
+    }
+    const current = officeCasesDb.getCase(context.caseItem.id);
+    if (current && (current.status === 'running' || current.status === 'waiting_user')) {
+      saveCase(context.caseItem.id, {
+        status: 'waiting_user',
+        waitingReason: 'provider_limit',
+        error: text(context.office.locale, 'providerLimit', { provider, message }),
+      });
+    }
   };
 
   const resolvePromptSkills = async (agent: OfficeAgent, projectPath: string): Promise<PromptSkill[]> => {
@@ -482,6 +519,18 @@ export function createOfficeOrchestrator(dependencies: {
       : { output: null, error: parsed.error, crashed: false };
   };
 
+  /** The last few finished cases of the workspace, newest first, for the coordinator's plan. */
+  const describeRecentCases = (context: CaseContext): PromptRecentCase[] => officeCasesDb
+    .listCases(context.office.id)
+    .filter((candidate) => candidate.id !== context.caseItem.id && (candidate.status === 'done' || candidate.status === 'failed'))
+    .slice(0, RECENT_CASES_IN_PLAN)
+    .map((candidate) => ({
+      title: candidate.title,
+      status: candidate.status,
+      summary: candidate.finalSummary ?? candidate.error ?? '',
+      changedFiles: [...new Set(officeCasesDb.listTasks(candidate.id).flatMap((task) => task.changedFiles))],
+    }));
+
   /** The workspace flow as `slug -> slug` pairs of enabled divisions, for the coordinator prompts. */
   const describeFlowFor = (context: CaseContext): Array<[string, string]> => officesDb
     .listFlowEdges(context.office.id)
@@ -591,6 +640,8 @@ export function createOfficeOrchestrator(dependencies: {
       notes: notes.filter((note) => !isFailureNote(note)),
       skills,
       flow: describeFlowFor(context),
+      workspace: { name: context.office.name, projectPath: context.office.projectPath },
+      recentCases: describeRecentCases(context),
     });
     const allowedDivisionSlugs = context.workers.map((division) => division.slug);
     const result = await coordinatorJsonTurn(
@@ -772,8 +823,13 @@ export function createOfficeOrchestrator(dependencies: {
         divisionName: (dependency.divisionId && context.divisionsById.get(dependency.divisionId)?.name) || '?',
         ref: dependency.ref,
         title: dependency.title,
-        summary: dependency.resultSummary ?? '',
+        // A team only sees the part of a forwarded result addressed to it (or all of it when it is not split per team).
+        summary: scopeResultToDivision(dependency.resultSummary ?? '', division, [...context.divisionsById.values()]),
       }));
+    const flowTargets = officesDb.listFlowEdges(context.office.id)
+      .filter((edge) => edge.fromDivisionId === division.id)
+      .map((edge) => context.divisionsById.get(edge.toDivisionId))
+      .filter((target): target is OfficeDivision => Boolean(target && target.agent.enabled));
     const skills = await resolvePromptSkills(division.agent, context.office.projectPath);
     const isRevision = task.attempts > 0 && Boolean(task.sessionId);
     const prompt = isRevision
@@ -786,6 +842,7 @@ export function createOfficeOrchestrator(dependencies: {
         dependencyResults,
         skills,
         resumedAfterRestart: Boolean(task.sessionId),
+        handsOffTo: flowTargets,
       });
 
     const turn = await runAgentTurn(context, handle, {
@@ -966,7 +1023,8 @@ export function createOfficeOrchestrator(dependencies: {
   const launchAudit = (context: CaseContext, task: OfficeTask): void => {
     const caseId = context.caseItem.id;
     const auditModel = context.audit ? readyModel(context.audit.agent) : null;
-    if (!context.audit || !auditModel) {
+    // A quick task skips the audit on purpose; with the audit layer switched off, results are accepted too.
+    if (!context.audit || !auditModel || context.caseItem.quickDivisionId) {
       // With the audit layer switched off, a finished task is accepted as is.
       saveTask(context.office.id, task.id, { status: 'done', finishedAt: new Date().toISOString() });
       postMessage(context.office.id, {
@@ -996,6 +1054,21 @@ export function createOfficeOrchestrator(dependencies: {
       });
   };
 
+  /** A quick task ends with its one agent's result as the summary; no orchestrator turn. */
+  const finishQuickCase = (context: CaseContext): void => {
+    const tasks = officeCasesDb.listTasks(context.caseItem.id);
+    const resolved = isCaseFullyResolved(tasks);
+    const summary = tasks.map((task) => task.resultSummary ?? task.error ?? '').filter(Boolean).join('\n\n');
+    saveCase(context.caseItem.id, {
+      status: resolved ? 'done' : 'failed',
+      finalSummary: summary || null,
+      error: resolved ? null : text(context.office.locale, 'someTasksFailed'),
+      phase: null,
+      waitingReason: null,
+      finishedAt: new Date().toISOString(),
+    });
+  };
+
   /**
    * Derives and starts the next work for a case from its stored state. Only
    * running cases move; a paused case lets in-flight turns finish (their
@@ -1017,7 +1090,9 @@ export function createOfficeOrchestrator(dependencies: {
         return;
       }
 
-      const unreadNotes = officeCasesDb.listUnreadNotes(caseId, context.coordinator.id);
+      // A quick task has no orchestrator turns at all.
+      const isQuick = Boolean(caseItem.quickDivisionId);
+      const unreadNotes = isQuick ? [] : officeCasesDb.listUnreadNotes(caseId, context.coordinator.id);
       let checkpointRunning = coordinatorRunning;
       if (unreadNotes.length > 0 && !coordinatorRunning) {
         launchCoordinator(context, 'checkpoint', unreadNotes);
@@ -1051,8 +1126,12 @@ export function createOfficeOrchestrator(dependencies: {
       }
 
       if (step.settled && !checkpointRunning && workHandles.length === 0) {
-        saveCase(caseId, { phase: 'finalizing' });
-        launchCoordinator(context, 'final');
+        if (isQuick) {
+          finishQuickCase(context);
+        } else {
+          saveCase(caseId, { phase: 'finalizing' });
+          launchCoordinator(context, 'final');
+        }
       }
     } catch (error) {
       console.error('[Office] Tick failed', { caseId, error });
@@ -1077,6 +1156,33 @@ export function createOfficeOrchestrator(dependencies: {
       const caseItem = officeService.requireCase(officeId, caseId);
       if (caseItem.status !== 'draft') {
         throw conflict('Only a draft case can be started.', 'OFFICE_CASE_NOT_DRAFT');
+      }
+      if (caseItem.quickDivisionId) {
+        // A quick task only needs its own agent: straight to one task, no plan.
+        const division = officesDb.getDivision(caseItem.quickDivisionId);
+        if (!division || division.officeId !== officeId || !readyModel(division.agent)) {
+          throw conflict('The team of this quick task is disabled, gone, or has no model.', 'OFFICE_MODELS_MISSING');
+        }
+        const [task] = officeCasesDb.createTasks(caseId, [{
+          id: randomUUID(),
+          divisionId: division.id,
+          parentTaskId: null,
+          ref: 'T1',
+          title: caseItem.title,
+          instruction: caseItem.description.trim() || caseItem.title,
+          dependsOn: [],
+          status: 'queued',
+        }]);
+        broadcastOfficeUpdate(officeId, { entity: 'task', task });
+        const started = saveCase(caseId, {
+          status: 'running',
+          phase: 'executing',
+          waitingReason: null,
+          error: null,
+          startedAt: new Date().toISOString(),
+        }) as OfficeCase;
+        scheduleTick(caseId);
+        return started;
       }
       requireRunnableModels(officeId);
       const hasWorkers = officesDb.listDivisions(officeId)
@@ -1110,9 +1216,48 @@ export function createOfficeOrchestrator(dependencies: {
         throw conflict('Only a waiting case can be resumed.', 'OFFICE_CASE_NOT_WAITING');
       }
       requireRunnableModels(officeId);
-      const resumed = saveCase(caseId, { status: 'running', waitingReason: null }) as OfficeCase;
+      const resumed = saveCase(caseId, { status: 'running', waitingReason: null, error: null }) as OfficeCase;
       scheduleTick(caseId);
       return resumed;
+    },
+
+    retryCase(officeId, caseId) {
+      const caseItem = officeService.requireCase(officeId, caseId);
+      if (caseItem.status !== 'failed') {
+        throw conflict('Only a failed case can be retried.', 'OFFICE_CASE_NOT_FAILED');
+      }
+      if (hasCoordinatorRun(caseId) || (handlesByCase.get(caseId)?.size ?? 0) > 0) {
+        throw conflict('This case still has a turn in flight; try again in a moment.', 'OFFICE_CASE_BUSY');
+      }
+      if (!caseItem.quickDivisionId) {
+        requireRunnableModels(officeId);
+      }
+      const tasks = officeCasesDb.listTasks(caseId);
+      for (const task of tasks) {
+        if (task.status === 'failed' || task.status === 'blocked') {
+          // A fresh set of audit retries; the session is kept, so the agent continues where it stopped.
+          saveTask(officeId, task.id, {
+            status: 'queued',
+            attempts: 0,
+            error: null,
+            auditNotes: null,
+            startedAt: null,
+            finishedAt: null,
+          });
+        }
+      }
+      const retried = saveCase(caseId, {
+        status: 'running',
+        // No subtasks yet means the plan itself failed: plan again.
+        phase: tasks.length === 0 ? 'planning' : 'executing',
+        waitingReason: null,
+        error: null,
+        finalSummary: null,
+        coordinatorBusy: false,
+        finishedAt: null,
+      }) as OfficeCase;
+      scheduleTick(caseId);
+      return retried;
     },
 
     async cancelCase(officeId, caseId) {
@@ -1145,6 +1290,9 @@ export function createOfficeOrchestrator(dependencies: {
       const caseItem = officeService.requireCase(officeId, caseId);
       if (caseItem.status === 'done' || caseItem.status === 'failed') {
         throw conflict('This case has already finished.', 'OFFICE_CASE_FINISHED');
+      }
+      if (caseItem.quickDivisionId) {
+        throw conflict('A quick task has no orchestrator to message; start a full task instead.', 'OFFICE_QUICK_NO_NOTES');
       }
       const trimmed = noteText.trim();
       if (!trimmed || trimmed.length > MAX_NOTE_LENGTH) {

@@ -17,7 +17,8 @@
     "projects": "proyek",
     "noMatchingProjects": "ga ada proyek yang cocok",
     "tryDifferentSearch": "coba kata kunci lain",
-    "runClaudeCli": "jalanin Claude CLI di folder proyek buat mulai"
+    "runClaudeCli": "jalanin Claude CLI di folder proyek buat mulai",
+    "openCanvas": "Buka canvas"
   },
   "app": {
     "title": "OpenLeira",
@@ -115,35 +116,35 @@
   },
   "search": {
     "modeProjects": "proyek",
-    "modeConversations": "riwayat",
+    "modeConversations": "sesi",
     "modeMore": "lainnya",
-    "conversationsPlaceholder": "cari di riwayat...",
+    "conversationsPlaceholder": "cari di sesi...",
     "searching": "lagi nyari...",
     "sessionTitles": "session",
-    "conversationContents": "isi obrolan",
+    "conversationContents": "isi sesi",
     "noResults": "ga ada hasil",
     "tryDifferentQuery": "coba kata kunci lain",
     "matches_one": "{{count}} yang cocok",
     "matches_other": "{{count}} yang cocok",
     "projectsScanned_one": "{{count}} proyek discan",
     "projectsScanned_other": "{{count}} proyek discan",
-    "modeObrolan": "obrolan",
-    "obrolanPlaceholder": "cari obrolan..."
+    "modeObrolan": "chat",
+    "obrolanPlaceholder": "cari chat..."
   },
   "recent": {
-    "title": "obrolan terbaru",
-    "emptyTitle": "belum ada obrolan",
-    "emptyDescription": "obrolan yang paling baru diupdate bakal muncul di sini.",
-    "loadFailed": "gagal load obrolan terbaru",
-    "loadMore": "load obrolan yang lebih lama",
+    "title": "sesi terbaru",
+    "emptyTitle": "belum ada sesi",
+    "emptyDescription": "sesi yang paling baru diupdate bakal muncul di sini.",
+    "loadFailed": "gagal load sesi terbaru",
+    "loadMore": "load sesi yang lebih lama",
     "loadingMore": "bentar, lagi load..."
   },
   "deleteConfirmation": {
     "deleteProject": "hapus proyek",
     "deleteSession": "hapus session",
     "confirmDelete": "mau diapain",
-    "sessionCount_one": "proyek ini punya {{count}} obrolan.",
-    "sessionCount_other": "proyek ini punya {{count}} obrolan.",
+    "sessionCount_one": "proyek ini punya {{count}} sesi.",
+    "sessionCount_other": "proyek ini punya {{count}} sesi.",
     "removeFromSidebar": "hapus dari sidebar aja",
     "archiveProject": "arsipin proyek",
     "archiveSession": "arsipin session",
@@ -155,14 +156,14 @@
     "cannotUndo": "proyek bisa ditambahin lagi nanti."
   },
   "obrolan": {
-    "new": "obrolan baru",
-    "emptyTitle": "belum ada obrolan",
-    "emptyDescription": "ngobrol bebas aja, ga perlu pilih proyek.",
-    "loadMore": "load obrolan lama"
+    "new": "chat baru",
+    "emptyTitle": "belum ada chat",
+    "emptyDescription": "chat bebas aja, ga perlu pilih proyek.",
+    "loadMore": "load chat lama"
   },
   "files": {
-    "open": "files",
-    "opening": "bentar, lagi buka files..."
+    "open": "file",
+    "opening": "bentar, lagi buka file..."
   },
   "contextMenu": {
     "sessionMenuLabel": "opsi sesi {{name}}",

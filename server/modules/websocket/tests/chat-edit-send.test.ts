@@ -87,6 +87,9 @@ async function withGateway(
 
   closeConnection();
   process.env.DATABASE_PATH = path.join(tempDirectory, 'auth.db');
+  // The session lives in the free-chat workspace; project sessions are canvas-only.
+  const previousFreeChatDirectory = process.env.VITE_OBROLAN_DIR;
+  process.env.VITE_OBROLAN_DIR = tempDirectory;
   await initializeDatabase();
 
   const runs: RunCall[] = [];
@@ -120,6 +123,11 @@ async function withGateway(
     connectedClients.clear();
     chatRunRegistry.clearAll();
     closeConnection();
+    if (previousFreeChatDirectory === undefined) {
+      delete process.env.VITE_OBROLAN_DIR;
+    } else {
+      process.env.VITE_OBROLAN_DIR = previousFreeChatDirectory;
+    }
     if (previousDatabasePath === undefined) {
       delete process.env.DATABASE_PATH;
     } else {
@@ -182,6 +190,38 @@ test('every subscribed client is told to drop the superseded turns', async () =>
     assert.equal(truncation?.sessionId, SESSION_ID);
     // Sequenced like every other run event, so a reconnecting tab replays it.
     assert.equal(typeof truncation?.seq, 'number');
+  });
+});
+
+test('a session inside a project is refused: projects are prompted through the canvas', async () => {
+  await withGateway('claude', async ({ socket, runs }) => {
+    process.env.VITE_OBROLAN_DIR = path.join(os.tmpdir(), 'somewhere-else-obrolan');
+    socket.emit('message', JSON.stringify({
+      type: 'chat.edit-send',
+      sessionId: SESSION_ID,
+      anchorId: 'e-u2',
+      content: 'sneaking a prompt in',
+    }));
+    await settle();
+
+    assert.equal(runs.length, 0);
+    assert.equal(socket.frames.at(-1)?.code, 'PROJECT_CANVAS_ONLY');
+  });
+});
+
+test('a client cwd outside the free-chat workspace is refused', async () => {
+  await withGateway('claude', async ({ socket, runs }) => {
+    socket.emit('message', JSON.stringify({
+      type: 'chat.edit-send',
+      sessionId: SESSION_ID,
+      anchorId: 'e-u2',
+      content: 'run over there',
+      options: { cwd: path.join(os.tmpdir(), 'some-project') },
+    }));
+    await settle();
+
+    assert.equal(runs.length, 0);
+    assert.equal(socket.frames.at(-1)?.code, 'PROJECT_CANVAS_ONLY');
   });
 });
 

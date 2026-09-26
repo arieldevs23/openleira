@@ -54,7 +54,7 @@ test('a wide row shows every tab and no overflow menu', () => {
 
   assert.ok(screen.getByRole('button', { name: 'Chats' }));
   assert.ok(screen.getByRole('button', { name: 'Projects' }));
-  assert.ok(screen.getByRole('button', { name: 'Conversations' }));
+  assert.equal(screen.queryByRole('button', { name: 'Conversations' }), null);
   assert.ok(screen.getByRole('button', { name: 'Running sessions' }));
   assert.ok(screen.getByRole('button', { name: 'Archive only' }));
   assert.equal(screen.queryByRole('button', { name: 'More' }), null);
@@ -64,14 +64,13 @@ test('a narrow row moves the tabs that no longer fit into the dropdown', () => {
   const changes = renderTabs(220, 'projects');
 
   assert.ok(screen.getByRole('button', { name: 'Projects' }));
-  assert.equal(screen.queryByRole('button', { name: 'Conversations' }), null);
+  assert.equal(screen.queryByRole('button', { name: 'Archive only' }), null);
 
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  assert.ok(screen.getByRole('menuitem', { name: 'Running sessions' }));
   assert.ok(screen.getByRole('menuitem', { name: 'Archive only' }));
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Conversations' }));
-  assert.deepEqual(changes, ['conversations']);
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Archive only' }));
+  assert.deepEqual(changes, ['archived']);
 });
 
 test('the section on screen keeps its place in the row', () => {
@@ -81,6 +80,5 @@ test('the section on screen keeps its place in the row', () => {
   // is the open section, so the strip has to keep showing it as pressed.
   const archive = screen.getByRole('button', { name: 'Archive only' });
   assert.equal(archive.getAttribute('aria-pressed'), 'true');
-  assert.equal(screen.queryByRole('button', { name: 'Conversations' }), null);
   assert.ok(screen.getByRole('button', { name: 'More' }));
 });

@@ -14,36 +14,19 @@ export default function SidebarProjectList({
   selectedSession,
   isLoading,
   loadingProgress,
-  isProjectExpanded,
   activeRename,
-  initialSessionsLoaded,
-  currentTime,
 
   deletingProjects,
   tasksEnabled,
   mcpServerStatus,
-  getProjectSessions,
-  onLoadMoreSessions,
-  loadingMoreProjects,
-  activeSessions,
-  backgroundSessionIds,
-  attentionSessionIds,
   isProjectStarred,
   onRenameDraftChange,
-  onToggleProject,
   onProjectSelect,
   onToggleStarProject,
   onStartEditingProject,
   onCancelEditingProject,
   onSaveProjectName,
   onDeleteProject,
-  onSessionSelect,
-  onDeleteSession,
-  onForkSession,
-  onNewSession,
-  onStartEditingSession,
-  onCancelEditingSession,
-  onSaveEditingSession,
   t,
 }: SidebarProjectListProps) {
   const pageTitle = getPageTitle(selectedProject, selectedSession);
@@ -68,15 +51,11 @@ export default function SidebarProjectList({
         {!showProjects
           ? state
           : filteredProjects.map((project) => {
-              // Both renames are resolved here rather than inside the row, so
+              // The rename is resolved here rather than inside the row, so
               // every other row is handed the same scalars on each keystroke and
               // its memo boundary holds.
               const renamingProject =
                 activeRename?.target === 'project' && activeRename.id === project.projectId
-                  ? activeRename
-                  : null;
-              const renamingSession =
-                activeRename?.target === 'session' && activeRename.projectId === project.projectId
                   ? activeRename
                   : null;
 
@@ -87,39 +66,19 @@ export default function SidebarProjectList({
                 key={project.projectId}
                 project={project}
                 selectedProject={selectedProject}
-                selectedSession={selectedSession}
-                isExpanded={isProjectExpanded(project.projectId)}
                 isDeleting={deletingProjects.has(project.projectId)}
                 isStarred={isProjectStarred(project.projectId)}
                 isEditing={renamingProject !== null}
                 renameDraft={renamingProject?.draft ?? ''}
-                sessions={getProjectSessions(project)}
-                initialSessionsLoaded={initialSessionsLoaded.has(project.projectId)}
-                isLoadingMoreSessions={loadingMoreProjects.has(project.projectId)}
-                currentTime={currentTime}
-                sessionRenameId={renamingSession?.id ?? null}
-                sessionRenameDraft={renamingSession?.draft ?? ''}
                 tasksEnabled={tasksEnabled}
                 mcpServerStatus={mcpServerStatus}
                 onRenameDraftChange={onRenameDraftChange}
-                onToggleProject={onToggleProject}
                 onProjectSelect={onProjectSelect}
                 onToggleStarProject={onToggleStarProject}
                 onStartEditingProject={onStartEditingProject}
                 onCancelEditingProject={onCancelEditingProject}
                 onSaveProjectName={onSaveProjectName}
                 onDeleteProject={onDeleteProject}
-                onSessionSelect={onSessionSelect}
-                onDeleteSession={onDeleteSession}
-                onForkSession={onForkSession}
-                onLoadMoreSessions={onLoadMoreSessions}
-                activeSessions={activeSessions}
-                backgroundSessionIds={backgroundSessionIds}
-                attentionSessionIds={attentionSessionIds}
-                onNewSession={onNewSession}
-                onStartEditingSession={onStartEditingSession}
-                onCancelEditingSession={onCancelEditingSession}
-                onSaveEditingSession={onSaveEditingSession}
                 t={t}
               />
             );

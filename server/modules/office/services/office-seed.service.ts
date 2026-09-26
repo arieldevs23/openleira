@@ -271,3 +271,32 @@ export function buildDivisionsFromProposals(
     audit,
   ];
 }
+
+/** Arrows of the default flow, by slug: the planner hands out work, designs reach the frontend, security reviews the backend. */
+const DEFAULT_FLOW: Array<[string, string]> = [
+  ['planner', 'designer'],
+  ['planner', 'backend'],
+  ['planner', 'frontend'],
+  ['planner', 'security'],
+  ['planner', 'docs'],
+  ['designer', 'frontend'],
+  ['backend', 'security'],
+];
+
+/**
+ * The flow a new workspace starts with, as slug pairs of divisions it has.
+ * The coordinator hands the case to the start of the flow (the planner) and
+ * the planner's plan fans out to the teams, instead of every team starting
+ * in parallel. For teams proposed by an app analysis, a team whose slug looks
+ * like a planner feeds every other working team; without one there is no
+ * starting flow. Used by the office service when it creates a workspace.
+ */
+export function buildDefaultFlow(workerSlugs: string[]): Array<[string, string]> {
+  const present = new Set(workerSlugs);
+  const seeded = DEFAULT_FLOW.filter(([from, to]) => present.has(from) && present.has(to));
+  if (seeded.length > 0) {
+    return seeded;
+  }
+  const planner = workerSlugs.find((slug) => /plan/.test(slug));
+  return planner ? workerSlugs.filter((slug) => slug !== planner).map((slug) => [planner, slug]) : [];
+}

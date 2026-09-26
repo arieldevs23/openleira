@@ -8,6 +8,7 @@ import {
   MonitorPlay,
   Palette,
   Plug,
+  Workflow,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
@@ -30,6 +31,14 @@ export const OBROLAN_DEFAULT_CLAUDE_MODEL = 'sonnet';
 
 /** localStorage key of the Claude model obrolan chats last used; read by the chat composer and the welcome screen. */
 export const OBROLAN_MODEL_STORAGE_KEY = 'claude-model-obrolan';
+
+/**
+ * Browser-storage keys of the workspace canvas page's layout choices. The
+ * office module reads and writes them; the settings module's Node Design tab
+ * changes the same values, so both share these names.
+ */
+export const OFFICE_CHAT_DOCK_STORAGE_KEY = 'office-chat-dock';
+export const OFFICE_COLLAPSED_PANELS_STORAGE_KEY = 'office-collapsed-panels';
 
 // ---------------------------
 
@@ -72,6 +81,7 @@ type SettingsMainTabMeta = {
  */
 export const SETTINGS_MAIN_TABS: SettingsMainTabMeta[] = [
   { id: 'agents', label: 'Agents', keywords: 'agents subagents claude code', icon: Bot },
+  { id: 'workspace', label: 'Node Design', keywords: 'workspace canvas node design agents teams chat dock shapes shortcuts github', icon: Workflow },
   { id: 'appearance', label: 'Appearance', keywords: 'appearance theme dark light language', icon: Palette },
   { id: 'git', label: 'Git', keywords: 'git github commits', icon: GitBranch },
   { id: 'api', label: 'API Tokens', keywords: 'api tokens auth keys', icon: KeyRound },

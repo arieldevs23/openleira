@@ -162,7 +162,7 @@
   },
   "providerSelection": {
     "title": "pilih asisten AI",
-    "description": "pilih provider buat mulai obrolan baru",
+    "description": "pilih provider buat mulai chat baru",
     "selectModel": "pilih model",
     "providerInfo": {
       "anthropic": "dari Anthropic",
@@ -189,7 +189,7 @@
   },
   "session": {
     "continue": {
-      "title": "lanjutin obrolan",
+      "title": "lanjutin chat",
       "description": "tanya soal kode, minta ubah sesuatu, atau minta bantuan buat urusan development"
     },
     "loading": {
@@ -275,9 +275,9 @@
     "forkFromHere": "fork dari sini"
   },
   "export": {
-    "trigger": "export obrolan",
+    "trigger": "export chat",
     "heading": "export sebagai",
-    "untitled": "obrolan",
+    "untitled": "chat",
     "html": {
       "label": "halaman web (.html)",
       "description": "standalone, tampilannya kayak di app, bisa diprint ke PDF."
@@ -362,5 +362,9 @@
     "tokensLabel_other": "token",
     "escClosesModal": "esc buat nutup modal.",
     "close": "tutup"
+  },
+  "canvasOnly": {
+    "body": "Agent di proyek ini cuma bisa di-prompt lewat canvas. Chat di sini cuma buat dibaca.",
+    "open": "Buka canvas"
   }
 }

@@ -1,8 +1,10 @@
-import { ChevronRight, Copy, File, Folder, FolderOpen, Loader2 } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { ChevronRight, Copy, Download, File, FileArchive, Folder, FolderOpen, Loader2 } from 'lucide-react';
+import { useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { downloadResultFile, downloadResultFilesZip, downloadResultFolderZip } from '@/modules/office/utils/resultDownloads';
 import { api, readApiJson } from '@/shared/api';
+import { ContextMenu } from '@/shared/ui';
 import type { OfficeDivision, OfficeTask } from '@/shared/types';
 import { cn } from '@/shared/utils';
 
@@ -53,6 +55,10 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
   const [isLoading, setIsLoading] = useState(false);
   // Brief "copied" confirmation next to the folder path.
   const [copied, setCopied] = useState(false);
+  // The right-click menu and the file, folder or workspace root it was opened on.
+  const [menu, setMenu] = useState<{ x: number; y: number; target: { kind: 'file' | 'folder' | 'root'; path: string } } | null>(null);
+  // A download being prepared (zips of big folders take a moment), or why it failed.
+  const [download, setDownload] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
 
   const divisionsById = useMemo(() => new Map(divisions.map((division) => [division.id, division])), [divisions]);
   const files = useMemo(() => {
@@ -94,11 +100,57 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
     }
   };
 
+  const openMenu = (event: ReactMouseEvent, target: { kind: 'file' | 'folder' | 'root'; path: string }) => {
+    event.preventDefault();
+    setMenu({ x: event.clientX, y: event.clientY, target });
+  };
+
+  const runDownload = async (work: () => Promise<void>) => {
+    setDownload({ busy: true, error: null });
+    try {
+      await work();
+      setDownload({ busy: false, error: null });
+    } catch (error) {
+      setDownload({ busy: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  };
+
+  /** Changed files at or under a folder of the tree ('' is the whole workspace). */
+  const changedUnder = (folderPath: string) => insideFiles
+    .map((file) => file.path)
+    .filter((filePath) => !folderPath || filePath.startsWith(`${folderPath}/`));
+
+  const menuItems = (() => {
+    if (!menu) return [];
+    const { target } = menu;
+    const copy = (text: string) => () => { void navigator.clipboard?.writeText(text).catch(() => undefined); };
+    if (target.kind === 'file') {
+      return [
+        { key: 'download', label: t('files.downloadFile'), icon: Download, onSelect: () => void runDownload(() => downloadResultFile(projectId, target.path)) },
+        { key: 'copy', label: t('files.copyFilePath'), icon: Copy, onSelect: copy(target.path) },
+      ];
+    }
+    const folderName = target.kind === 'root' ? (projectPath.split('/').filter(Boolean).pop() ?? 'result') : target.path.split('/').pop() ?? target.path;
+    return [
+      {
+        key: 'zip', label: t('files.downloadFolder'), icon: FileArchive,
+        onSelect: () => void runDownload(() => downloadResultFolderZip(projectId, projectPath, target.kind === 'root' ? '' : target.path)),
+      },
+      {
+        key: 'changed', label: t('files.downloadChanged', { count: changedUnder(target.kind === 'root' ? '' : target.path).length }), icon: Download,
+        disabled: changedUnder(target.kind === 'root' ? '' : target.path).length === 0,
+        onSelect: () => void runDownload(() => downloadResultFilesZip(projectId, changedUnder(target.kind === 'root' ? '' : target.path), `${folderName}-changes.zip`)),
+      },
+      { key: 'copy', label: t('files.copyFilePath'), icon: Copy, showDividerBefore: true, onSelect: copy(target.kind === 'root' ? projectPath : `${projectPath.replace(/\/+$/, '')}/${target.path}`) },
+    ];
+  })();
+
   const renderFile = (file: ChangedFile, depth: number, label: string) => (
     <li key={file.path}>
       <button
         type="button"
         onClick={() => void openFile(file.path)}
+        onContextMenu={(event) => openMenu(event, { kind: 'file', path: file.path })}
         className={cn(
           'flex w-full items-center gap-1.5 rounded-md py-1 pr-2 text-left text-xs hover:bg-muted/60',
           selectedPath === file.path && 'bg-primary/10 text-foreground',
@@ -134,6 +186,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
               if (next.has(folder.path)) next.delete(folder.path); else next.add(folder.path);
               return next;
             })}
+            onContextMenu={(event) => openMenu(event, { kind: 'folder', path: folder.path })}
             className="flex w-full items-center gap-1.5 rounded-md py-1 pr-2 text-left text-xs hover:bg-muted/60"
             style={{ paddingLeft: 8 + depth * 14 }}
           >
@@ -153,16 +206,34 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
 
   return (
     <div className="space-y-3" data-testid="office-result-files">
-      <div className="rounded-[10px] border border-border bg-card/60 p-2.5">
+      <div className="rounded-[10px] border border-border bg-card/60 p-2.5" onContextMenu={(event) => openMenu(event, { kind: 'root', path: '' })}>
         <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">{t('files.savedIn')}</span>
         <div className="mt-1 flex items-center gap-1.5">
           <code className="min-w-0 flex-1 break-all text-[11.5px] text-foreground" data-testid="office-result-folder">{projectPath}</code>
           <button type="button" onClick={() => void copyPath()} className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={t('files.copyPath')} title={t('files.copyPath')}>
             <Copy className="h-3.5 w-3.5" />
           </button>
+          <button
+            type="button"
+            onClick={(event) => openMenu(event, { kind: 'root', path: '' })}
+            className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label={t('files.downloadMenu')}
+            title={t('files.downloadMenu')}
+            data-testid="office-result-download"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </button>
         </div>
         {copied && <span className="text-[10px] text-emerald-700 dark:text-emerald-300">{t('files.copied')}</span>}
+        <span className="mt-1 block text-[10px] text-muted-foreground">{t('files.rightClickHint')}</span>
       </div>
+      {download.busy && (
+        <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />{t('files.preparing')}</p>
+      )}
+      {download.error && <p className="text-[11px] text-red-600 dark:text-red-300">{download.error}</p>}
+      {menu && menuItems.length > 0 && (
+        <ContextMenu position={{ x: menu.x, y: menu.y }} items={menuItems} ariaLabel={t('files.menu')} onClose={() => setMenu(null)} />
+      )}
 
       {files.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t('files.none')}</p>

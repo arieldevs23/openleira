@@ -1347,3 +1347,71 @@ export function findApplicationRoot(startDirectory: string): string {
     ? path.dirname(parentDirectory)
     : parentDirectory;
 }
+
+// ---------------------------
+//----------------- CANVAS-ONLY PROJECT POLICY ------------
+
+/**
+ * Folder of the built-in free-chat workspace ("obrolan"). It mirrors the
+ * frontend's `OBROLAN_WORKSPACE_PATH`: `VITE_OBROLAN_DIR`, else
+ * `<VITE_HOME_DIR>/obrolan`, else `/home/hermes/obrolan`. Read on every call so
+ * tests and a reloaded `.env` take effect without a restart.
+ */
+export function getFreeChatWorkspacePath(): string {
+  const homeDirectory = process.env.VITE_HOME_DIR || '/home/hermes';
+  return path.resolve(process.env.VITE_OBROLAN_DIR || path.join(homeDirectory, 'obrolan'));
+}
+
+/**
+ * Whether a user may prompt an agent directly (chat) in this folder. Projects
+ * are prompted only through the workspace canvas, so only the free-chat
+ * workspace and folders inside it qualify. Used by the chat WebSocket and by
+ * session creation; the canvas's own runs (`runDetachedChatTurn`) never ask.
+ */
+export function isFreeChatPath(candidate: string | null | undefined): boolean {
+  if (!candidate) {
+    return false;
+  }
+  const root = getFreeChatWorkspacePath();
+  const resolved = path.resolve(candidate);
+  return resolved === root || resolved.startsWith(`${root}${path.sep}`);
+}
+
+// ---------------------------
+//----------------- GIT CREDENTIALS ------------
+
+/**
+ * The only origin the credential helper answers for. The token is a GitHub
+ * token; a helper that answered every challenge would hand it to whatever
+ * host a remote names — and over plain http, in the clear.
+ */
+const GITHUB_TOKEN_CREDENTIAL_SCOPE = 'credential.https://github.com.helper';
+
+/**
+ * Environment for a git command that talks to a remote (clone, fetch, pull,
+ * push) with the user's GitHub token. The token never goes into a URL: git
+ * echoes URLs on stderr, keeps them in the process argv (readable through
+ * /proc) and writes a clone's URL into `.git/config`. Instead env-only config
+ * points git at a credential helper that reads the token from its own
+ * environment. The empty first helper entry clears any helper configured on
+ * the machine so a stored credential cannot shadow the chosen one; the helper
+ * is scoped to github.com over https, so any other host (and every SSH
+ * remote, which uses the server's SSH keys) gets no token at all. Without a
+ * token only interactive prompts are turned off. Used by project cloning and
+ * the Git module's fetch/pull/push/publish.
+ */
+export function buildGithubTokenGitEnvironment(githubToken: string | null): NodeJS.ProcessEnv {
+  if (!githubToken) {
+    return { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  }
+  return {
+    ...process.env,
+    GIT_CONFIG_COUNT: '2',
+    GIT_CONFIG_KEY_0: 'credential.helper',
+    GIT_CONFIG_VALUE_0: '',
+    GIT_CONFIG_KEY_1: GITHUB_TOKEN_CREDENTIAL_SCOPE,
+    GIT_CONFIG_VALUE_1: '!f() { echo username=x-access-token; echo "password=$CLOUDCLI_GITHUB_TOKEN"; }; f',
+    CLOUDCLI_GITHUB_TOKEN: githubToken,
+    GIT_TERMINAL_PROMPT: '0',
+  };
+}

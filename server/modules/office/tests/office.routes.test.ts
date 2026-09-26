@@ -109,7 +109,7 @@ test('case routes record the author and route controls to the orchestrator', asy
   await withServer(calls, async (request) => {
     assert.equal((await request('POST', '/api/office/o1/cases', { title: 'Login', description: 'd' })).status, 201);
     assert.equal((await request('POST', '/api/office/o1/cases', { description: 'no title' })).status, 400);
-    for (const action of ['start', 'pause', 'resume', 'cancel']) {
+    for (const action of ['start', 'pause', 'resume', 'retry', 'cancel']) {
       assert.equal((await request('POST', `/api/office/o1/cases/c1/${action}`)).status, 200);
     }
     assert.equal((await request('POST', '/api/office/o1/cases/c1/notes', { text: 'hi' })).status, 201);
@@ -118,16 +118,21 @@ test('case routes record the author and route controls to the orchestrator', asy
   });
   assert.deepEqual(calls.map((call) => call.method), [
     'office.createCase',
+    'office.requireCase',
     'office.requireConnectedProviders',
     'orchestrator.startCase',
     'orchestrator.pauseCase',
+    'office.requireCase',
     'office.requireConnectedProviders',
     'orchestrator.resumeCase',
+    'office.requireCase',
+    'office.requireConnectedProviders',
+    'orchestrator.retryCase',
     'orchestrator.cancelCase',
     'orchestrator.postNote',
   ]);
-  assert.deepEqual(calls[0].args, ['o1', { title: 'Login', description: 'd', createdBy: '42' }]);
-  assert.deepEqual(calls[7].args, ['o1', 'c1', 'hi']);
+  assert.deepEqual(calls[0].args, ['o1', { title: 'Login', description: 'd', createdBy: '42', quickDivisionId: null }]);
+  assert.deepEqual(calls[12].args, ['o1', 'c1', 'hi']);
 });
 
 test('workspace, flow, position and analysis routes parse their input', async () => {
@@ -143,6 +148,9 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     assert.equal((await request('POST', '/api/office/analyses', { projectId: 'p1', provider: 'claude', model: 'sonnet' })).status, 202);
     assert.equal((await request('POST', '/api/office/analyses', { projectId: 'p1' })).status, 400);
     assert.equal((await request('GET', '/api/office/analyses/a1')).status, 200);
+    assert.equal((await request('GET', '/api/office/analyses')).status, 200);
+    assert.equal((await request('POST', '/api/office/analyses/a1/cancel')).status, 200);
+    assert.equal((await request('DELETE', '/api/office/analyses/a1')).status, 200);
     assert.equal((await request('POST', '/api/office', {
       projectId: 'p1',
       divisions: [{ name: 'API', rolePrompt: 'owns /api' }],
@@ -153,6 +161,13 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     assert.equal((await request('DELETE', '/api/office/o1')).status, 200);
     assert.equal((await request('POST', '/api/office/folders', { path: '/srv/app', mode: 'new' })).status, 200);
     assert.equal((await request('POST', '/api/office/folders', { path: '/srv/app', mode: 'copy' })).status, 400);
+    assert.equal((await request('POST', '/api/office/o1/skills', { skillName: 'review', position: { x: 1, y: 2 } })).status, 201);
+    assert.equal((await request('POST', '/api/office/o1/skills', {})).status, 400);
+    assert.equal((await request('PATCH', '/api/office/o1/skills/n1', { position: { x: 3, y: 4 } })).status, 200);
+    assert.equal((await request('PATCH', '/api/office/o1/skills/n1', {})).status, 400);
+    assert.equal((await request('POST', '/api/office/o1/skills/n1/links', { divisionId: 'd1' })).status, 201);
+    assert.equal((await request('DELETE', '/api/office/o1/skills/n1/links/d1')).status, 200);
+    assert.equal((await request('DELETE', '/api/office/o1/skills/n1')).status, 200);
   });
   assert.deepEqual(calls.map((call) => call.method), [
     'office.listWorkspaces',
@@ -163,14 +178,22 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     'office.requireReadyModel',
     'analyzer.start',
     'analyzer.get',
+    'analyzer.list',
+    'analyzer.cancel',
+    'analyzer.dismiss',
     'office.createOffice',
     'office.getCaseUsage',
     'office.deleteOffice',
     'office.prepareFolder',
+    'office.addSkillNode',
+    'office.moveSkillNode',
+    'office.linkSkill',
+    'office.unlinkSkill',
+    'office.deleteSkillNode',
   ]);
   assert.deepEqual((calls[3].args[2] as { position: unknown }).position, { x: 4, y: 5 });
   assert.equal((calls[4].args[2] as { position: unknown }).position, null);
-  assert.deepEqual(calls[8].args[0], {
+  assert.deepEqual(calls[11].args[0], {
     projectId: 'p1',
     locale: null,
     divisions: [{ name: 'API', slug: '', description: '', color: '', agentName: '', rolePrompt: 'owns /api' }],

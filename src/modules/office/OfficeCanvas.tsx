@@ -1,6 +1,10 @@
 import {
+  ArrowDownToLine,
   ArrowRightLeft,
+  ArrowUpToLine,
   Bot,
+  ClipboardPaste,
+  Copy,
   Cpu,
   FileText,
   LayoutGrid,
@@ -11,9 +15,13 @@ import {
   Plus,
   Power,
   RotateCcw,
+  Send,
   Sparkles,
   Trash2,
+  Unlink,
   Wrench,
+  X,
+  Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
@@ -23,8 +31,12 @@ import type {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import CanvasShape, { type ShapeHandle } from '@/modules/office/CanvasShape';
 import OfficeStatusBadge from '@/modules/office/OfficeStatusBadge';
+import ShapeToolbar, { TOOL_SHORTCUTS, type CanvasTool } from '@/modules/office/ShapeToolbar';
 import {
+  autoSkillPositions,
+  connectorEnds,
   CASE_HEIGHT,
   CASE_WIDTH,
   casePosition,
@@ -33,6 +45,8 @@ import {
   formatTokens,
   NODE_HEIGHT,
   NODE_WIDTH,
+  SKILL_HEIGHT,
+  SKILL_WIDTH,
 } from '@/modules/office/utils/officeCanvasLayout';
 import type { CanvasPoint } from '@/modules/office/utils/officeCanvasLayout';
 import { ContextMenu } from '@/shared/ui';
@@ -42,9 +56,13 @@ import type {
   OfficeCase,
   OfficeDivision,
   OfficeFlowEdge,
+  OfficeInstalledSkill,
   OfficeMessage,
   OfficeNodeStatus,
   OfficeSelection,
+  OfficeShape,
+  OfficeShapeKind,
+  OfficeSkillNode,
   OfficeTask,
 } from '@/shared/types';
 import { cn, officeCaseTone } from '@/shared/utils';
@@ -66,6 +84,14 @@ const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
 
 /** Selected nodes use `outline`, which glass surfaces' own box-shadow cannot hide (a `ring` would be). */
 const SELECTED_OUTLINE = 'outline outline-primary bg-primary/[0.06]';
+/**
+ * A node in the Shift multi-selection gets a dashed frame around it, so it reads
+ * differently from the one node open in the panel. A separate element, because
+ * the nodes' glass surface owns box-shadow (which Tailwind rings use).
+ */
+const MarkedFrame = () => (
+  <span aria-hidden data-marked-frame className="pointer-events-none absolute -inset-[5px] rounded-[15px] border-2 border-dashed border-primary" />
+);
 const FOCUS_OUTLINE = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /** Border colour per status, set inline because glass surfaces own their border colour. */
@@ -99,12 +125,21 @@ function deriveDivisionState(tasks: OfficeTask[], replacedTaskIds: ReadonlySet<s
   return { status, queued };
 }
 
+/** One end of a connection drawn on the canvas: an agent (division) or a skill node. */
+type ConnectEnd = { kind: 'division' | 'skill'; id: string };
+
 /** What a pointer that went down on the canvas is doing. */
 type Gesture =
   | { kind: 'pan'; pointerId: number; startX: number; startY: number; originX: number; originY: number }
   | { kind: 'node'; pointerId: number; divisionId: string; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
-  | { kind: 'skills'; pointerId: number; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
-  | { kind: 'connect'; pointerId: number; fromDivisionId: string }
+  | { kind: 'skill'; pointerId: number; nodeId: string; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
+  | { kind: 'connect'; pointerId: number; from: ConnectEnd }
+  | { kind: 'marquee'; pointerId: number; start: CanvasPoint; base: ReadonlySet<string> }
+  | { kind: 'reconnect'; pointerId: number; fromDivisionId: string; toDivisionId: string; end: 'from' | 'to' }
+  | { kind: 'shape'; pointerId: number; shapeId: string; startX: number; startY: number; origin: CanvasPoint; moved: boolean }
+  | { kind: 'resize'; pointerId: number; shapeId: string; handle: ShapeHandle; startX: number; startY: number; origin: ShapeRect }
+  | { kind: 'draw'; pointerId: number; start: CanvasPoint; shapeKind: OfficeShapeKind }
+  | { kind: 'group'; pointerId: number; startX: number; startY: number; origins: ReadonlyMap<string, CanvasPoint>; moved: boolean; pressedKey: string }
   | { kind: 'pinch'; distance: number; zoom: number };
 
 /** The right-click menu and what it was opened on. */
@@ -113,7 +148,58 @@ type MenuState =
   | { position: CanvasPoint; target: { kind: 'flow'; fromDivisionId: string; toDivisionId: string } }
   | { position: CanvasPoint; target: { kind: 'spoke'; divisionId: string } }
   | { position: CanvasPoint; target: { kind: 'canvas'; at: CanvasPoint } }
-  | { position: CanvasPoint; target: { kind: 'skills' } };
+  | { position: CanvasPoint; target: { kind: 'skill'; nodeId: string } }
+  | { position: CanvasPoint; target: { kind: 'skillLink'; nodeId: string; divisionId: string } }
+  | { position: CanvasPoint; target: { kind: 'marked' } }
+  | { position: CanvasPoint; target: { kind: 'shape'; shapeId: string } };
+
+/** A drawn shape's box on the canvas. */
+type ShapeRect = { x: number; y: number; width: number; height: number };
+
+const MIN_SHAPE_SIZE = 12;
+/** Size of a shape placed with a click instead of a drag. */
+const DEFAULT_SHAPE_SIZE: Record<OfficeShapeKind, { width: number; height: number }> = {
+  rect: { width: 180, height: 100 },
+  rounded: { width: 180, height: 100 },
+  ellipse: { width: 150, height: 100 },
+  diamond: { width: 140, height: 110 },
+  text: { width: 180, height: 40 },
+};
+
+const shapeKey = (shapeId: string) => `shape:${shapeId}`;
+
+/** The box a resize handle drag leads to, never smaller than the minimum. */
+function resizeRect(origin: ShapeRect, handle: ShapeHandle, dx: number, dy: number): ShapeRect {
+  let { x, y, width, height } = origin;
+  if (handle.includes('e')) width = Math.max(MIN_SHAPE_SIZE, origin.width + dx);
+  if (handle.includes('s')) height = Math.max(MIN_SHAPE_SIZE, origin.height + dy);
+  if (handle.includes('w')) {
+    width = Math.max(MIN_SHAPE_SIZE, origin.width - dx);
+    x = origin.x + origin.width - width;
+  }
+  if (handle.includes('n')) {
+    height = Math.max(MIN_SHAPE_SIZE, origin.height - dy);
+    y = origin.y + origin.height - height;
+  }
+  return { x, y, width, height };
+}
+
+/** The rectangle between two points, whichever way it was dragged. */
+const rectBetween = (a: CanvasPoint, b: CanvasPoint): ShapeRect => ({
+  x: Math.min(a.x, b.x),
+  y: Math.min(a.y, b.y),
+  width: Math.abs(b.x - a.x),
+  height: Math.abs(b.y - a.y),
+});
+
+/** Key of a node in the multi-selection and in the pending positions: a division id, or `skill:<id>`. */
+const skillKey = (nodeId: string) => `skill:${nodeId}`;
+
+/** Is a node's box fully inside the rectangle between two canvas points? Like a diagram editor, touching is not enough. */
+const isInside = (point: CanvasPoint, width: number, height: number, a: CanvasPoint, b: CanvasPoint): boolean => (
+  point.x >= Math.min(a.x, b.x) && point.x + width <= Math.max(a.x, b.x)
+  && point.y >= Math.min(a.y, b.y) && point.y + height <= Math.max(a.y, b.y)
+);
 
 type OfficeCanvasProps = {
   officeId: string;
@@ -127,28 +213,44 @@ type OfficeCanvasProps = {
   onSelect: (selection: OfficeSelection) => void;
   /** Tokens each division spent in the selected case. */
   usageByDivision?: ReadonlyMap<string, number>;
-  actions: Pick<OfficeActions, 'addFlowEdge' | 'deleteFlowEdge' | 'updateDivision' | 'updateAgent'>;
+  actions: Pick<
+    OfficeActions,
+    'addFlowEdge' | 'deleteFlowEdge' | 'updateDivision' | 'updateAgent'
+    | 'addSkillNode' | 'moveSkillNode' | 'deleteSkillNode' | 'linkSkill' | 'unlinkSkill'
+    | 'addShape' | 'updateShape' | 'deleteShape'
+  >;
+  /** Shapes the user drew to arrange or annotate the chart. */
+  shapes?: OfficeShape[];
   /** "Add an agent here" from the canvas menu; the position is in canvas pixels. */
   onAddDivisionAt: (position: CanvasPoint) => void;
   onDeleteDivision: (division: OfficeDivision) => void;
-};
-
-const readSkillsPosition = (officeId: string): CanvasPoint | null => {
-  try {
-    const raw = window.localStorage.getItem(`office-skills-position:${officeId}`);
-    const parsed = raw ? JSON.parse(raw) as CanvasPoint : null;
-    return parsed && Number.isFinite(parsed.x) && Number.isFinite(parsed.y) ? parsed : null;
-  } catch {
-    return null;
-  }
+  /** Skills placed on the canvas; an agent linked to one has that skill. */
+  skillNodes?: OfficeSkillNode[];
+  /** Installed skills, for descriptions and to flag a node whose skill is not installed. */
+  installedSkills?: OfficeInstalledSkill[];
+  /** "Add skill here" from the canvas menu. */
+  onAddSkillAt?: (position: CanvasPoint) => void;
+  /** The skill copied with Ctrl+C (kept by the page, so it can be pasted into another workspace). */
+  skillClipboard?: string | null;
+  onCopySkill?: (skillName: string) => void;
+  /** Answers the coordinator's open question (a note that un-parks the case). */
+  onAnswerQuestion?: (text: string) => Promise<void>;
+  /** Focuses the message box to the coordinator. */
+  onMessageCoordinator?: () => void;
+  /** "Quick task": a job straight to one team, without the coordinator. */
+  onQuickTask?: (division: OfficeDivision) => void;
 };
 
 /**
  * The workspace canvas, shown by the office module's OfficePage: the case,
  * the coordinator, every division as a node that can be dragged anywhere, the
  * flow arrows between divisions (drag from a node's handle onto another node
- * to add one), and the skills/audit layer. Right-click (or hold on touch)
- * opens a menu for the node, arrow or empty canvas under the pointer.
+ * to add one), the audit layer, and skill nodes (an agent linked to a skill
+ * node has that skill; Ctrl+C / Ctrl+V copies a skill node). Shift+drag on
+ * empty canvas selects the nodes inside a rectangle and Shift+click adds or
+ * removes one; the selection moves together. Right-click (or
+ * hold on touch) opens a menu for the node, line or empty canvas under the
+ * pointer. An open question from the coordinator is shown next to it.
  */
 export default function OfficeCanvas({
   officeId,
@@ -164,6 +266,15 @@ export default function OfficeCanvas({
   actions,
   onAddDivisionAt,
   onDeleteDivision,
+  skillNodes = [],
+  installedSkills = [],
+  onAddSkillAt,
+  skillClipboard = null,
+  onCopySkill,
+  onAnswerQuestion,
+  onMessageCoordinator,
+  onQuickTask,
+  shapes = [],
 }: OfficeCanvasProps) {
   const { t } = useTranslation('office');
   const coordinator = divisions.find((division) => division.isCoordinator) ?? null;
@@ -253,14 +364,11 @@ export default function OfficeCanvas({
     if (division.isAudit) return auditStatus;
     return divisionStates.get(division.id)?.status ?? 'idle';
   };
-  const skillCount = new Set(divisions.flatMap((division) => division.agent.skills)).size;
 
   // ----- positions -----
   const layout = useMemo(() => computeAutoLayout(divisions, flow), [divisions, flow]);
   // Positions being dragged, or dropped but not yet confirmed by the server's frame.
   const [pendingPositions, setPendingPositions] = useState<ReadonlyMap<string, CanvasPoint>>(() => new Map());
-  // Where the skills node sits; it is not a division, so its place is remembered in this browser only.
-  const [skillsPosition, setSkillsPosition] = useState<CanvasPoint | null>(() => readSkillsPosition(officeId));
 
   // A dropped node keeps its local position until the division comes back from the server with it.
   useEffect(() => {
@@ -269,40 +377,79 @@ export default function OfficeCanvas({
         return current;
       }
       const next = new Map(current);
-      for (const division of divisions) {
-        const pending = next.get(division.id);
-        if (pending && division.position && Math.round(division.position.x) === Math.round(pending.x)
-          && Math.round(division.position.y) === Math.round(pending.y)) {
-          next.delete(division.id);
+      const saved = [
+        ...divisions.map((division) => [division.id, division.position] as const),
+        ...skillNodes.map((node) => [`skill:${node.id}`, node.position] as const),
+        ...shapes.map((shape) => [shapeKey(shape.id), { x: shape.x, y: shape.y }] as const),
+      ];
+      for (const [key, position] of saved) {
+        const pending = next.get(key);
+        if (pending && position && Math.round(position.x) === Math.round(pending.x) && Math.round(position.y) === Math.round(pending.y)) {
+          next.delete(key);
         }
       }
       return next.size === current.size ? current : next;
     });
-  }, [divisions]);
+  }, [divisions, skillNodes, shapes]);
+
+  // A shape being resized, or resized but not yet confirmed by the server's frame.
+  const [pendingShapeRects, setPendingShapeRects] = useState<ReadonlyMap<string, ShapeRect>>(() => new Map());
+  useEffect(() => {
+    setPendingShapeRects((current) => {
+      if (current.size === 0) {
+        return current;
+      }
+      const next = new Map(current);
+      for (const shape of shapes) {
+        const pending = next.get(shape.id);
+        if (pending && Math.round(pending.x) === shape.x && Math.round(pending.y) === shape.y
+          && Math.round(pending.width) === shape.width && Math.round(pending.height) === shape.height) {
+          next.delete(shape.id);
+        }
+      }
+      return next.size === current.size ? current : next;
+    });
+  }, [shapes]);
+
+  const shapeRectOf = useCallback((shape: OfficeShape): ShapeRect => {
+    const resized = pendingShapeRects.get(shape.id);
+    if (resized) {
+      return resized;
+    }
+    const moved = pendingPositions.get(shapeKey(shape.id));
+    return { x: moved?.x ?? shape.x, y: moved?.y ?? shape.y, width: shape.width, height: shape.height };
+  }, [pendingPositions, pendingShapeRects]);
 
   const positionOf = useCallback((division: OfficeDivision): CanvasPoint => (
     pendingPositions.get(division.id) ?? division.position ?? layout.divisions.get(division.id) ?? { x: 0, y: 0 }
   ), [layout, pendingPositions]);
 
+  const autoSkills = useMemo(
+    () => autoSkillPositions(layout.skills, skillNodes.filter((node) => !node.position).map((node) => node.id)),
+    [layout, skillNodes],
+  );
+  const skillPositionOf = useCallback((node: OfficeSkillNode): CanvasPoint => (
+    pendingPositions.get(`skill:${node.id}`) ?? node.position ?? autoSkills.get(node.id) ?? layout.skills
+  ), [autoSkills, layout, pendingPositions]);
+
   const coordinatorPoint = coordinator ? positionOf(coordinator) : { x: 0, y: 110 };
   const casePoint = casePosition(coordinatorPoint);
-  const skillsPoint = skillsPosition ?? layout.skills;
 
   const bounds = useMemo(() => {
     const coordinatorAt = coordinator ? positionOf(coordinator) : { x: 0, y: 110 };
     const caseAt = casePosition(coordinatorAt);
-    const skillsAt = skillsPosition ?? layout.skills;
     const points: Array<CanvasPoint & { width: number; height: number }> = [
       { ...caseAt, width: CASE_WIDTH, height: CASE_HEIGHT },
-      { ...skillsAt, width: NODE_WIDTH, height: NODE_HEIGHT },
+      ...skillNodes.map((node) => ({ ...skillPositionOf(node), width: SKILL_WIDTH, height: SKILL_HEIGHT })),
       ...divisions.map((division) => ({ ...positionOf(division), width: NODE_WIDTH, height: NODE_HEIGHT })),
+      ...shapes.map((shape) => shapeRectOf(shape)),
     ];
     const minX = Math.min(...points.map((point) => point.x));
     const minY = Math.min(...points.map((point) => point.y));
     const maxX = Math.max(...points.map((point) => point.x + point.width));
     const maxY = Math.max(...points.map((point) => point.y + point.height));
     return { minX, minY, width: maxX - minX, height: maxY - minY };
-  }, [coordinator, divisions, layout, positionOf, skillsPosition]);
+  }, [coordinator, divisions, positionOf, skillNodes, skillPositionOf, shapes, shapeRectOf]);
 
   // ----- zoom and pan -----
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -319,14 +466,42 @@ export default function OfficeCanvas({
   const [isPanning, setIsPanning] = useState(false);
   // The node being dragged, for its lifted look.
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  // The loose end of an arrow being drawn from a node's handle, in canvas pixels.
-  const [connectingTo, setConnectingTo] = useState<{ fromDivisionId: string; point: CanvasPoint } | null>(null);
-  // "Connect to…" picked from a menu: the next node clicked becomes the arrow's target.
-  const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
+  // Nodes picked with Shift (a rectangle or Shift+click), moved and deleted together; keys as in pendingPositions.
+  const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set());
+  // An arrow end being dragged off its node: the arrow, which end, and where the pointer is.
+  const [reconnecting, setReconnecting] = useState<{ fromDivisionId: string; toDivisionId: string; end: 'from' | 'to'; point: CanvasPoint } | null>(null);
+  // The skill line picked with a click, so Delete can cut it.
+  const [selectedLink, setSelectedLink] = useState<{ nodeId: string; divisionId: string } | null>(null);
+  // A picked skill line only stays picked while its skill is the selection.
+  useEffect(() => {
+    if (selection.type !== 'skill') {
+      setSelectedLink(null);
+    }
+  }, [selection.type]);
+  // The drawing tool picked in the shape bar; 'select' is the normal pointer.
+  const [tool, setTool] = useState<CanvasTool>('select');
+  // The shape being drawn with a drawing tool, in canvas pixels.
+  const [drawing, setDrawing] = useState<{ kind: OfficeShapeKind; rect: ShapeRect } | null>(null);
+  // The shape whose text is being edited in place.
+  const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
+  // The Shift+drag selection rectangle, in canvas pixels.
+  const [marquee, setMarquee] = useState<{ from: CanvasPoint; to: CanvasPoint } | null>(null);
+  // The loose end of a line being drawn from a node's handle, in canvas pixels.
+  const [connectingTo, setConnectingTo] = useState<{ from: ConnectEnd; point: CanvasPoint } | null>(null);
+  // "Connect to…" picked from a menu: the next node clicked becomes the line's other end.
+  const [connectSource, setConnectSource] = useState<ConnectEnd | null>(null);
+  // Where the pointer last was on the canvas, in canvas pixels; Ctrl+V pastes a skill there.
+  const lastPointerRef = useRef<CanvasPoint | null>(null);
   // The open right-click menu.
   const [menu, setMenu] = useState<MenuState | null>(null);
   // Error of the last canvas action (an arrow that would loop, a failed save).
   const [canvasError, setCanvasError] = useState<string | null>(null);
+  // The answer being typed into the question bubble.
+  const [answer, setAnswer] = useState('');
+  // The answer is being sent.
+  const [isAnswering, setIsAnswering] = useState(false);
+  // The question bubble folded into a chip, so it does not cover the nodes behind it.
+  const [isQuestionFolded, setIsQuestionFolded] = useState(false);
 
   const fitToCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -411,12 +586,130 @@ export default function OfficeCanvas({
     setCanvasError(error instanceof Error ? error.message : String(error));
   };
 
-  const addArrow = (fromDivisionId: string, toDivisionId: string) => {
-    if (fromDivisionId === toDivisionId) {
+  /**
+   * Joins two ends drawn on the canvas: agent to agent is a flow arrow, agent
+   * and skill (either way round) gives the agent that skill.
+   */
+  const connectEnds = (from: ConnectEnd, to: ConnectEnd) => {
+    if (from.kind === to.kind && from.id === to.id) {
       return;
     }
     setCanvasError(null);
-    actions.addFlowEdge(fromDivisionId, toDivisionId).catch(report);
+    if (from.kind === 'division' && to.kind === 'division') {
+      actions.addFlowEdge(from.id, to.id).catch(report);
+    } else if (from.kind !== to.kind) {
+      const skill = from.kind === 'skill' ? from : to;
+      const division = from.kind === 'division' ? from : to;
+      actions.linkSkill(skill.id, division.id).catch(report);
+    }
+  };
+
+  /** The node under a screen point: an agent or a skill node. */
+  const endAt = (clientX: number, clientY: number): ConnectEnd | null => {
+    const element = document.elementFromPoint?.(clientX, clientY);
+    const division = element?.closest<HTMLElement>('[data-division-id]')?.dataset.divisionId;
+    if (division) return { kind: 'division', id: division };
+    const skill = element?.closest<HTMLElement>('[data-skill-node-id]')?.dataset.skillNodeId;
+    return skill ? { kind: 'skill', id: skill } : null;
+  };
+
+  const pasteSkill = (at: CanvasPoint | null) => {
+    if (!skillClipboard) {
+      return;
+    }
+    const position = at ?? { x: layout.skills.x, y: layout.skills.y + NODE_HEIGHT + 36 };
+    setCanvasError(null);
+    actions.addSkillNode({ skillName: skillClipboard, position: { x: Math.round(position.x), y: Math.round(position.y) } })
+      .then((node) => onSelect({ type: 'skill', nodeId: node.id }))
+      .catch(report);
+  };
+
+  /** Every node fully inside the rectangle, as multi-selection keys. */
+  const keysInRectangle = (a: CanvasPoint, b: CanvasPoint): string[] => [
+    ...divisions.filter((division) => isInside(positionOf(division), NODE_WIDTH, NODE_HEIGHT, a, b)).map((division) => division.id),
+    ...skillNodes.filter((node) => isInside(skillPositionOf(node), SKILL_WIDTH, SKILL_HEIGHT, a, b)).map((node) => skillKey(node.id)),
+    ...shapes.filter((shape) => {
+      const rect = shapeRectOf(shape);
+      return isInside(rect, rect.width, rect.height, a, b);
+    }).map((shape) => shapeKey(shape.id)),
+  ];
+
+  const toggleMarked = (key: string) => {
+    setMarked((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const clearMarked = () => setMarked((current) => (current.size === 0 ? current : new Set()));
+
+  /** Where a node is now, by multi-selection key. */
+  const positionOfKey = (key: string): CanvasPoint | null => {
+    if (key.startsWith('shape:')) {
+      const shape = shapes.find((candidate) => shapeKey(candidate.id) === key);
+      return shape ? shapeRectOf(shape) : null;
+    }
+    if (key.startsWith('skill:')) {
+      const node = skillNodes.find((candidate) => skillKey(candidate.id) === key);
+      return node ? skillPositionOf(node) : null;
+    }
+    const division = divisions.find((candidate) => candidate.id === key);
+    return division ? positionOf(division) : null;
+  };
+
+  /** Saves a dropped node's position; on failure it snaps back and the error is shown. */
+  const savePosition = (key: string, dropped: CanvasPoint) => {
+    const position = { x: Math.round(dropped.x), y: Math.round(dropped.y) };
+    const save = key.startsWith('shape:')
+      ? actions.updateShape(key.slice('shape:'.length), position)
+      : key.startsWith('skill:')
+        ? actions.moveSkillNode(key.slice('skill:'.length), position)
+        : actions.updateDivision(key, { position });
+    save.catch((error: unknown) => {
+      setPendingPositions((current) => {
+        const next = new Map(current);
+        next.delete(key);
+        return next;
+      });
+      report(error);
+    });
+  };
+
+  /** Deletes the marked skill nodes and shapes; teams are deleted one by one from their own menu, with a confirmation. */
+  const deleteMarkedSkills = () => {
+    const nodeIds = [...marked].filter((key) => key.startsWith('skill:')).map((key) => key.slice('skill:'.length));
+    const shapeIds = [...marked].filter((key) => key.startsWith('shape:')).map((key) => key.slice('shape:'.length));
+    if (nodeIds.length === 0 && shapeIds.length === 0) {
+      return;
+    }
+    setCanvasError(null);
+    Promise.all([
+      ...nodeIds.map((nodeId) => actions.deleteSkillNode(nodeId)),
+      ...shapeIds.map((shapeId) => actions.deleteShape(shapeId)),
+    ]).catch(report);
+    setMarked((current) => new Set([...current].filter((key) => !key.startsWith('skill:') && !key.startsWith('shape:'))));
+  };
+
+  const commitShapeText = (shape: OfficeShape, text: string) => {
+    setEditingShapeId(null);
+    if (text !== shape.text) {
+      actions.updateShape(shape.id, { text }).catch(report);
+    }
+  };
+
+  const handleShapeClick = (shape: OfficeShape, withShift: boolean) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (withShift) {
+      toggleMarked(shapeKey(shape.id));
+      return;
+    }
+    clearMarked();
+    onSelect({ type: 'shape', shapeId: shape.id });
   };
 
   const cancelLongPress = () => {
@@ -453,12 +746,52 @@ export default function OfficeCanvas({
       return;
     }
 
+    // Dragging an end of the selected arrow detaches it; dropping it on another team reconnects it.
+    const edgeEnd = target.closest<SVGElement>('[data-edge-end]');
+    if (edgeEnd) {
+      const fromDivisionId = edgeEnd.dataset.edgeFrom as string;
+      const toDivisionId = edgeEnd.dataset.edgeTo as string;
+      const end = edgeEnd.dataset.edgeEnd === 'from' ? 'from' : 'to';
+      gestureRef.current = { kind: 'reconnect', pointerId: event.pointerId, fromDivisionId, toDivisionId, end };
+      capture();
+      setReconnecting({ fromDivisionId, toDivisionId, end, point: toCanvasPoint(event.clientX, event.clientY) });
+      return;
+    }
+
+    // A handle of the selected shape resizes it.
+    const shapeHandle = target.closest<HTMLElement>('[data-shape-handle]');
+    const handledShape = shapeHandle ? shapes.find((shape) => shape.id === shapeHandle.dataset.shapeId) : undefined;
+    if (shapeHandle && handledShape) {
+      gestureRef.current = {
+        kind: 'resize', pointerId: event.pointerId, shapeId: handledShape.id, handle: shapeHandle.dataset.shapeHandle as ShapeHandle,
+        startX: event.clientX, startY: event.clientY, origin: shapeRectOf(handledShape),
+      };
+      capture();
+      userMovedRef.current = true;
+      return;
+    }
+
     const handle = target.closest<HTMLElement>('[data-connect-from]');
     if (handle) {
-      const fromDivisionId = handle.dataset.connectFrom as string;
-      gestureRef.current = { kind: 'connect', pointerId: event.pointerId, fromDivisionId };
+      const from: ConnectEnd = { kind: handle.dataset.connectKind === 'skill' ? 'skill' : 'division', id: handle.dataset.connectFrom as string };
+      gestureRef.current = { kind: 'connect', pointerId: event.pointerId, from };
       capture();
-      setConnectingTo({ fromDivisionId, point: toCanvasPoint(event.clientX, event.clientY) });
+      setConnectingTo({ from, point: toCanvasPoint(event.clientX, event.clientY) });
+      return;
+    }
+
+    // Pressing a node that is part of a multi-selection drags the whole selection.
+    const pressedElement = target.closest<HTMLElement>('[data-division-id], [data-skill-node-id], [data-shape-id]');
+    const pressedKey = pressedElement?.dataset.divisionId
+      ?? (pressedElement?.dataset.skillNodeId ? skillKey(pressedElement.dataset.skillNodeId) : null)
+      ?? (pressedElement?.dataset.shapeId ? shapeKey(pressedElement.dataset.shapeId) : null);
+    if (pressedKey && marked.has(pressedKey) && marked.size > 1 && !event.shiftKey) {
+      const origins = new Map<string, CanvasPoint>();
+      for (const key of marked) {
+        const point = positionOfKey(key);
+        if (point) origins.set(key, point);
+      }
+      gestureRef.current = { kind: 'group', pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, origins, moved: false, pressedKey };
       return;
     }
 
@@ -482,13 +815,62 @@ export default function OfficeCanvas({
         return;
       }
     }
-    if (target.closest('[data-skills-node]')) {
+    const skillElement = target.closest<HTMLElement>('[data-skill-node-id]');
+    const skillNode = skillElement ? skillNodes.find((node) => node.id === skillElement.dataset.skillNodeId) : undefined;
+    if (skillNode) {
       gestureRef.current = {
-        kind: 'skills', pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, origin: skillsPoint, moved: false,
+        kind: 'skill', pointerId: event.pointerId, nodeId: skillNode.id,
+        startX: event.clientX, startY: event.clientY, origin: skillPositionOf(skillNode), moved: false,
       };
+      if (event.pointerType !== 'mouse') {
+        const { clientX, clientY } = event;
+        longPressRef.current = window.setTimeout(() => {
+          longPressRef.current = null;
+          gestureRef.current = null;
+          suppressClickRef.current = true;
+          setMenu({ position: { x: clientX, y: clientY }, target: { kind: 'skill', nodeId: skillNode.id } });
+        }, LONG_PRESS_MS);
+      }
+      return;
+    }
+    const shapeElement = target.closest<HTMLElement>('[data-shape-id]');
+    const pressedShape = shapeElement && tool === 'select' ? shapes.find((shape) => shape.id === shapeElement.dataset.shapeId) : undefined;
+    if (pressedShape) {
+      gestureRef.current = {
+        kind: 'shape', pointerId: event.pointerId, shapeId: pressedShape.id,
+        startX: event.clientX, startY: event.clientY, origin: shapeRectOf(pressedShape), moved: false,
+      };
+      if (event.pointerType !== 'mouse') {
+        const { clientX, clientY } = event;
+        longPressRef.current = window.setTimeout(() => {
+          longPressRef.current = null;
+          gestureRef.current = null;
+          suppressClickRef.current = true;
+          setMenu({ position: { x: clientX, y: clientY }, target: { kind: 'shape', shapeId: pressedShape.id } });
+        }, LONG_PRESS_MS);
+      }
       return;
     }
     if (target.closest('[data-case-node], path[data-hit], [data-edge-chip]')) {
+      return;
+    }
+    // A drawing tool draws a shape where the pointer is dragged.
+    if (tool !== 'select') {
+      const start = toCanvasPoint(event.clientX, event.clientY);
+      gestureRef.current = { kind: 'draw', pointerId: event.pointerId, start, shapeKind: tool };
+      capture();
+      setDrawing({ kind: tool, rect: { ...start, width: 0, height: 0 } });
+      return;
+    }
+    // Shift+drag on empty canvas draws a selection rectangle instead of panning.
+    if (event.shiftKey) {
+      // Shift+press would otherwise extend the page's text selection across the panels.
+      event.preventDefault();
+      window.getSelection?.()?.removeAllRanges();
+      const start = toCanvasPoint(event.clientX, event.clientY);
+      gestureRef.current = { kind: 'marquee', pointerId: event.pointerId, start, base: marked };
+      capture();
+      setMarquee({ from: start, to: start });
       return;
     }
     gestureRef.current = {
@@ -499,6 +881,7 @@ export default function OfficeCanvas({
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    lastPointerRef.current = toCanvasPoint(event.clientX, event.clientY);
     if (!pointersRef.current.has(event.pointerId)) {
       return;
     }
@@ -529,7 +912,26 @@ export default function OfficeCanvas({
       return;
     }
     if (gesture.kind === 'connect') {
-      setConnectingTo({ fromDivisionId: gesture.fromDivisionId, point: toCanvasPoint(event.clientX, event.clientY) });
+      setConnectingTo({ from: gesture.from, point: toCanvasPoint(event.clientX, event.clientY) });
+      return;
+    }
+    if (gesture.kind === 'draw') {
+      setDrawing({ kind: gesture.shapeKind, rect: rectBetween(gesture.start, toCanvasPoint(event.clientX, event.clientY)) });
+      return;
+    }
+    if (gesture.kind === 'resize') {
+      const next = resizeRect(gesture.origin, gesture.handle, (event.clientX - gesture.startX) / view.zoom, (event.clientY - gesture.startY) / view.zoom);
+      setPendingShapeRects((current) => new Map(current).set(gesture.shapeId, next));
+      return;
+    }
+    if (gesture.kind === 'reconnect') {
+      setReconnecting({ fromDivisionId: gesture.fromDivisionId, toDivisionId: gesture.toDivisionId, end: gesture.end, point: toCanvasPoint(event.clientX, event.clientY) });
+      return;
+    }
+    if (gesture.kind === 'marquee') {
+      const to = toCanvasPoint(event.clientX, event.clientY);
+      setMarquee({ from: gesture.start, to });
+      setMarked(new Set([...gesture.base, ...keysInRectangle(gesture.start, to)]));
       return;
     }
     const dx = event.clientX - gesture.startX;
@@ -543,16 +945,23 @@ export default function OfficeCanvas({
       event.currentTarget.setPointerCapture?.(event.pointerId);
       // Moving a node is arranging the chart; stop refitting it under the user.
       userMovedRef.current = true;
-      if (gesture.kind === 'node') {
-        setDraggingId(gesture.divisionId);
-      }
+      setDraggingId(gesture.kind === 'node' ? gesture.divisionId
+        : gesture.kind === 'group' ? gesture.pressedKey
+          : gesture.kind === 'shape' ? shapeKey(gesture.shapeId) : `skill:${gesture.nodeId}`);
+    }
+    if (gesture.kind === 'group') {
+      setPendingPositions((current) => {
+        const next = new Map(current);
+        for (const [key, origin] of gesture.origins) {
+          next.set(key, { x: origin.x + dx / view.zoom, y: origin.y + dy / view.zoom });
+        }
+        return next;
+      });
+      return;
     }
     const next = { x: gesture.origin.x + dx / view.zoom, y: gesture.origin.y + dy / view.zoom };
-    if (gesture.kind === 'node') {
-      setPendingPositions((current) => new Map(current).set(gesture.divisionId, next));
-    } else {
-      setSkillsPosition(next);
-    }
+    const key = gesture.kind === 'node' ? gesture.divisionId : gesture.kind === 'shape' ? shapeKey(gesture.shapeId) : `skill:${gesture.nodeId}`;
+    setPendingPositions((current) => new Map(current).set(key, next));
   };
 
   const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -574,10 +983,110 @@ export default function OfficeCanvas({
 
     if (gesture.kind === 'connect') {
       setConnectingTo(null);
-      const node = document.elementFromPoint?.(event.clientX, event.clientY)?.closest<HTMLElement>('[data-division-id]');
-      const toDivisionId = node?.dataset.divisionId;
-      if (toDivisionId && event.type === 'pointerup') {
-        addArrow(gesture.fromDivisionId, toDivisionId);
+      const to = endAt(event.clientX, event.clientY);
+      if (to && event.type === 'pointerup') {
+        connectEnds(gesture.from, to);
+      }
+      return;
+    }
+    if (gesture.kind === 'marquee') {
+      setMarquee(null);
+      return;
+    }
+    if (gesture.kind === 'draw') {
+      setDrawing(null);
+      setTool('select');
+      if (event.type !== 'pointerup') {
+        return;
+      }
+      const dragged = rectBetween(gesture.start, toCanvasPoint(event.clientX, event.clientY));
+      // A click (or a tiny drag) places a shape of the default size where it was clicked.
+      const rect = dragged.width < MIN_SHAPE_SIZE || dragged.height < MIN_SHAPE_SIZE
+        ? { ...gesture.start, ...DEFAULT_SHAPE_SIZE[gesture.shapeKind] }
+        : dragged;
+      setCanvasError(null);
+      actions.addShape({
+        kind: gesture.shapeKind,
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      })
+        .then((shape) => {
+          onSelect({ type: 'shape', shapeId: shape.id });
+          if (shape.kind === 'text') {
+            setEditingShapeId(shape.id);
+          }
+        })
+        .catch(report);
+      return;
+    }
+    if (gesture.kind === 'resize') {
+      const rect = resizeRect(gesture.origin, gesture.handle, (event.clientX - gesture.startX) / view.zoom, (event.clientY - gesture.startY) / view.zoom);
+      setPendingShapeRects((current) => new Map(current).set(gesture.shapeId, rect));
+      actions.updateShape(gesture.shapeId, {
+        x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height),
+      }).catch((error: unknown) => {
+        setPendingShapeRects((current) => {
+          const next = new Map(current);
+          next.delete(gesture.shapeId);
+          return next;
+        });
+        report(error);
+      });
+      return;
+    }
+    if (gesture.kind === 'shape') {
+      if (gesture.moved) {
+        suppressClickRef.current = true;
+        const dropped = { x: gesture.origin.x + (event.clientX - gesture.startX) / view.zoom, y: gesture.origin.y + (event.clientY - gesture.startY) / view.zoom };
+        setPendingPositions((current) => new Map(current).set(shapeKey(gesture.shapeId), dropped));
+        savePosition(shapeKey(gesture.shapeId), dropped);
+      }
+      return;
+    }
+    if (gesture.kind === 'reconnect') {
+      setReconnecting(null);
+      if (event.type !== 'pointerup') {
+        return;
+      }
+      const dropped = endAt(event.clientX, event.clientY);
+      const keep = gesture.end === 'from' ? gesture.toDivisionId : gesture.fromDivisionId;
+      const moved = gesture.end === 'from' ? gesture.fromDivisionId : gesture.toDivisionId;
+      if (dropped?.kind === 'division' && dropped.id === moved) {
+        return;
+      }
+      setCanvasError(null);
+      // Off every node: the arrow is cut. On another team: it is cut and drawn again to that team.
+      const next = dropped?.kind === 'division' && dropped.id !== keep
+        ? (gesture.end === 'from' ? [dropped.id, keep] as const : [keep, dropped.id] as const)
+        : null;
+      actions.deleteFlowEdge(gesture.fromDivisionId, gesture.toDivisionId)
+        .then(() => (next ? actions.addFlowEdge(next[0], next[1]) : undefined))
+        .then(() => {
+          onSelect(next ? { type: 'edge', fromDivisionId: next[0], toDivisionId: next[1] } : { type: 'case' });
+        })
+        .catch(report);
+      return;
+    }
+    if (gesture.kind === 'pan') {
+      // A plain click on empty canvas (no drag) drops the multi-selection.
+      if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) < DRAG_THRESHOLD_PX) {
+        clearMarked();
+      }
+      return;
+    }
+    if (gesture.kind === 'group') {
+      if (!gesture.moved) {
+        return;
+      }
+      suppressClickRef.current = true;
+      const dx = (event.clientX - gesture.startX) / view.zoom;
+      const dy = (event.clientY - gesture.startY) / view.zoom;
+      const dropped = new Map([...gesture.origins].map(([key, origin]) => [key, { x: origin.x + dx, y: origin.y + dy }]));
+      setPendingPositions((current) => new Map([...current, ...dropped]));
+      for (const [key, point] of dropped) {
+        savePosition(key, point);
       }
       return;
     }
@@ -595,19 +1104,79 @@ export default function OfficeCanvas({
       });
       return;
     }
-    if (gesture.kind === 'skills' && gesture.moved) {
+    if (gesture.kind === 'skill' && gesture.moved) {
       suppressClickRef.current = true;
-      try {
-        window.localStorage.setItem(`office-skills-position:${officeId}`, JSON.stringify(skillsPoint));
-      } catch {
-        // The position simply is not remembered in private windows.
-      }
+      const key = `skill:${gesture.nodeId}`;
+      const dropped = { x: gesture.origin.x + (event.clientX - gesture.startX) / view.zoom, y: gesture.origin.y + (event.clientY - gesture.startY) / view.zoom };
+      setPendingPositions((current) => new Map(current).set(key, dropped));
+      actions.moveSkillNode(gesture.nodeId, { x: Math.round(dropped.x), y: Math.round(dropped.y) }).catch((error: unknown) => {
+        setPendingPositions((current) => {
+          const next = new Map(current);
+          next.delete(key);
+          return next;
+        });
+        report(error);
+      });
     }
   };
 
   const handleCanvasKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
-      setConnectSourceId(null);
+      setConnectSource(null);
+      clearMarked();
+      setTool('select');
+      return;
+    }
+    // Ctrl/Cmd+C copies the selected skill node, Ctrl/Cmd+V places a copy where the pointer is.
+    const isShortcut = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey;
+    const inField = (event.target as Element).closest('input, textarea, [contenteditable="true"]');
+    if (isShortcut && !inField && event.key.toLowerCase() === 'c' && selection.type === 'skill') {
+      const node = skillNodes.find((candidate) => candidate.id === selection.nodeId);
+      if (node) {
+        event.preventDefault();
+        onCopySkill?.(node.skillName);
+      }
+      return;
+    }
+    // Ctrl/Cmd+A picks every node, like a diagram editor.
+    if (isShortcut && !inField && event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      setMarked(new Set([...divisions.map((division) => division.id), ...skillNodes.map((node) => skillKey(node.id))]));
+      return;
+    }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && selection.type === 'shape' && marked.size === 0) {
+      event.preventDefault();
+      setCanvasError(null);
+      actions.deleteShape(selection.shapeId).then(() => onSelect({ type: 'case' })).catch(report);
+      return;
+    }
+    // Single letters pick a drawing tool, like a diagram editor (V pointer, R box, U rounded, O ellipse, D diamond, T text).
+    if (!inField && !event.ctrlKey && !event.metaKey && !event.altKey && TOOL_SHORTCUTS[event.key.toLowerCase()]) {
+      event.preventDefault();
+      setTool(TOOL_SHORTCUTS[event.key.toLowerCase()]);
+      return;
+    }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && selection.type === 'edge' && marked.size === 0) {
+      event.preventDefault();
+      setCanvasError(null);
+      actions.deleteFlowEdge(selection.fromDivisionId, selection.toDivisionId).then(() => onSelect({ type: 'case' })).catch(report);
+      return;
+    }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && selectedLink && marked.size === 0) {
+      event.preventDefault();
+      setCanvasError(null);
+      actions.unlinkSkill(selectedLink.nodeId, selectedLink.divisionId).catch(report);
+      setSelectedLink(null);
+      return;
+    }
+    if (!inField && (event.key === 'Delete' || event.key === 'Backspace') && marked.size > 0) {
+      event.preventDefault();
+      deleteMarkedSkills();
+      return;
+    }
+    if (isShortcut && !inField && event.key.toLowerCase() === 'v' && skillClipboard) {
+      event.preventDefault();
+      pasteSkill(lastPointerRef.current);
       return;
     }
     if (event.target !== event.currentTarget) {
@@ -640,21 +1209,71 @@ export default function OfficeCanvas({
     setMenu({ position: { x: event.clientX, y: event.clientY }, target } as MenuState);
   };
 
-  const handleNodeClick = (division: OfficeDivision) => {
+  const handleNodeClick = (division: OfficeDivision, withShift = false) => {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
       return;
     }
-    if (connectSourceId) {
-      const from = connectSourceId;
-      setConnectSourceId(null);
-      addArrow(from, division.id);
+    if (withShift) {
+      toggleMarked(division.id);
+      return;
+    }
+    clearMarked();
+    setSelectedLink(null);
+    if (connectSource) {
+      const from = connectSource;
+      setConnectSource(null);
+      connectEnds(from, { kind: 'division', id: division.id });
       return;
     }
     onSelect({ type: 'division', divisionId: division.id });
   };
 
+  const handleSkillClick = (node: OfficeSkillNode, withShift = false) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (withShift) {
+      toggleMarked(skillKey(node.id));
+      return;
+    }
+    clearMarked();
+    setSelectedLink(null);
+    if (connectSource) {
+      const from = connectSource;
+      setConnectSource(null);
+      connectEnds(from, { kind: 'skill', id: node.id });
+      return;
+    }
+    onSelect({ type: 'skill', nodeId: node.id });
+  };
+
+  // ----- the coordinator's open question -----
+  const openQuestion = caseItem?.status === 'waiting_user' && caseItem.waitingReason === 'question'
+    ? [...messages].reverse().find((message) => message.kind === 'question') ?? null
+    : null;
+
+  const sendAnswer = async () => {
+    const text = answer.trim();
+    if (!text || !onAnswerQuestion || isAnswering) {
+      return;
+    }
+    setIsAnswering(true);
+    setCanvasError(null);
+    try {
+      await onAnswerQuestion(text);
+      setAnswer('');
+    } catch (error) {
+      report(error);
+    } finally {
+      setIsAnswering(false);
+    }
+  };
+
   // ----- menus -----
+  const caseIsOpen = Boolean(caseItem && caseItem.status !== 'done' && caseItem.status !== 'failed');
+
   const divisionMenuItems = (division: OfficeDivision) => {
     const open = (focus: OfficeAgentSection) => () => onSelect({ type: 'division', divisionId: division.id, focus });
     const isWorker = !division.isCoordinator && !division.isAudit;
@@ -663,9 +1282,17 @@ export default function OfficeCanvas({
       { key: 'model', label: t('menu.model'), icon: Cpu, onSelect: open('model') },
       { key: 'role', label: t('menu.role'), icon: FileText, onSelect: open('role') },
       { key: 'tools', label: t('menu.tools'), icon: Wrench, onSelect: open('tools') },
-      { key: 'skills', label: t('menu.skills'), icon: Sparkles, onSelect: open('skills') },
+      ...(isWorker && onQuickTask ? [{
+        key: 'quick', label: t('menu.quickTask'), icon: Zap, onSelect: () => onQuickTask(division), showDividerBefore: true,
+      }] : []),
+      ...(division.isCoordinator && caseIsOpen && onMessageCoordinator ? [{
+        key: 'message', label: t('menu.messageCoordinator'), icon: Send, onSelect: onMessageCoordinator, showDividerBefore: true,
+      }] : []),
+      {
+        key: 'connect', label: isWorker ? t('menu.connectTo') : t('menu.connectSkill'), icon: Link2,
+        onSelect: () => setConnectSource({ kind: 'division', id: division.id }), showDividerBefore: true,
+      },
       ...(isWorker ? [
-        { key: 'connect', label: t('menu.connectTo'), icon: Link2, onSelect: () => setConnectSourceId(division.id), showDividerBefore: true },
         { key: 'messages', label: t('menu.messages'), icon: MessageSquare, onSelect: () => onSelect({ type: 'messages', divisionId: division.id }) },
       ] : []),
       ...(!division.isCoordinator ? [{
@@ -673,7 +1300,6 @@ export default function OfficeCanvas({
         label: division.agent.enabled ? t('menu.disable') : t('menu.enable'),
         icon: Power,
         onSelect: () => { actions.updateAgent(division.agent.id, { enabled: !division.agent.enabled }).catch(report); },
-        showDividerBefore: !isWorker,
       }] : []),
       ...(division.position ? [{
         key: 'reset', label: t('menu.resetPosition'), icon: RotateCcw,
@@ -707,23 +1333,87 @@ export default function OfficeCanvas({
     if (target.kind === 'spoke') {
       return [{ key: 'messages', label: t('menu.messages'), icon: MessageSquare, onSelect: () => onSelect({ type: 'messages', divisionId: target.divisionId }) }];
     }
-    if (target.kind === 'skills') {
-      return [{ key: 'skills', label: t('menu.viewSkills'), icon: Sparkles, onSelect: () => onSelect({ type: 'skills' }) }];
+    if (target.kind === 'skill') {
+      const node = skillNodes.find((candidate) => candidate.id === target.nodeId);
+      if (!node) return [];
+      return [
+        { key: 'open', label: t('menu.viewSkill'), icon: Sparkles, onSelect: () => onSelect({ type: 'skill', nodeId: node.id }) },
+        { key: 'connect', label: t('menu.connectAgent'), icon: Link2, onSelect: () => setConnectSource({ kind: 'skill', id: node.id }) },
+        { key: 'copy', label: t('menu.copySkill'), icon: Copy, onSelect: () => onCopySkill?.(node.skillName) },
+        ...(node.position ? [{
+          key: 'reset', label: t('menu.resetPosition'), icon: RotateCcw,
+          onSelect: () => { actions.moveSkillNode(node.id, null).catch(report); },
+        }] : []),
+        {
+          key: 'delete', label: t('menu.deleteSkill'), icon: Trash2, isDanger: true, showDividerBefore: true,
+          onSelect: () => { actions.deleteSkillNode(node.id).catch(report); },
+        },
+      ];
+    }
+    if (target.kind === 'shape') {
+      const shape = shapes.find((candidate) => candidate.id === target.shapeId);
+      if (!shape) return [];
+      return [
+        { key: 'text', label: t('shapes.menu.editText'), icon: FileText, onSelect: () => setEditingShapeId(shape.id) },
+        { key: 'style', label: t('shapes.menu.style'), icon: Sparkles, onSelect: () => onSelect({ type: 'shape', shapeId: shape.id }) },
+        { key: 'front', label: t('shapes.menu.front'), icon: ArrowUpToLine, showDividerBefore: true, onSelect: () => { actions.updateShape(shape.id, { stack: 'front' }).catch(report); } },
+        { key: 'back', label: t('shapes.menu.back'), icon: ArrowDownToLine, onSelect: () => { actions.updateShape(shape.id, { stack: 'back' }).catch(report); } },
+        {
+          key: 'duplicate', label: t('shapes.menu.duplicate'), icon: Copy,
+          onSelect: () => {
+            const { id: _id, z: _z, createdAt: _createdAt, updatedAt: _updatedAt, ...copy } = shape;
+            actions.addShape({ ...copy, x: shape.x + 24, y: shape.y + 24 })
+              .then((created) => onSelect({ type: 'shape', shapeId: created.id }))
+              .catch(report);
+          },
+        },
+        {
+          key: 'delete', label: t('shapes.menu.delete'), icon: Trash2, isDanger: true, showDividerBefore: true,
+          onSelect: () => { actions.deleteShape(shape.id).catch(report); },
+        },
+      ];
+    }
+    if (target.kind === 'marked') {
+      const markedSkills = [...marked].filter((key) => key.startsWith('skill:') || key.startsWith('shape:')).length;
+      return [
+        {
+          key: 'reset', label: t('menu.resetMarked', { count: marked.size }), icon: RotateCcw,
+          onSelect: () => {
+            // Shapes have no automatic place; only nodes go back to the automatic layout.
+            Promise.all([...marked].filter((key) => !key.startsWith('shape:')).map((key) => (key.startsWith('skill:')
+              ? actions.moveSkillNode(key.slice('skill:'.length), null)
+              : actions.updateDivision(key, { position: null })))).catch(report);
+          },
+        },
+        { key: 'clear', label: t('menu.clearMarked'), icon: X, onSelect: clearMarked },
+        ...(markedSkills > 0 ? [{
+          key: 'delete', label: t('menu.deleteMarkedSkills', { count: markedSkills }), icon: Trash2, isDanger: true, showDividerBefore: true,
+          onSelect: deleteMarkedSkills,
+        }] : []),
+      ];
+    }
+    if (target.kind === 'skillLink') {
+      return [{
+        key: 'unlink', label: t('menu.unlinkSkill'), icon: Unlink, isDanger: true,
+        onSelect: () => { actions.unlinkSkill(target.nodeId, target.divisionId).catch(report); },
+      }];
     }
     return [
       { key: 'add', label: t('menu.addAgentHere'), icon: Plus, onSelect: () => onAddDivisionAt(target.at) },
+      ...(onAddSkillAt ? [{ key: 'skill', label: t('menu.addSkillHere'), icon: Sparkles, onSelect: () => onAddSkillAt(target.at) }] : []),
+      ...(skillClipboard ? [{
+        key: 'paste', label: t('menu.pasteSkill', { name: skillClipboard }), icon: ClipboardPaste, onSelect: () => pasteSkill(target.at),
+      }] : []),
+      ...(caseIsOpen && onMessageCoordinator ? [{
+        key: 'message', label: t('menu.messageCoordinator'), icon: Send, onSelect: onMessageCoordinator, showDividerBefore: true,
+      }] : []),
       {
-        key: 'layout', label: t('menu.autoLayout'), icon: LayoutGrid,
+        key: 'layout', label: t('menu.autoLayout'), icon: LayoutGrid, showDividerBefore: true,
         onSelect: () => {
-          setSkillsPosition(null);
-          try {
-            window.localStorage.removeItem(`office-skills-position:${officeId}`);
-          } catch {
-            // Nothing stored.
-          }
-          Promise.all(divisions.filter((division) => division.position)
-            .map((division) => actions.updateDivision(division.id, { position: null })))
-            .catch(report);
+          Promise.all([
+            ...divisions.filter((division) => division.position).map((division) => actions.updateDivision(division.id, { position: null })),
+            ...skillNodes.filter((node) => node.position).map((node) => actions.moveSkillNode(node.id, null)),
+          ]).catch(report);
           userMovedRef.current = false;
         },
       },
@@ -761,9 +1451,10 @@ export default function OfficeCanvas({
         data-division-id={division.id}
         data-testid={`office-node-${division.slug}`}
         data-status={status}
+        data-marked={marked.has(division.id) ? 'true' : undefined}
         aria-pressed={selected}
         aria-label={`${division.name} · ${agent.name} · ${statusLabel}`}
-        onClick={() => handleNodeClick(division)}
+        onClick={(event) => handleNodeClick(division, event.shiftKey)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -774,7 +1465,7 @@ export default function OfficeCanvas({
             setMenu({ position: { x: rect.left + 12, y: rect.top + 12 }, target: { kind: 'division', divisionId: division.id } });
           }
         }}
-        onContextMenu={(event) => openMenu(event, { kind: 'division', divisionId: division.id })}
+        onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(division.id) ? { kind: 'marked' } : { kind: 'division', divisionId: division.id })}
         className={cn(
           'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col gap-1 rounded-[12px] border px-2.5 py-2 text-left transition-colors hover:bg-card/80',
           FOCUS_OUTLINE,
@@ -782,7 +1473,8 @@ export default function OfficeCanvas({
           selected && SELECTED_OUTLINE,
           !agent.enabled && 'opacity-60',
           dragging && 'cursor-grabbing shadow-lg',
-          connectSourceId && connectSourceId !== division.id && isWorker && 'outline-dashed outline-1 outline-primary/60',
+          connectSource && !(connectSource.kind === 'division' && connectSource.id === division.id)
+            && (isWorker || connectSource.kind === 'skill') && 'outline-dashed outline-1 outline-primary/60',
         )}
         style={{
           left: point.x,
@@ -793,6 +1485,7 @@ export default function OfficeCanvas({
           ...(selected ? selectedOutlineStyle : {}),
         }}
       >
+        {marked.has(division.id) && <MarkedFrame />}
         <span className="flex min-w-0 items-center gap-1.5">
           <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: division.color }} />
           <span className="truncate text-[13px] font-semibold text-foreground">{division.name}</span>
@@ -819,19 +1512,18 @@ export default function OfficeCanvas({
             </span>
           )}
         </span>
-        {isWorker && (
-          <span
-            data-connect-from={division.id}
-            role="presentation"
-            title={t('tree.dragToConnect')}
-            className={cn(
-              'absolute -bottom-2 left-1/2 flex h-4 w-4 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 border-primary bg-background opacity-0 transition-opacity group-hover:opacity-100',
-              (selected || connectingTo?.fromDivisionId === division.id) && 'opacity-100',
-            )}
-          >
-            <span className="h-1 w-1 rounded-full bg-primary" />
-          </span>
-        )}
+        <span
+          data-connect-from={division.id}
+          data-connect-kind="division"
+          role="presentation"
+          title={isWorker ? t('tree.dragToConnect') : t('tree.dragToSkill')}
+          className={cn(
+            'absolute -bottom-2 left-1/2 flex h-4 w-4 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 border-primary bg-background opacity-0 transition-opacity group-hover:opacity-100',
+            (selected || (connectingTo?.from.kind === 'division' && connectingTo.from.id === division.id)) && 'opacity-100',
+          )}
+        >
+          <span className="h-1 w-1 rounded-full bg-primary" />
+        </span>
       </div>
     );
   };
@@ -850,7 +1542,7 @@ export default function OfficeCanvas({
         onPointerCancel={handlePointerEnd}
         onKeyDown={handleCanvasKeyDown}
         onContextMenu={(event) => {
-          if ((event.target as Element).closest('[data-division-id], path[data-hit], [data-skills-node]')) {
+          if ((event.target as Element).closest('[data-division-id], path[data-hit], [data-skill-node-id], [data-shape-id], [data-canvas-control]')) {
             return;
           }
           openMenu(event, { kind: 'canvas', at: toCanvasPoint(event.clientX, event.clientY) });
@@ -858,7 +1550,7 @@ export default function OfficeCanvas({
         className={cn(
           'office-canvas absolute inset-0 touch-none select-none focus-visible:outline-none',
           isPanning ? 'cursor-grabbing' : 'cursor-grab',
-          connectSourceId && 'cursor-crosshair',
+          (connectSource || tool !== 'select') && 'cursor-crosshair',
         )}
         style={{ backgroundPosition: `${view.x}px ${view.y}px`, backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px` }}
       >
@@ -868,6 +1560,36 @@ export default function OfficeCanvas({
           data-testid="office-tree"
           data-zoom={view.zoom.toFixed(2)}
         >
+          {/* shapes the user drew, under the chart */}
+          {shapes.map((shape) => (
+            <CanvasShape
+              key={shape.id}
+              shape={shape}
+              rect={shapeRectOf(shape)}
+              zoom={view.zoom}
+              selected={selection.type === 'shape' && selection.shapeId === shape.id}
+              marked={marked.has(shapeKey(shape.id))}
+              editing={editingShapeId === shape.id}
+              onClick={(withShift) => handleShapeClick(shape, withShift)}
+              onDoubleClick={() => setEditingShapeId(shape.id)}
+              onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(shapeKey(shape.id)) ? { kind: 'marked' } : { kind: 'shape', shapeId: shape.id })}
+              onTextCommit={(text) => commitShapeText(shape, text)}
+              onTextCancel={() => setEditingShapeId(null)}
+            />
+          ))}
+          {drawing && (
+            <div
+              aria-hidden
+              data-testid="office-shape-draft"
+              className={cn(
+                'pointer-events-none absolute border border-dashed border-primary bg-primary/5',
+                drawing.kind === 'ellipse' && 'rounded-[50%]',
+                drawing.kind === 'rounded' && 'rounded-xl',
+              )}
+              style={{ left: drawing.rect.x, top: drawing.rect.y, width: drawing.rect.width, height: drawing.rect.height, borderWidth: 1 / view.zoom }}
+            />
+          )}
+
           <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={1} height={1} aria-hidden>
             <defs>
               <marker id={`office-arrow-${officeId}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -926,6 +1648,9 @@ export default function OfficeCanvas({
               const to = divisions.find((division) => division.id === edge.toDivisionId) as OfficeDivision;
               const active = divisionStates.get(to.id)?.status === 'running' || flowingDivisionIds.has(to.id);
               const selected = selection.type === 'edge' && selection.fromDivisionId === from.id && selection.toDivisionId === to.id;
+              if (reconnecting && reconnecting.fromDivisionId === from.id && reconnecting.toDivisionId === to.id) {
+                return null;
+              }
               const path = connectorPath(positionOf(from), nodeSize, positionOf(to), nodeSize);
               return (
                 <g key={`flow-${from.id}-${to.id}`}>
@@ -945,7 +1670,7 @@ export default function OfficeCanvas({
                     strokeWidth={14}
                     data-hit
                     style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                    onClick={() => onSelect({ type: 'edge', fromDivisionId: from.id, toDivisionId: to.id })}
+                    onClick={() => { setSelectedLink(null); onSelect({ type: 'edge', fromDivisionId: from.id, toDivisionId: to.id }); }}
                     onContextMenu={(event) => openMenu(event, { kind: 'flow', fromDivisionId: from.id, toDivisionId: to.id })}
                   />
                 </g>
@@ -971,14 +1696,75 @@ export default function OfficeCanvas({
             })}
 
             {/* the arrow being drawn */}
-            {connectingTo && (() => {
-              const from = divisions.find((division) => division.id === connectingTo.fromDivisionId);
-              if (!from) return null;
-              const start = positionOf(from);
+            {/* skill links: an agent linked to a skill node has that skill */}
+            {skillNodes.flatMap((node) => node.divisionIds.map((divisionId) => {
+              const division = divisions.find((candidate) => candidate.id === divisionId);
+              if (!division) return null;
+              const path = connectorPath(positionOf(division), nodeSize, skillPositionOf(node), { width: SKILL_WIDTH, height: SKILL_HEIGHT });
+              const selected = (selection.type === 'skill' && selection.nodeId === node.id)
+                || (selectedLink?.nodeId === node.id && selectedLink.divisionId === divisionId);
+              return (
+                <g key={`skill-link-${node.id}-${divisionId}`}>
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke="rgb(139 92 246 / 0.7)"
+                    strokeWidth={selected ? 2.5 : 1.25}
+                    strokeDasharray="3 4"
+                    data-testid={`office-skill-link-${node.skillName}-${division.slug}`}
+                  />
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={12}
+                    data-hit
+                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                    onClick={() => { setSelectedLink({ nodeId: node.id, divisionId }); onSelect({ type: 'skill', nodeId: node.id }); }}
+                    onContextMenu={(event) => openMenu(event, { kind: 'skillLink', nodeId: node.id, divisionId })}
+                  />
+                </g>
+              );
+            }))}
+
+            {/* an arrow end being dragged to another team */}
+            {reconnecting && (() => {
+              const from = divisions.find((division) => division.id === reconnecting.fromDivisionId);
+              const to = divisions.find((division) => division.id === reconnecting.toDivisionId);
+              if (!from || !to) return null;
+              const ends = connectorEnds(positionOf(from), nodeSize, positionOf(to), nodeSize);
+              const start = reconnecting.end === 'from' ? reconnecting.point : ends.start;
+              const end = reconnecting.end === 'to' ? reconnecting.point : ends.end;
               return (
                 <line
-                  x1={start.x + NODE_WIDTH / 2}
-                  y1={start.y + NODE_HEIGHT}
+                  x1={start.x}
+                  y1={start.y}
+                  x2={end.x}
+                  y2={end.y}
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  markerEnd={`url(#office-arrow-${officeId})`}
+                  data-testid="office-reconnect-line"
+                />
+              );
+            })()}
+
+            {/* the line being drawn */}
+            {connectingTo && (() => {
+              let start: CanvasPoint | null = null;
+              if (connectingTo.from.kind === 'division') {
+                const from = divisions.find((division) => division.id === connectingTo.from.id);
+                start = from ? { x: positionOf(from).x + NODE_WIDTH / 2, y: positionOf(from).y + NODE_HEIGHT } : null;
+              } else {
+                const from = skillNodes.find((node) => node.id === connectingTo.from.id);
+                start = from ? { x: skillPositionOf(from).x + SKILL_WIDTH / 2, y: skillPositionOf(from).y } : null;
+              }
+              if (!start) return null;
+              return (
+                <line
+                  x1={start.x}
+                  y1={start.y}
                   x2={connectingTo.point.x}
                   y2={connectingTo.point.y}
                   stroke="hsl(var(--primary))"
@@ -1022,6 +1808,39 @@ export default function OfficeCanvas({
 
           {divisions.map(renderNode)}
 
+          {/* the draggable ends of the selected arrow, above the nodes so they can always be grabbed */}
+          {selection.type === 'edge' && !reconnecting && (() => {
+            const from = divisions.find((division) => division.id === selection.fromDivisionId);
+            const to = divisions.find((division) => division.id === selection.toDivisionId);
+            if (!from || !to) return null;
+            const ends = connectorEnds(positionOf(from), nodeSize, positionOf(to), nodeSize);
+            return (
+              <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" style={{ zIndex: 20 }} width={1} height={1} aria-hidden>
+                {(['from', 'to'] as const).map((end) => {
+                  const at = end === 'from' ? ends.start : ends.end;
+                  return (
+                    <circle
+                      key={end}
+                      cx={at.x}
+                      cy={at.y}
+                      r={6 / view.zoom + 2}
+                      data-edge-end={end}
+                      data-edge-from={from.id}
+                      data-edge-to={to.id}
+                      data-testid={`office-flow-end-${end}-${from.slug}-${to.slug}`}
+                      fill="hsl(var(--background))"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      style={{ pointerEvents: 'all', cursor: 'move' }}
+                    >
+                      <title>{t('tree.dragArrowEnd')}</title>
+                    </circle>
+                  );
+                })}
+              </svg>
+            );
+          })()}
+
           {/* message-count chips on the coordinator → division spokes */}
           {coordinator && spokeTargets.map((division) => {
             const count = messageCounts.get(division.id) ?? 0;
@@ -1050,47 +1869,169 @@ export default function OfficeCanvas({
             );
           })}
 
-          {/* skills layer */}
-          <button
-            type="button"
-            data-skills-node
-            data-testid="office-node-skills"
-            aria-pressed={selection.type === 'skills'}
-            onClick={() => {
-              if (suppressClickRef.current) {
-                suppressClickRef.current = false;
-                return;
-              }
-              onSelect({ type: 'skills' });
-            }}
-            onContextMenu={(event) => openMenu(event, { kind: 'skills' })}
-            className={cn(
-              'office-node-enter glass-surface absolute z-10 flex flex-col gap-1 rounded-[12px] border px-2.5 py-2 text-left hover:bg-card/80',
-              FOCUS_OUTLINE,
-              selection.type === 'skills' && SELECTED_OUTLINE,
-            )}
-            style={{
-              left: skillsPoint.x,
-              top: skillsPoint.y,
-              width: NODE_WIDTH,
-              height: NODE_HEIGHT,
-              borderColor: STATUS_BORDER.idle,
-              ...(selection.type === 'skills' ? selectedOutlineStyle : {}),
-            }}
-          >
-            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              {t('tree.skills')}
-            </span>
-            <span className="text-[11px] text-muted-foreground">{t('tree.skillsCount', { count: skillCount })}</span>
-          </button>
+          {/* skill nodes */}
+          {skillNodes.map((node) => {
+            const point = skillPositionOf(node);
+            const installed = installedSkills.find((skill) => skill.name === node.skillName);
+            const selected = selection.type === 'skill' && selection.nodeId === node.id;
+            return (
+              <div
+                key={node.id}
+                role="button"
+                tabIndex={0}
+                data-skill-node-id={node.id}
+                data-testid={`office-skill-node-${node.skillName}`}
+                data-marked={marked.has(skillKey(node.id)) ? 'true' : undefined}
+                aria-pressed={selected}
+                aria-label={t('tree.skillNode', { name: node.skillName, count: node.divisionIds.length })}
+                onClick={(event) => handleSkillClick(node, event.shiftKey)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleSkillClick(node);
+                  }
+                }}
+                onContextMenu={(event) => openMenu(event, marked.size > 1 && marked.has(skillKey(node.id)) ? { kind: 'marked' } : { kind: 'skill', nodeId: node.id })}
+                title={installed?.description || undefined}
+                className={cn(
+                  'office-node-enter glass-surface group absolute z-10 flex cursor-pointer flex-col justify-center gap-0.5 rounded-[12px] border border-violet-400/50 px-2.5 text-left hover:bg-card/80',
+                  FOCUS_OUTLINE,
+                  selected && SELECTED_OUTLINE,
+                  draggingId === `skill:${node.id}` && 'cursor-grabbing shadow-lg',
+                  connectSource?.kind === 'division' && 'outline-dashed outline-1 outline-violet-500/60',
+                )}
+                style={{ left: point.x, top: point.y, width: SKILL_WIDTH, height: SKILL_HEIGHT, ...(selected ? selectedOutlineStyle : {}) }}
+              >
+                {marked.has(skillKey(node.id)) && <MarkedFrame />}
+                <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-semibold text-foreground">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                  <span className="truncate">{node.skillName}</span>
+                </span>
+                <span className={cn('truncate text-[10.5px]', installed || installedSkills.length === 0 ? 'text-muted-foreground' : 'text-amber-700 dark:text-amber-300')}>
+                  {installed || installedSkills.length === 0 ? t('tree.skillAgents', { count: node.divisionIds.length }) : t('tree.skillMissing')}
+                </span>
+                <span
+                  data-connect-from={node.id}
+                  data-connect-kind="skill"
+                  role="presentation"
+                  title={t('tree.dragSkillToAgent')}
+                  className={cn(
+                    'absolute -top-2 left-1/2 flex h-4 w-4 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 border-violet-500 bg-background opacity-0 transition-opacity group-hover:opacity-100',
+                    selected && 'opacity-100',
+                  )}
+                >
+                  <span className="h-1 w-1 rounded-full bg-violet-500" />
+                </span>
+              </div>
+            );
+          })}
+
+          {marquee && (
+            <div
+              aria-hidden
+              data-testid="office-marquee"
+              className="pointer-events-none absolute z-30 rounded-[4px] border border-primary bg-primary/10"
+              style={{
+                left: Math.min(marquee.from.x, marquee.to.x),
+                top: Math.min(marquee.from.y, marquee.to.y),
+                width: Math.abs(marquee.to.x - marquee.from.x),
+                height: Math.abs(marquee.to.y - marquee.from.y),
+                borderWidth: 1 / view.zoom,
+              }}
+            />
+          )}
         </div>
       </div>
 
-      {connectSourceId && (
+      <ShapeToolbar tool={tool} onToolChange={setTool} />
+
+      {openQuestion && coordinator && isQuestionFolded && (
+        <button
+          type="button"
+          data-canvas-control
+          data-testid="office-question-chip"
+          onClick={() => setIsQuestionFolded(false)}
+          className="absolute z-20 flex items-center gap-1.5 rounded-full border-2 border-amber-400/70 bg-background px-2.5 py-1 text-[11px] font-medium text-amber-700 shadow-sm dark:text-amber-300"
+          style={{
+            left: Math.max(12, view.x + (coordinatorPoint.x + NODE_WIDTH + 12) * view.zoom),
+            top: Math.max(12, view.y + coordinatorPoint.y * view.zoom),
+          }}
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          {t('question.chip')}
+        </button>
+      )}
+      {openQuestion && coordinator && !isQuestionFolded && (
+        <div
+          data-canvas-control
+          data-testid="office-question-bubble"
+          role="group"
+          aria-label={t('question.label')}
+          className="glass-surface-strong absolute z-20 w-[min(320px,calc(100%-24px))] rounded-[14px] border-2 border-amber-400/70 p-3 shadow-lg"
+          style={{
+            left: Math.min(
+              Math.max(12, view.x + (coordinatorPoint.x + NODE_WIDTH + 18) * view.zoom),
+              Math.max(12, (canvasRef.current?.clientWidth ?? 800) - 332),
+            ),
+            top: Math.max(12, view.y + coordinatorPoint.y * view.zoom - 8),
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span className="flex-1">{t('question.title', { name: coordinator.agent.name })}</span>
+            <button
+              type="button"
+              onClick={() => setIsQuestionFolded(true)}
+              className="rounded-md p-0.5 text-muted-foreground hover:text-foreground"
+              aria-label={t('question.fold')}
+              title={t('question.fold')}
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+          </span>
+          <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[13px] leading-snug text-foreground">{String(openQuestion.payload.text ?? '')}</p>
+          {onAnswerQuestion && (
+            <form
+              className="mt-2 flex items-end gap-1.5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendAnswer();
+              }}
+            >
+              <textarea
+                value={answer}
+                onChange={(event) => setAnswer(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    void sendAnswer();
+                  }
+                }}
+                rows={2}
+                placeholder={t('question.placeholder')}
+                aria-label={t('question.placeholder')}
+                className="min-h-10 flex-1 resize-y rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button
+                type="submit"
+                disabled={!answer.trim() || isAnswering}
+                aria-label={t('question.send')}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground disabled:opacity-50"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {connectSource && (
         <div className="glass-surface-strong absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-foreground" role="status">
-          {t('tree.connectHint', { name: divisions.find((division) => division.id === connectSourceId)?.name ?? '' })}
-          <button type="button" className="text-primary hover:underline" onClick={() => setConnectSourceId(null)}>{t('common.cancel')}</button>
+          {connectSource.kind === 'skill'
+            ? t('tree.connectSkillHint', { name: skillNodes.find((node) => node.id === connectSource.id)?.skillName ?? '' })
+            : t('tree.connectHint', { name: divisions.find((division) => division.id === connectSource.id)?.name ?? '' })}
+          <button type="button" className="text-primary hover:underline" onClick={() => setConnectSource(null)}>{t('common.cancel')}</button>
         </div>
       )}
       {canvasError && (
@@ -1123,7 +2064,7 @@ export default function OfficeCanvas({
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
       </div>
-      <p className="pointer-events-none absolute bottom-4 left-3 z-30 hidden text-[10.5px] text-muted-foreground/80 min-[900px]:block">
+      <p className="pointer-events-none absolute bottom-4 left-3 right-48 z-10 hidden truncate text-[10.5px] text-muted-foreground/80 min-[900px]:block" title={t('tree.hint')}>
         {t('tree.hint')}
       </p>
 

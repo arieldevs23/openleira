@@ -110,6 +110,11 @@ export default function CaseList({ cases, selectedCaseId, onSelect, onCreate, va
                 <span className="line-clamp-2 text-[13px] font-medium text-foreground">{caseItem.title}</span>
                 <span className="flex items-center gap-1.5">
                   <OfficeStatusBadge tone={officeCaseTone(caseItem.status)} label={t(`status.${caseItem.status}`)} />
+                  {caseItem.quickDivisionId && (
+                    <span className="rounded-full bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-700 dark:text-amber-300" data-testid="office-quick-badge">
+                      {t('quickTask.badge')}
+                    </span>
+                  )}
                   <span className="text-[10px] text-muted-foreground">
                     {new Date(caseItem.createdAt).toLocaleDateString()}
                   </span>

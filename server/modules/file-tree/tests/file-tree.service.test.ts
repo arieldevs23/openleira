@@ -83,6 +83,7 @@ function createDependencies(
     fileSystem,
     projects: {
       getProjectPathById: async () => projectRoot,
+      isProjectBusy: () => false,
     },
     workspace: {
       rootPath: projectRoot,
@@ -419,7 +420,7 @@ test('createEntry performs filesystem mutation only through the injected adapter
  * which is the only way to exercise the read-only roots: the whole guarantee
  * rests on `realpath` resolving symlinks before the comparison.
  */
-function createRealFileSystemService(projectRoot: string): FileTreeServices {
+function createRealFileSystemService(projectRoot: string, isProjectBusy: (projectPath: string) => boolean = () => false): FileTreeServices {
   return createFileTreeService({
     fileSystem: {
       access: (candidatePath) => fsPromises.access(candidatePath),
@@ -442,7 +443,7 @@ function createRealFileSystemService(projectRoot: string): FileTreeServices {
       copyFile: (source, destination) => fsPromises.copyFile(source, destination),
       createReadStream: (filePath) => createReadStream(filePath),
     },
-    projects: { getProjectPathById: async () => projectRoot },
+    projects: { getProjectPathById: async () => projectRoot, isProjectBusy },
     workspace: {
       rootPath: projectRoot,
       validatePath: (candidatePath) => validateWorkspacePath(candidatePath),
@@ -453,6 +454,32 @@ function createRealFileSystemService(projectRoot: string): FileTreeServices {
     logger: { error: () => undefined },
   });
 }
+
+test('while a canvas task runs in the project, files can be read but not edited', async () => {
+  const projectRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'file-tree-busy-'));
+  try {
+    const filePath = path.join(projectRoot, 'app.js');
+    await fsPromises.writeFile(filePath, 'original', 'utf8');
+    const service = createRealFileSystemService(projectRoot, (candidate) => candidate === projectRoot);
+
+    await assert.rejects(
+      service.saveTextFile('project-1', filePath, 'overwritten'),
+      (error: unknown) => (error as AppError).code === 'PROJECT_BUSY' && (error as AppError).statusCode === 423,
+    );
+    await assert.rejects(
+      service.createEntry({ projectId: 'project-1', parentPath: projectRoot, type: 'file', name: 'new.txt' }),
+      (error: unknown) => (error as AppError).code === 'PROJECT_BUSY',
+    );
+    await assert.rejects(
+      service.deleteEntry({ projectId: 'project-1', targetPath: filePath }),
+      (error: unknown) => (error as AppError).code === 'PROJECT_BUSY',
+    );
+    assert.deepEqual(await fsPromises.readdir(projectRoot), ['app.js']);
+    assert.equal(await fsPromises.readFile(filePath, 'utf8'), 'original');
+  } finally {
+    await fsPromises.rm(projectRoot, { recursive: true, force: true });
+  }
+});
 
 test('the temp directory can be browsed and read, but never written to', async () => {
   const temporaryDirectory = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'file-tree-tmp-'));

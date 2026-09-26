@@ -7,7 +7,7 @@ import test from 'node:test';
 import { closeConnection, initializeDatabase, officeCasesDb, projectsDb } from '@/modules/database/index.js';
 import { officeService } from '@/modules/office/services/office.service.js';
 import { providerModelsService } from '@/modules/providers/index.js';
-import type { LLMProvider, ProviderAuthStatus } from '@/shared/types.js';
+import type { LLMProvider, OfficeDivision, ProviderAuthStatus } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
 async function withProject(run: (projectId: string) => Promise<void>): Promise<void> {
@@ -180,6 +180,16 @@ test('flow arrows join worker divisions only and never loop; node positions are 
   await withProject(async (projectId) => {
     const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });
     const bySlug = (slug: string) => divisions.find((division) => division.slug === slug)?.id as string;
+    const slugOf = (id: string) => divisions.find((division) => division.id === id)?.slug;
+
+    // A new workspace starts with coordinator → planner → teams, not everyone in parallel.
+    const seeded = officeService.getSnapshot(office.id).flow.map((edge) => `${slugOf(edge.fromDivisionId)}>${slugOf(edge.toDivisionId)}`).sort();
+    assert.deepEqual(seeded, [
+      'backend>security', 'designer>frontend', 'planner>backend', 'planner>designer', 'planner>docs', 'planner>frontend', 'planner>security',
+    ]);
+    for (const edge of officeService.getSnapshot(office.id).flow) {
+      officeService.deleteFlowEdge(office.id, edge.fromDivisionId, edge.toDivisionId);
+    }
 
     officeService.addFlowEdge(office.id, bySlug('planner'), bySlug('backend'));
     const flow = officeService.addFlowEdge(office.id, bySlug('backend'), bySlug('docs'));
@@ -305,6 +315,42 @@ test('a workspace folder is either a fresh empty folder or an existing one, regi
   });
 });
 
+test('an agent has a skill exactly when it is linked to that skill on the canvas', async () => {
+  await withProject(async (projectId) => {
+    const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });
+    const backend = divisions.find((division) => division.slug === 'backend') as OfficeDivision;
+    const docs = divisions.find((division) => division.slug === 'docs') as OfficeDivision;
+    const agentSkills = (divisionId: string) => officeService.getSnapshot(office.id).divisions
+      .find((division) => division.id === divisionId)?.agent.skills;
+
+    const review = officeService.addSkillNode(office.id, { skillName: 'review', position: { x: 10, y: 20 } });
+    assert.deepEqual(review.position, { x: 10, y: 20 });
+    officeService.linkSkill(office.id, review.id, backend.id);
+    officeService.linkSkill(office.id, review.id, docs.id);
+    assert.deepEqual(agentSkills(backend.id), ['review']);
+
+    // A copy of the same skill elsewhere on the canvas is still the same skill.
+    const copy = officeService.addSkillNode(office.id, { skillName: 'review' });
+    officeService.linkSkill(office.id, copy.id, backend.id);
+    officeService.unlinkSkill(office.id, review.id, backend.id);
+    assert.deepEqual(agentSkills(backend.id), ['review'], 'still linked through the copy');
+
+    officeService.deleteSkillNode(office.id, copy.id);
+    assert.deepEqual(agentSkills(backend.id), []);
+    assert.deepEqual(agentSkills(docs.id), ['review']);
+
+    // Skills set the old way (agent PATCH) are placed on the canvas and linked.
+    await officeService.updateAgent(office.id, backend.agent.id, { skills: ['deploy'] });
+    const nodes = officeService.getSnapshot(office.id).skillNodes;
+    const deploy = nodes.find((node) => node.skillName === 'deploy');
+    assert.ok(deploy);
+    assert.deepEqual(deploy.divisionIds, [backend.id]);
+
+    assert.throws(() => officeService.addSkillNode(office.id, { skillName: '  ' }), rejectsWith('INVALID_OFFICE_INPUT'));
+    assert.throws(() => officeService.linkSkill(office.id, 'missing', backend.id), rejectsWith('OFFICE_SKILL_NODE_NOT_FOUND'));
+  });
+});
+
 test('only draft cases can be edited, and running cases cannot be deleted', async () => {
   await withProject(async (projectId) => {
     const { office } = officeService.createOffice({ projectId, locale: 'en' });
@@ -321,5 +367,32 @@ test('only draft cases can be edited, and running cases cannot be deleted', asyn
     officeService.deleteCase(office.id, created.id);
     assert.equal(officeCasesDb.getCase(created.id), null);
     assert.throws(() => officeService.getCaseDetail(office.id, created.id), rejectsWith('OFFICE_CASE_NOT_FOUND'));
+  });
+});
+
+test('shapes are drawn, restyled, stacked and deleted, with their input checked', async () => {
+  await withProject(async (projectId) => {
+    const { office } = officeService.createOffice({ projectId, locale: 'en' });
+    const box = officeService.addShape(office.id, { kind: 'rounded', x: 10.4, y: 20, width: 200, height: 120, text: 'Frontend group' });
+    assert.equal(box.kind, 'rounded');
+    assert.equal(box.x, 10);
+    assert.equal(box.stroke, '#8a8a90', 'a box gets a border by default');
+    const label = officeService.addShape(office.id, { kind: 'text', x: 0, y: 0, width: 120, height: 40, text: 'Notes' });
+    assert.equal(label.stroke, null, 'text has no border');
+    assert.ok(label.z > box.z, 'a new shape goes on top');
+
+    const restyled = officeService.updateShape(office.id, box.id, { fill: '#1C1C1F', textColor: null, fontSize: 18, width: 260 });
+    assert.equal(restyled.fill, '#1c1c1f');
+    assert.equal(restyled.width, 260);
+    assert.ok(officeService.updateShape(office.id, box.id, { stack: 'front' }).z > label.z);
+    assert.ok(officeService.updateShape(office.id, box.id, { stack: 'back' }).z < label.z);
+
+    assert.throws(() => officeService.updateShape(office.id, box.id, { fill: 'red' }), rejectsWith('INVALID_OFFICE_INPUT'));
+    assert.throws(() => officeService.updateShape(office.id, box.id, { width: 2 }), rejectsWith('INVALID_OFFICE_INPUT'));
+    assert.throws(() => officeService.addShape(office.id, { kind: 'star' as never, x: 0, y: 0, width: 20, height: 20 }), rejectsWith('INVALID_OFFICE_INPUT'));
+
+    assert.equal(officeService.getSnapshot(office.id).shapes.length, 2);
+    assert.deepEqual(officeService.deleteShape(office.id, box.id).map((shape) => shape.id), [label.id]);
+    assert.throws(() => officeService.deleteShape(office.id, box.id), rejectsWith('OFFICE_SHAPE_NOT_FOUND'));
   });
 });

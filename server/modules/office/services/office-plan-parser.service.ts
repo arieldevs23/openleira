@@ -422,3 +422,77 @@ export function parseAppAnalysis(text: string): ParseResult<ParsedAppAnalysis> {
   }
   return { ok: true, value: { summary: readText(value.summary), divisions: divisions.slice(0, 12) } };
 }
+
+/** Longer answers are real work that may merely mention limits (e.g. an agent building rate limiting). */
+const MAX_PROVIDER_LIMIT_TEXT_LENGTH = 400;
+const PROVIDER_LIMIT_PATTERNS = [
+  /\bhit your (?:session|usage|weekly|daily|monthly|\d+-hour) limit\b/i,
+  /\b(?:session|usage|weekly|daily|monthly|\d+-hour) limit (?:reached|exceeded|hit)\b/i,
+  /\b(?:usage|rate) limit(?:s)? (?:reached|exceeded)\b/i,
+  /\bquota (?:exceeded|reached|exhausted)\b/i,
+  /\binsufficient[_ ]quota\b/i,
+  /\bout of (?:credits|usage)\b/i,
+  /\blimit\b[^\n]{0,80}\bresets?\b/i,
+];
+
+/**
+ * Recognises a provider's "you are out of quota" reply, which CLIs print as
+ * an ordinary assistant answer (Claude Code: "You've hit your session limit ·
+ * resets 6pm (UTC)"). Returns the message, or null for a normal answer. Only
+ * short answers qualify, so a real report that talks about limits is never
+ * mistaken for one. Used by the orchestrator to park a case instead of
+ * counting the reply as a failed task or audit.
+ */
+export function detectProviderLimit(text: string | null | undefined): string | null {
+  const trimmed = (text ?? '').trim();
+  if (!trimmed || trimmed.length > MAX_PROVIDER_LIMIT_TEXT_LENGTH) {
+    return null;
+  }
+  return PROVIDER_LIMIT_PATTERNS.some((pattern) => pattern.test(trimmed)) ? trimmed : null;
+}
+
+const HEADING_PATTERN = /^(#{2,4})\s+(.+?)\s*#*\s*$/;
+
+/** Lower-case letters and digits only, so "Frontend (web)" and "frontend" compare equal. */
+const foldForMatch = (value: string): string => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+
+/**
+ * Cuts a forwarded result down to what one receiving team needs. A result
+ * that hands work to several teams (typically the planner's) carries one
+ * subsection per team, headed with the team's name or slug; the receiving
+ * team gets the text above the first team subsection (shared context) plus
+ * its own subsection, never the other teams'. A result without team
+ * subsections is forwarded whole. Used by the orchestrator when it builds a
+ * task prompt from its dependencies' results.
+ */
+export function scopeResultToDivision(
+  summary: string,
+  target: { name: string; slug: string },
+  divisions: Array<{ name: string; slug: string }>,
+): string {
+  const lines = summary.split('\n');
+  const matchers = divisions
+    .map((division) => ({ slug: division.slug, keys: [foldForMatch(division.name), foldForMatch(division.slug)].filter(Boolean) }));
+  const teamOf = (line: string): string | null => {
+    const match = HEADING_PATTERN.exec(line.trim());
+    if (!match) return null;
+    const heading = foldForMatch(match[2]);
+    const found = matchers.find((matcher) => matcher.keys.some((key) => heading === key || heading.startsWith(key) || heading.endsWith(key)));
+    return found?.slug ?? null;
+  };
+
+  const sections: Array<{ slug: string; start: number }> = [];
+  lines.forEach((line, index) => {
+    const slug = teamOf(line);
+    if (slug) sections.push({ slug, start: index });
+  });
+  if (sections.length === 0) {
+    return summary;
+  }
+  const shared = lines.slice(0, sections[0].start).join('\n').trim();
+  const own = sections
+    .map((section, index) => ({ ...section, end: sections[index + 1]?.start ?? lines.length }))
+    .filter((section) => section.slug === target.slug)
+    .map((section) => lines.slice(section.start, section.end).join('\n').trim());
+  return [shared, ...own].filter(Boolean).join('\n\n') || summary;
+}

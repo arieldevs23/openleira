@@ -12,6 +12,8 @@ import type {
   OfficeFlowEdge,
   OfficeMessage,
   OfficeSelection,
+  OfficeShape,
+  OfficeSkillNode,
   OfficeTask,
   OfficeTaskStatus,
 } from '@/shared/types';
@@ -120,6 +122,7 @@ const CASE: OfficeCase = {
   updatedAt: NOW,
   startedAt: NOW,
   finishedAt: null,
+  quickDivisionId: null,
 };
 
 const TASKS: OfficeTask[] = [
@@ -151,15 +154,27 @@ type Recorded = { method: string; args: unknown[] };
 function recordingActions(calls: Recorded[]) {
   const record = (method: string) => async (...args: unknown[]) => {
     calls.push({ method, args });
-    return {} as never;
+    return { id: 'new-node' } as never;
   };
   return {
     addFlowEdge: record('addFlowEdge'),
     deleteFlowEdge: record('deleteFlowEdge'),
     updateDivision: record('updateDivision'),
     updateAgent: record('updateAgent'),
-  } as unknown as Pick<OfficeActions, 'addFlowEdge' | 'deleteFlowEdge' | 'updateDivision' | 'updateAgent'>;
+    addSkillNode: record('addSkillNode'),
+    moveSkillNode: record('moveSkillNode'),
+    deleteSkillNode: record('deleteSkillNode'),
+    linkSkill: record('linkSkill'),
+    unlinkSkill: record('unlinkSkill'),
+    addShape: record('addShape'),
+    updateShape: record('updateShape'),
+    deleteShape: record('deleteShape'),
+  } as unknown as OfficeActions;
 }
+
+const SKILL_NODES: OfficeSkillNode[] = [
+  { id: 'n-review', skillName: 'review', position: null, divisionIds: ['div-backend'], createdAt: NOW },
+];
 
 function renderTree(overrides: {
   tasks?: OfficeTask[];
@@ -169,6 +184,15 @@ function renderTree(overrides: {
   calls?: Recorded[];
   onAddDivisionAt?: (point: { x: number; y: number }) => void;
   usageByDivision?: Map<string, number>;
+  skillNodes?: OfficeSkillNode[];
+  skillClipboard?: string | null;
+  onCopySkill?: (name: string) => void;
+  onAddSkillAt?: (point: { x: number; y: number }) => void;
+  caseItem?: OfficeCase;
+  messages?: OfficeMessage[];
+  onAnswerQuestion?: (text: string) => Promise<void>;
+  onQuickTask?: (division: OfficeDivision) => void;
+  shapes?: OfficeShape[];
 } = {}) {
   return render(
     <OfficeCanvas
@@ -176,24 +200,34 @@ function renderTree(overrides: {
       projectName="shop"
       divisions={DIVISIONS}
       flow={overrides.flow ?? []}
-      caseItem={CASE}
+      caseItem={overrides.caseItem ?? CASE}
       tasks={overrides.tasks ?? TASKS}
-      messages={MESSAGES}
+      messages={overrides.messages ?? MESSAGES}
       selection={overrides.selection ?? { type: 'case' }}
       onSelect={overrides.onSelect ?? (() => {})}
       usageByDivision={overrides.usageByDivision}
       actions={recordingActions(overrides.calls ?? [])}
       onAddDivisionAt={overrides.onAddDivisionAt ?? (() => {})}
       onDeleteDivision={() => {}}
+      skillNodes={overrides.skillNodes ?? SKILL_NODES}
+      installedSkills={[{ name: 'review', description: 'Reviews code', scope: 'user' }]}
+      skillClipboard={overrides.skillClipboard ?? null}
+      onCopySkill={overrides.onCopySkill}
+      onAddSkillAt={overrides.onAddSkillAt}
+      onAnswerQuestion={overrides.onAnswerQuestion}
+      onQuickTask={overrides.onQuickTask}
+      shapes={overrides.shapes}
     />,
   );
 }
 
 const arrow = (from: string, to: string): OfficeFlowEdge => ({ fromDivisionId: `div-${from}`, toDivisionId: `div-${to}`, createdAt: NOW });
 
-test('renders the case, the coordinator, one node per division and the skills/audit layer', () => {
+test('renders the case, the coordinator, one node per division, the audit layer and the skill nodes', () => {
   renderTree();
-  for (const slug of ['case', 'coordinator', 'planner', 'designer', 'backend', 'frontend', 'security', 'docs', 'skills', 'audit']) {
+  assert.ok(screen.getByTestId('office-skill-node-review'));
+  assert.ok(screen.getByTestId('office-skill-link-review-backend'), 'the linked agent is drawn to its skill');
+  for (const slug of ['case', 'coordinator', 'planner', 'designer', 'backend', 'frontend', 'security', 'docs', 'audit']) {
     assert.ok(screen.getByTestId(`office-node-${slug}`), `node ${slug}`);
   }
   assert.ok(screen.getByText('Add login'));
@@ -250,12 +284,12 @@ test('clicking a node selects its division and the message chip opens the messag
 
   fireEvent.click(screen.getByTestId('office-node-frontend'));
   fireEvent.click(screen.getByRole('button', { name: 'Messages with Backend' }));
-  fireEvent.click(screen.getByTestId('office-node-skills'));
+  fireEvent.click(screen.getByTestId('office-skill-node-review'));
 
   assert.deepEqual(selections, [
     { type: 'division', divisionId: 'div-frontend' },
     { type: 'messages', divisionId: 'div-backend' },
-    { type: 'skills' },
+    { type: 'skill', nodeId: 'n-review' },
   ]);
 });
 
@@ -351,13 +385,24 @@ test('right-click on a node opens its menu; entries jump to a section or draw an
   assert.deepEqual(calls, [{ method: 'addFlowEdge', args: ['div-backend', 'div-docs'] }]);
 });
 
+test('a working team menu offers a quick task; the coordinator menu does not', () => {
+  const picked: string[] = [];
+  renderTree({ onQuickTask: (division) => picked.push(division.id) });
+  fireEvent.contextMenu(screen.getByTestId('office-node-backend'), { clientX: 50, clientY: 50 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Quick task' }));
+  assert.deepEqual(picked, ['div-backend']);
+
+  fireEvent.contextMenu(screen.getByTestId('office-node-coordinator'), { clientX: 50, clientY: 50 });
+  assert.ok(!screen.getAllByRole('menuitem').some((item) => item.textContent === 'Quick task'));
+});
+
 test('the coordinator menu offers no flow or delete entries', () => {
   renderTree();
   fireEvent.contextMenu(screen.getByTestId('office-node-coordinator'), { clientX: 50, clientY: 50 });
   const labels = screen.getAllByRole('menuitem').map((item) => item.textContent);
   assert.ok(labels.includes('Model'));
   assert.ok(!labels.includes('Connect to…'));
-  assert.ok(!labels.includes('Delete division'));
+  assert.ok(!labels.includes('Delete team'));
   assert.ok(!labels.includes('Disable'));
 });
 
@@ -391,4 +436,257 @@ test('a drag whose trailing click never comes does not swallow the next click', 
   fireEvent.pointerUp(docs, { pointerId: 2, pointerType: 'mouse', clientX: 10, clientY: 10 });
   fireEvent.click(docs);
   assert.deepEqual(selections, [{ type: 'division', divisionId: 'div-docs' }]);
+});
+
+test('an agent gets a skill by being connected to the skill node', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  fireEvent.contextMenu(screen.getByTestId('office-skill-node-review'), { clientX: 40, clientY: 40 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Connect to an agent…' }));
+  fireEvent.click(screen.getByTestId('office-node-docs'));
+  assert.deepEqual(calls, [{ method: 'linkSkill', args: ['n-review', 'div-docs'] }]);
+
+  // A link can be cut from its line.
+  fireEvent.contextMenu(screen.getByTestId('office-skill-link-review-backend').nextElementSibling as Element, { clientX: 40, clientY: 40 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove skill from agent' }));
+  assert.deepEqual(calls[1], { method: 'unlinkSkill', args: ['n-review', 'div-backend'] });
+});
+
+test('skills are added from the canvas menu and copied with Ctrl+C / Ctrl+V', async () => {
+  const calls: Recorded[] = [];
+  const copied: string[] = [];
+  const addAt: Array<{ x: number; y: number }> = [];
+  const view = renderTree({ calls, onCopySkill: (name) => copied.push(name), onAddSkillAt: (point) => addAt.push(point), selection: { type: 'skill', nodeId: 'n-review' } });
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+
+  fireEvent.contextMenu(canvas, { clientX: 200, clientY: 200 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Add skill here' }));
+  assert.equal(addAt.length, 1);
+
+  fireEvent.keyDown(canvas, { key: 'c', ctrlKey: true });
+  assert.deepEqual(copied, ['review']);
+
+  view.unmount();
+  renderTree({ calls, skillClipboard: 'review' });
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'v', ctrlKey: true });
+  await Promise.resolve();
+  assert.equal(calls[0].method, 'addSkillNode');
+  assert.equal((calls[0].args[0] as { skillName: string }).skillName, 'review');
+});
+
+test('an open question from the coordinator shows on the canvas and can be answered there', async () => {
+  const answers: string[] = [];
+  renderTree({
+    caseItem: { ...CASE, status: 'waiting_user', waitingReason: 'question', coordinatorBusy: false },
+    messages: [...MESSAGES, {
+      id: 2, caseId: 'case-1', taskId: null, fromDivisionId: 'div-coordinator', toDivisionId: null,
+      kind: 'question', payload: { text: 'Which app, HR or payroll?' }, readAt: null, createdAt: NOW,
+    }],
+    onAnswerQuestion: async (text) => { answers.push(text); },
+  });
+  const bubble = screen.getByTestId('office-question-bubble');
+  assert.ok(bubble.textContent?.includes('Which app, HR or payroll?'));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Answer the orchestrator' }), { target: { value: 'payroll' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send answer' }));
+  await Promise.resolve();
+  assert.deepEqual(answers, ['payroll']);
+
+  // The bubble folds into a chip so it does not cover the nodes behind it, and unfolds again.
+  fireEvent.click(screen.getByRole('button', { name: 'Minimize' }));
+  assert.equal(screen.queryByTestId('office-question-bubble'), null);
+  fireEvent.click(screen.getByTestId('office-question-chip'));
+  assert.ok(screen.getByTestId('office-question-bubble'));
+});
+
+test('no question, no bubble', () => {
+  renderTree();
+  assert.equal(screen.queryByTestId('office-question-bubble'), null);
+});
+
+/** The canvas pixels of a node as rendered (the chart is not fitted in jsdom, so they are client pixels too). */
+const boxOf = (element: HTMLElement) => ({ x: Number.parseFloat(element.style.left), y: Number.parseFloat(element.style.top) });
+
+test('Shift+drag on empty canvas selects the nodes fully inside the rectangle', () => {
+  renderTree();
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+  const backend = boxOf(screen.getByTestId('office-node-backend'));
+
+  fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, pointerType: 'mouse', shiftKey: true, clientX: backend.x - 4, clientY: backend.y - 4 });
+  // Only touching a node is not enough.
+  fireEvent.pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', shiftKey: true, clientX: backend.x + 20, clientY: backend.y + 20 });
+  assert.ok(screen.getByTestId('office-marquee'));
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, undefined);
+  fireEvent.pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', shiftKey: true, clientX: backend.x + 180, clientY: backend.y + 100 });
+  fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: 'mouse', clientX: backend.x + 180, clientY: backend.y + 100 });
+
+  assert.equal(screen.queryByTestId('office-marquee'), null);
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, 'true');
+  assert.equal(screen.getByTestId('office-node-docs').dataset.marked, undefined);
+
+  // A plain click on empty canvas drops the selection.
+  fireEvent.pointerDown(canvas, { pointerId: 2, button: 0, pointerType: 'mouse', clientX: 5, clientY: 5 });
+  fireEvent.pointerUp(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 5, clientY: 5 });
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, undefined);
+});
+
+test('Shift+click picks nodes, and dragging one moves and saves all of them', () => {
+  const calls: Recorded[] = [];
+  const selections: OfficeSelection[] = [];
+  renderTree({ calls, onSelect: (selection) => selections.push(selection) });
+  const backend = screen.getByTestId('office-node-backend');
+  const skill = screen.getByTestId('office-skill-node-review');
+  const skillStart = boxOf(skill);
+
+  fireEvent.click(backend, { shiftKey: true });
+  fireEvent.click(skill, { shiftKey: true });
+  assert.equal(backend.dataset.marked, 'true');
+  assert.equal(skill.dataset.marked, 'true');
+  assert.deepEqual(selections, [], 'Shift+click marks without opening the panel');
+
+  fireEvent.pointerDown(backend, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(backend, { pointerId: 1, pointerType: 'mouse', clientX: 150, clientY: 120 });
+  fireEvent.pointerUp(backend, { pointerId: 1, pointerType: 'mouse', clientX: 150, clientY: 120 });
+  // The click the browser fires after a drag neither opens the panel nor drops the selection.
+  fireEvent.click(backend);
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, 'true');
+  assert.deepEqual(selections, []);
+
+  assert.deepEqual(calls.map((call) => [call.method, call.args[0]]).sort(), [['moveSkillNode', 'n-review'], ['updateDivision', 'div-backend']]);
+  assert.ok(Math.abs(boxOf(screen.getByTestId('office-skill-node-review')).x - (skillStart.x + 50)) < 1, 'the other node follows');
+
+  // Shift+click again takes a node out; Escape clears the rest.
+  fireEvent.click(skill, { shiftKey: true });
+  assert.equal(screen.getByTestId('office-skill-node-review').dataset.marked, undefined);
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'Escape' });
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, undefined);
+});
+
+test('Ctrl+A selects every node and Delete removes the selected skill nodes only', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+
+  fireEvent.keyDown(canvas, { key: 'a', ctrlKey: true });
+  assert.equal(screen.getByTestId('office-node-coordinator').dataset.marked, 'true');
+  assert.equal(screen.getByTestId('office-skill-node-review').dataset.marked, 'true');
+
+  fireEvent.keyDown(canvas, { key: 'Delete' });
+  assert.deepEqual(calls, [{ method: 'deleteSkillNode', args: ['n-review'] }]);
+  assert.equal(screen.getByTestId('office-node-backend').dataset.marked, 'true', 'teams stay: they are deleted one by one');
+});
+
+test('a selected arrow is cut with Delete', async () => {
+  const calls: Recorded[] = [];
+  const selections: OfficeSelection[] = [];
+  renderTree({
+    calls,
+    flow: [arrow('backend', 'frontend')],
+    selection: { type: 'edge', fromDivisionId: 'div-backend', toDivisionId: 'div-frontend' },
+    onSelect: (selection) => selections.push(selection),
+  });
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'Delete' });
+  assert.deepEqual(calls, [{ method: 'deleteFlowEdge', args: ['div-backend', 'div-frontend'] }]);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(selections, [{ type: 'case' }]);
+});
+
+test('dragging an end of a selected arrow off every node cuts it; onto another team moves it', async () => {
+  const calls: Recorded[] = [];
+  renderTree({
+    calls,
+    flow: [arrow('backend', 'frontend')],
+    selection: { type: 'edge', fromDivisionId: 'div-backend', toDivisionId: 'div-frontend' },
+  });
+  const end = screen.getByTestId('office-flow-end-to-backend-frontend');
+
+  fireEvent.pointerDown(end, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 10, clientY: 10 });
+  // The arrow's own end handle goes away while it is dragged; the canvas holds the pointer (capture).
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+  fireEvent.pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 40, clientY: 40 });
+  assert.ok(screen.getByTestId('office-reconnect-line'));
+  fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 40, clientY: 40 });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(calls, [{ method: 'deleteFlowEdge', args: ['div-backend', 'div-frontend'] }]);
+
+  calls.length = 0;
+  const docs = screen.getByTestId('office-node-docs');
+  const original = document.elementFromPoint;
+  document.elementFromPoint = () => docs;
+  try {
+    fireEvent.pointerDown(screen.getByTestId('office-flow-end-to-backend-frontend'), { pointerId: 2, button: 0, pointerType: 'mouse', clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 50, clientY: 50 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    document.elementFromPoint = original;
+  }
+  assert.deepEqual(calls, [
+    { method: 'deleteFlowEdge', args: ['div-backend', 'div-frontend'] },
+    { method: 'addFlowEdge', args: ['div-backend', 'div-docs'] },
+  ]);
+});
+
+test('a clicked skill line is cut with Delete', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  fireEvent.click(screen.getByTestId('office-skill-link-review-backend').nextElementSibling as Element);
+  fireEvent.keyDown(screen.getByRole('region', { name: 'Workspace canvas' }), { key: 'Delete' });
+  assert.deepEqual(calls, [{ method: 'unlinkSkill', args: ['n-review', 'div-backend'] }]);
+});
+
+const SHAPE: OfficeShape = {
+  id: 'shape-1', kind: 'rounded', x: 40, y: 600, width: 200, height: 100, text: 'Group', fill: null, stroke: '#8a8a90',
+  textColor: null, fontSize: 14, z: 1, createdAt: NOW, updatedAt: NOW,
+};
+
+test('a drawing tool places a shape where the canvas is clicked, then goes back to the pointer', () => {
+  const calls: Recorded[] = [];
+  renderTree({ calls });
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+  fireEvent.keyDown(canvas, { key: 'o' });
+  assert.equal(screen.getByTestId('office-tool-ellipse').getAttribute('aria-pressed'), 'true');
+
+  fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 300, clientY: 400 });
+  assert.ok(screen.getByTestId('office-shape-draft'));
+  fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 302, clientY: 401 });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'addShape');
+  const input = calls[0].args[0] as { kind: string; width: number; height: number };
+  assert.equal(input.kind, 'ellipse');
+  assert.ok(input.width >= 100 && input.height >= 50, 'a click gets the default size');
+  assert.equal(screen.getByTestId('office-tool-select').getAttribute('aria-pressed'), 'true');
+});
+
+test('a shape drags, resizes from a handle, edits its text in place and is deleted with Delete', async () => {
+  const calls: Recorded[] = [];
+  const selections: OfficeSelection[] = [];
+  renderTree({ calls, shapes: [SHAPE], selection: { type: 'shape', shapeId: 'shape-1' }, onSelect: (selection) => selections.push(selection) });
+  const shape = screen.getByTestId('office-shape-shape-1');
+  const canvas = screen.getByRole('region', { name: 'Workspace canvas' });
+
+  fireEvent.pointerDown(shape, { pointerId: 1, button: 0, pointerType: 'mouse', clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(shape, { pointerId: 1, pointerType: 'mouse', clientX: 130, clientY: 110 });
+  fireEvent.pointerUp(shape, { pointerId: 1, pointerType: 'mouse', clientX: 130, clientY: 110 });
+  fireEvent.click(shape);
+  assert.equal(calls[0].method, 'updateShape');
+  assert.deepEqual(calls[0].args, ['shape-1', { x: 70, y: 610 }]);
+
+  const handle = shape.querySelector('[data-shape-handle="se"]') as Element;
+  fireEvent.pointerDown(handle, { pointerId: 2, button: 0, pointerType: 'mouse', clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 40, clientY: 20 });
+  fireEvent.pointerUp(canvas, { pointerId: 2, pointerType: 'mouse', clientX: 40, clientY: 20 });
+  assert.equal(calls[1].method, 'updateShape');
+  const resized = calls[1].args[1] as { width: number; height: number };
+  assert.equal(resized.width, 240);
+  assert.equal(resized.height, 120);
+
+  fireEvent.doubleClick(screen.getByTestId('office-shape-shape-1'));
+  const editor = screen.getByRole('textbox', { name: 'Shape text' });
+  fireEvent.change(editor, { target: { value: 'Frontend team' } });
+  fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true });
+  assert.deepEqual(calls[2].args, ['shape-1', { text: 'Frontend team' }]);
+
+  fireEvent.keyDown(canvas, { key: 'Delete' });
+  assert.deepEqual(calls[3], { method: 'deleteShape', args: ['shape-1'] });
 });

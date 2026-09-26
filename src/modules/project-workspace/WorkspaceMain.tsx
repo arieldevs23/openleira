@@ -10,6 +10,7 @@ import { TaskMasterPanel, useTaskMasterProjectSync, useTasksSettings } from '@/m
 import { OfficePage } from '@/modules/office';
 import type { AppTab, DirectoryRevealRequest, Project, ProjectSession, SessionEstablishedContext, SessionNavigationOptions, SettingsMainTab } from '@/shared/types';
 import { useUiPreferences } from '@/shared/context/UiPreferencesContext';
+import { isBuiltInWorkspaceProject, isObrolanProject } from '@/shared/utils';
 import { useFileOpenResolver } from '@/modules/project-workspace/hooks/useFileOpenResolver';
 import { EditorSidebar, useEditorSidebar } from '@/modules/code-editor';
 import WorkspaceHeader from '@/modules/project-workspace/WorkspaceHeader';
@@ -33,6 +34,8 @@ type WorkspaceMainProps = {
   onShowSettings: (tab?: SettingsMainTab) => void;
   externalMessageUpdate: number;
   newSessionTrigger: number;
+  /** Selects the project the workspace canvas switched to, so files and terminal follow it. */
+  onCanvasProjectChange: (projectId: string) => void;
 };
 
 /**
@@ -56,6 +59,7 @@ function WorkspaceMain({
   onShowSettings,
   externalMessageUpdate,
   newSessionTrigger,
+  onCanvasProjectChange,
 }: WorkspaceMainProps) {
   const preferences = useUiPreferences();
   const { showRawParameters, showThinking, sendByCtrlEnter } = preferences;
@@ -69,6 +73,11 @@ function WorkspaceMain({
   const [revealDirectory, setRevealDirectory] = useState<DirectoryRevealRequest | null>(null);
 
   const shouldShowTasksTab = Boolean(tasksEnabled && isTaskMasterInstalled);
+  // Projects are prompted only through their canvas: the chat tab exists for
+  // the free-chat workspace, and for reading an agent session opened from the canvas.
+  const shouldShowChatTab = !selectedProject || isObrolanProject(selectedProject) || Boolean(selectedSession);
+  // The canvas never shows the free-chat or home workspace.
+  const canvasProjectId = selectedProject && !isBuiltInWorkspaceProject(selectedProject) ? selectedProject.projectId : null;
   const shouldShowBrowserTab = browserUseEnabled;
 
   const {
@@ -101,6 +110,12 @@ function WorkspaceMain({
       setActiveTab('chat');
     }
   }, [shouldShowBrowserTab, activeTab, setActiveTab]);
+
+  useEffect(() => {
+    if (!shouldShowChatTab && activeTab === 'chat') {
+      setActiveTab('files');
+    }
+  }, [shouldShowChatTab, activeTab, setActiveTab]);
 
   // Stable so React.memo(ChatInterface) can bail out: an inline arrow here made
   // every WorkspaceMain render re-render the whole chat tree, including during
@@ -143,6 +158,8 @@ function WorkspaceMain({
     setActiveTab(workspaceMode ? 'office' : lastNormalTabRef.current);
   }, [setActiveTab]);
 
+  const openCanvas = useCallback(() => handleModeChange(true), [handleModeChange]);
+
   // Stable arguments keep usePaletteOpsRegister's effect from tearing down and
   // rewriting the whole palette registry on every render.
   usePaletteOpsRegister({ openFile, openFileInEditor, openDirectory });
@@ -165,7 +182,7 @@ function WorkspaceMain({
         />
         <div className="min-h-0 flex-1 overflow-hidden">
           <WorkspaceErrorBoundary showDetails>
-            <OfficePage initialProjectId={selectedProject?.projectId ?? null} onOpenSession={openOfficeSession} />
+            <OfficePage initialProjectId={canvasProjectId} onProjectChange={onCanvasProjectChange} onOpenSession={openOfficeSession} />
           </WorkspaceErrorBoundary>
         </div>
       </div>
@@ -189,6 +206,7 @@ function WorkspaceMain({
       setActiveTab={setActiveTab}
       shouldShowTasksTab={shouldShowTasksTab}
       shouldShowBrowserTab={shouldShowBrowserTab}
+      shouldShowChatTab={shouldShowChatTab}
       orientation={isMobile ? 'horizontal' : 'vertical'}
     />
   );
@@ -231,6 +249,7 @@ function WorkspaceMain({
                 externalMessageUpdate={externalMessageUpdate}
                 newSessionTrigger={newSessionTrigger}
                 onShowAllTasks={tasksEnabled ? showAllTasks : null}
+                onOpenCanvas={openCanvas}
               />
             </WorkspaceErrorBoundary>
           </div>

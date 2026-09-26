@@ -32,7 +32,6 @@ vi.mock('@/modules/sidebar/SidebarSessionItem', () => ({
 }));
 
 const { default: SidebarProjectList } = await import('@/modules/sidebar/SidebarProjectList');
-const { default: SidebarProjectSessions } = await import('@/modules/sidebar/SidebarProjectSessions');
 const { getAllSessions } = await import('@/modules/sidebar/utils/sidebarProjectFormatting');
 
 const makeProject = (projectId: string, sessionIds: string[]): Project => ({
@@ -108,32 +107,15 @@ beforeEach(() => {
   recordedSessionRowProps.length = 0;
 });
 
-test('project expansion is resolved per project without dropping rows', () => {
-  const props = listProps(null);
-  const { rerender } = render(
-    React.createElement(SidebarProjectList, {
-      ...props,
-      isProjectExpanded: (projectId) => projectId === PROJECT_A.projectId,
-    }),
-  );
+test('project rows carry no session list: a project is prompted through its canvas', () => {
+  render(React.createElement(SidebarProjectList, listProps(null)));
 
-  assert.deepEqual(
-    recordedProjectRowProps.map(({ isExpanded }) => isExpanded),
-    [true, false],
-  );
-
-  rerender(
-    React.createElement(SidebarProjectList, {
-      ...props,
-      isProjectExpanded: () => true,
-    }),
-  );
-
-  assert.equal(recordedProjectRowProps.length, 4);
-  assert.deepEqual(
-    recordedProjectRowProps.slice(2).map(({ isExpanded }) => isExpanded),
-    [true, true],
-  );
+  assert.equal(recordedProjectRowProps.length, 2);
+  for (const row of recordedProjectRowProps) {
+    assert.equal('sessions' in row, false);
+    assert.equal('isExpanded' in row, false);
+    assert.equal('onNewSession' in row, false);
+  }
 });
 
 test('renaming a project changes props on that row only', () => {
@@ -155,7 +137,7 @@ test('renaming a project changes props on that row only', () => {
   );
 });
 
-test('renaming a session changes props on the owning project row only', () => {
+test('a session rename leaves every project row untouched', () => {
   const rename = (draft: string): ActiveSidebarRename =>
     ({ target: 'session', id: 'a1', projectId: 'a', draft });
 
@@ -165,12 +147,8 @@ test('renaming a session changes props on the owning project row only', () => {
   rerender(React.createElement(SidebarProjectList, listProps(rename('Ne'))));
   const [, , secondA, secondB] = recordedProjectRowProps;
 
-  assert.deepEqual(changedProps(firstA, secondA), ['sessionRenameDraft']);
-  assert.deepEqual(
-    changedProps(firstB, secondB),
-    [],
-    'a session rename in project a must not touch project b',
-  );
+  assert.deepEqual(changedProps(firstA, secondA), []);
+  assert.deepEqual(changedProps(firstB, secondB), []);
 });
 
 test('a session rename does not put a same-id project row into edit mode', () => {
@@ -182,59 +160,6 @@ test('a session rename does not put a same-id project row into edit mode', () =>
   ));
 
   assert.equal(recordedProjectRowProps[0].isEditing, false);
-});
-
-test('the fork callback reaches the rows that render the fork action', () => {
-  // `onForkSession` is optional on every component between Sidebar and the
-  // session row, so dropping it type-checks perfectly and shows up only as a
-  // missing item in a menu. That is exactly how it went missing.
-  const onForkSession = () => {};
-  render(React.createElement(SidebarProjectList, { ...listProps(null), onForkSession }));
-
-  assert.equal(recordedProjectRowProps[0].onForkSession, onForkSession);
-});
-
-const sessionsProps = (sessionRenameId: string | null, sessionRenameDraft: string) => ({
-  project: PROJECT_A,
-  isExpanded: true,
-  sessions: getAllSessions(PROJECT_A),
-  selectedSession: null,
-  initialSessionsLoaded: true,
-  hasMoreSessions: false,
-  isLoadingMoreSessions: false,
-  activeSessions: NO_SESSION_IDS,
-  backgroundSessionIds: NO_SESSION_IDS,
-  attentionSessionIds: NO_SESSION_IDS,
-  currentTime: NOW,
-  sessionRenameId,
-  sessionRenameDraft,
-  onRenameDraftChange: noop,
-  onStartEditingSession: noop,
-  onCancelEditingSession: noop,
-  onSaveEditingSession: noop,
-  onProjectSelect: noop,
-  onSessionSelect: noop,
-  onDeleteSession: noop,
-  onLoadMoreSessions: noop,
-  onNewSession: noop,
-  t,
-});
-
-test('within a project, a keystroke changes props on the renamed session row only', () => {
-  const { rerender } = render(
-    React.createElement(SidebarProjectSessions, sessionsProps('a1', 'N')),
-  );
-  const [firstA1, firstA2] = recordedSessionRowProps;
-
-  rerender(React.createElement(SidebarProjectSessions, sessionsProps('a1', 'Ne')));
-  const [, , secondA1, secondA2] = recordedSessionRowProps;
-
-  assert.deepEqual(changedProps(firstA1, secondA1), ['renameDraft']);
-  assert.deepEqual(
-    changedProps(firstA2, secondA2),
-    [],
-    'the sibling session row must be handed a constant, not the live draft',
-  );
 });
 
 test('the sorted session list is the same array until the project itself changes', () => {
