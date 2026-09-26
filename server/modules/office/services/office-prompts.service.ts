@@ -20,6 +20,38 @@ export type PromptRecentCase = {
   changedFiles: string[];
 };
 
+/**
+ * Other work running in the same workspace at the same time, told to the
+ * coordinator and to every team so parallel work items stay out of each
+ * other's way (they share one working tree).
+ */
+export type PromptConcurrentWork = {
+  title: string;
+  /** Teams working on it right now, with the subtask each one has. */
+  running: Array<{ divisionName: string; taskTitle: string }>;
+};
+
+const MAX_CONCURRENT_WORK = 8;
+
+/** The "other work in progress" section; empty when nothing else runs. */
+const describeConcurrentWork = (work: PromptConcurrentWork[]): string => {
+  if (work.length === 0) {
+    return '';
+  }
+  const lines = ['## Other work running in this workspace right now'];
+  for (const item of work.slice(0, MAX_CONCURRENT_WORK)) {
+    lines.push(`- "${item.title}"`);
+    for (const running of item.running) {
+      lines.push(`  - ${running.divisionName}: ${running.taskTitle}`);
+    }
+  }
+  lines.push(
+    'All of this shares one folder. Do not edit files another team is working on for other work, and do not undo its changes;',
+    'if your work really needs such a file, keep your change small and say so in your result.',
+  );
+  return lines.join('\n');
+};
+
 const MAX_RECENT_SUMMARY = 700;
 const MAX_RECENT_FILES = 15;
 
@@ -158,13 +190,16 @@ export function buildCoordinatorPlanPrompt(input: {
   flow?: Array<[string, string]>;
   workspace?: { name: string; projectPath: string };
   recentCases?: PromptRecentCase[];
+  concurrentWork?: PromptConcurrentWork[];
 }): string {
   const notes = describeNotes(input.notes);
+  const concurrent = describeConcurrentWork(input.concurrentWork ?? []);
   return [
     withRolePrompt(input.coordinator),
     describeSkills(input.skills),
     '',
     input.workspace ? `${describeWorkspace(input.workspace, input.recentCases ?? [])}\n` : '',
+    concurrent ? `${concurrent}\n` : '',
     '## The case from the user',
     describeCase(input.caseItem),
     notes ? `\n## Extra notes from the user\n${notes}` : '',
@@ -178,6 +213,7 @@ export function buildCoordinatorPlanPrompt(input: {
     'Every finished task is checked by the audit division automatically; do not create audit tasks yourself.',
     'A task only sees the results of the tasks it depends on, so list every task whose output it needs in "depends_on".',
     'Independent tasks may run in parallel. Use as few tasks as the case really needs.',
+    'A team works on one task at a time across all work in this workspace; its next task waits until it is free.',
     'If the case is too ambiguous to plan at all, return no tasks and put ONE question for the user in "question".',
     'Before asking, look at the folder and the earlier cases above: only ask what you really cannot work out from them.',
     languageLine(input.locale),
@@ -279,8 +315,11 @@ export function buildTaskPrompt(input: {
   resumedAfterRestart: boolean;
   /** Teams the flow sends this team's result to; each only sees its own subsection. */
   handsOffTo?: Array<{ name: string }>;
+  /** Other work items running in the workspace at the same time. */
+  concurrentWork?: PromptConcurrentWork[];
 }): string {
   const handsOffTo = input.handsOffTo ?? [];
+  const concurrent = describeConcurrentWork(input.concurrentWork ?? []);
   const dependencies = input.dependencyResults.map((result) => [
     `### ${result.ref} · ${result.divisionName}: ${result.title}`,
     result.summary.trim() || '(no summary)',
@@ -300,6 +339,7 @@ export function buildTaskPrompt(input: {
     input.resumedAfterRestart
       ? '\nThe server restarted while you worked on this. Check what is already done in the repository and finish the rest.'
       : '',
+    concurrent ? `\n${concurrent}` : '',
     '',
     '## Rules',
     '- Work only on your task and stay inside your field; other divisions handle the rest.',

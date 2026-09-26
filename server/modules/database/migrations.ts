@@ -513,6 +513,7 @@ const createOfficeTables = (db: Database): void => {
   addColumnToTableIfNotExists(db, 'office_tasks', taskColumns, 'changed_files', "TEXT NOT NULL DEFAULT '[]'");
   const caseColumns = (db.prepare('PRAGMA table_info(office_cases)').all() as { name: string }[]).map((column) => column.name);
   addColumnToTableIfNotExists(db, 'office_cases', caseColumns, 'quick_division_id', 'TEXT');
+  addColumnToTableIfNotExists(db, 'office_cases', caseColumns, 'follows_case_id', 'TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_office_flow_edges_office ON office_flow_edges(office_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_office_divisions_office ON office_divisions(office_id, sort_order)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_office_cases_office ON office_cases(office_id, created_at)');

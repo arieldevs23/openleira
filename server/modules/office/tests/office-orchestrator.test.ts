@@ -273,6 +273,110 @@ test('a quick task goes straight to one team: no plan, no audit, its result is t
   });
 });
 
+test('a work list to one team runs its items one after another, each starting when the last is done', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns, peak } = createScriptedRunner((turn) => {
+      if (turn.kind === 'task') return { text: `ok\n\n## Summary\ndid ${turn.request.prompt.includes('second') ? 'second' : 'other'}` };
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const frontend = officesDb.listDivisions(office.id).find((division) => division.slug === 'frontend');
+    assert.ok(frontend);
+
+    const created = orchestrator.submitWork(office.id, {
+      items: ['- first: the header', '- second: the footer\nwith a link', '  ', '3. third: the menu'],
+      divisionId: frontend.id,
+      createdBy: null,
+    });
+    assert.equal(created.length, 3, 'blank entries are skipped');
+    assert.deepEqual(created.map((caseItem) => caseItem.title), ['first: the header', 'second: the footer', 'third: the menu']);
+    assert.equal(created[0].status, 'running');
+    assert.equal(created[1].followsCaseId, created[0].id);
+    assert.equal(created[2].followsCaseId, created[1].id);
+    assert.equal(officeCasesDb.getCase(created[1].id)?.status, 'draft', 'the next item waits for the first');
+
+    const last = await waitFor(created[2].id, isFinished);
+    assert.equal(last.status, 'done');
+    for (const caseItem of created) {
+      assert.equal(officeCasesDb.getCase(caseItem.id)?.status, 'done');
+    }
+    assert.equal(turns.length, 3);
+    assert.equal(peak(), 1, 'the items never ran at the same time');
+    const startedAt = created.map((caseItem) => officeCasesDb.getCase(caseItem.id)?.startedAt ?? '');
+    const finishedAt = created.map((caseItem) => officeCasesDb.getCase(caseItem.id)?.finishedAt ?? '');
+    assert.ok(startedAt[1] >= finishedAt[0] && startedAt[2] >= finishedAt[1], 'each item started after the one before finished');
+
+    assert.throws(() => orchestrator.submitWork(office.id, { items: [' '], divisionId: null, createdBy: null }), /1 to 20/);
+  });
+});
+
+test('one team never works on two items at once: separate work for a busy team waits until it is free', async () => {
+  await withOffice(async ({ office }) => {
+    let releaseFirst: () => void = () => {};
+    const firstHeld = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const { runner, turns, peak } = createScriptedRunner(async (turn) => {
+      if (turn.kind === 'task') {
+        // Only the header's own task is held; other prompts may mention it as running work.
+        if (turn.request.prompt.includes('): the header')) {
+          await firstHeld;
+        }
+        return { text: 'ok\n\n## Summary\ndone' };
+      }
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const frontend = officesDb.listDivisions(office.id).find((division) => division.slug === 'frontend');
+    const backend = officesDb.listDivisions(office.id).find((division) => division.slug === 'backend');
+    assert.ok(frontend && backend);
+
+    const [header] = orchestrator.submitWork(office.id, { items: ['the header'], divisionId: frontend.id, createdBy: null });
+    await waitFor(header.id, () => turns.length === 1);
+    const [footer] = orchestrator.submitWork(office.id, { items: ['the footer'], divisionId: frontend.id, createdBy: null });
+    const [api] = orchestrator.submitWork(office.id, { items: ['the api'], divisionId: backend.id, createdBy: null });
+
+    // Another team is free, so its work runs right away, next to the header.
+    await waitFor(api.id, isFinished);
+    assert.equal(officeCasesDb.getCase(footer.id)?.status, 'running');
+    assert.equal(officeCasesDb.listTasks(footer.id)[0].status, 'queued', 'the footer waits for the busy frontend team');
+    const apiPrompt = turns.find((turn) => turn.request.prompt.includes('the api'))?.request.prompt ?? '';
+    assert.match(apiPrompt, /Other work running in this workspace right now[\s\S]*"the header"[\s\S]*Frontend/i);
+
+    releaseFirst();
+    const footerDone = await waitFor(footer.id, isFinished);
+    assert.equal(footerDone.status, 'done');
+    assert.ok(peak() <= 2, 'the header and the api ran side by side, the footer only after the header');
+  });
+});
+
+test('a new plan is told what other work is running in the workspace', async () => {
+  await withOffice(async ({ office }) => {
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const { runner, turns } = createScriptedRunner(async (turn) => {
+      if (turn.kind === 'task') {
+        await held;
+        return { text: 'ok\n\n## Summary\ndone' };
+      }
+      if (turn.kind === 'plan') return { text: json({ summary: 'x', tasks: [], question: 'Which page?' }) };
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const docs = officesDb.listDivisions(office.id).find((division) => division.slug === 'docs');
+    assert.ok(docs);
+
+    const [readme] = orchestrator.submitWork(office.id, { items: ['write the readme'], divisionId: docs.id, createdBy: null });
+    await waitFor(readme.id, () => turns.length === 1);
+    const [planned] = orchestrator.submitWork(office.id, { items: ['add a pricing page'], divisionId: null, createdBy: null });
+    await waitFor(planned.id, (caseItem) => caseItem.status === 'waiting_user');
+    const planPrompt = turns.find((turn) => turn.kind === 'plan')?.request.prompt ?? '';
+    assert.match(planPrompt, /Other work running in this workspace right now[\s\S]*"write the readme"/);
+    assert.match(planPrompt, /one task at a time across all work/);
+    release();
+    await waitFor(readme.id, isFinished);
+    await orchestrator.cancelCase(office.id, planned.id);
+  });
+});
+
 test('a failed audit re-runs the task in its session with the notes, and passes on the retry', async () => {
   await withOffice(async ({ office }) => {
     let audits = 0;

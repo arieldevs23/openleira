@@ -27,6 +27,7 @@ type CaseRow = {
   final_summary: string | null;
   error: string | null;
   quick_division_id: string | null;
+  follows_case_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -83,6 +84,7 @@ const toCase = (row: CaseRow): OfficeCase => ({
   finalSummary: row.final_summary,
   error: row.error,
   quickDivisionId: row.quick_division_id,
+  followsCaseId: row.follows_case_id,
   createdBy: row.created_by,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -158,7 +160,7 @@ type TaskPatch = {
 };
 
 const CASE_COLUMNS = `id, office_id, title, description, status, waiting_reason, phase, coordinator_busy,
-  coordinator_session_id, final_summary, error, quick_division_id, created_by, created_at, updated_at, started_at, finished_at`;
+  coordinator_session_id, final_summary, error, quick_division_id, follows_case_id, created_by, created_at, updated_at, started_at, finished_at`;
 
 const TASK_COLUMNS = `id, case_id, division_id, parent_task_id, ref, title, instruction, depends_on, status,
   attempts, result_summary, audit_notes, session_id, audit_session_id, error, changed_files, sort_order, created_at,
@@ -176,13 +178,14 @@ export const officeCasesDb = {
     description: string;
     createdBy: string | null;
     quickDivisionId?: string | null;
+    followsCaseId?: string | null;
   }): OfficeCase {
     const id = randomUUID();
     const now = new Date().toISOString();
     getConnection().prepare(`
-      INSERT INTO office_cases (id, office_id, title, description, status, quick_division_id, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?)
-    `).run(id, input.officeId, input.title, input.description, input.quickDivisionId ?? null, input.createdBy, now, now);
+      INSERT INTO office_cases (id, office_id, title, description, status, quick_division_id, follows_case_id, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)
+    `).run(id, input.officeId, input.title, input.description, input.quickDivisionId ?? null, input.followsCaseId ?? null, input.createdBy, now, now);
 
     const created = this.getCase(id);
     if (!created) {
@@ -240,6 +243,21 @@ export const officeCasesDb = {
     return this.getCase(caseId);
   },
 
+  /** Work-list items waiting for this case to finish before they start. */
+  listFollowers(caseId: string): OfficeCase[] {
+    const rows = getConnection()
+      .prepare(`SELECT ${CASE_COLUMNS} FROM office_cases WHERE follows_case_id = ? ORDER BY created_at ASC`)
+      .all(caseId) as CaseRow[];
+    return rows.map(toCase);
+  },
+
+  /** Points the items that waited for one case at another (or at nothing), e.g. when that case is deleted. */
+  repointFollowers(caseId: string, followsCaseId: string | null): void {
+    getConnection()
+      .prepare('UPDATE office_cases SET follows_case_id = ?, updated_at = ? WHERE follows_case_id = ?')
+      .run(followsCaseId, new Date().toISOString(), caseId);
+  },
+
   deleteCase(caseId: string): boolean {
     return getConnection().prepare('DELETE FROM office_cases WHERE id = ?').run(caseId).changes > 0;
   },
@@ -292,6 +310,19 @@ export const officeCasesDb = {
     const rows = getConnection()
       .prepare(`SELECT ${TASK_COLUMNS} FROM office_tasks WHERE case_id = ? ORDER BY sort_order ASC, created_at ASC`)
       .all(caseId) as TaskRow[];
+    return rows.map(toTask);
+  },
+
+  /** Tasks running right now in any case of one office: the teams that are busy. */
+  listRunningTasksForOffice(officeId: string): OfficeTask[] {
+    const rows = getConnection()
+      .prepare(`
+        SELECT ${TASK_COLUMNS.split(',').map((column) => `t.${column.trim()}`).join(', ')}
+        FROM office_tasks t JOIN office_cases c ON c.id = t.case_id
+        WHERE c.office_id = ? AND t.status = 'running'
+        ORDER BY t.started_at ASC
+      `)
+      .all(officeId) as TaskRow[];
     return rows.map(toTask);
   },
 

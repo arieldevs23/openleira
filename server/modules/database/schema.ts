@@ -342,6 +342,8 @@ CREATE TABLE IF NOT EXISTS office_cases (
     error TEXT,
     -- A quick task goes straight to this division's agent: no plan, no audit, no summary turn.
     quick_division_id TEXT,
+    -- One item of a work list: it starts by itself once this earlier item has finished.
+    follows_case_id TEXT,
     created_by TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,

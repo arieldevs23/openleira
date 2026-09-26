@@ -31,7 +31,7 @@ import {
   buildTaskPrompt,
   buildTaskRevisionPrompt,
 } from '@/modules/office/services/office-prompts.service.js';
-import type { PromptRecentCase, PromptSkill } from '@/modules/office/services/office-prompts.service.js';
+import type { PromptConcurrentWork, PromptRecentCase, PromptSkill } from '@/modules/office/services/office-prompts.service.js';
 import {
   applyAuditVerdict,
   applyFlowOrder,
@@ -137,6 +137,12 @@ export type OfficeOrchestrator = {
   retryCase(officeId: string, caseId: string): OfficeCase;
   cancelCase(officeId: string, caseId: string): Promise<OfficeCase>;
   postNote(officeId: string, caseId: string, noteText: string): OfficeMessage;
+  /**
+   * Hands new work to the workspace: one item per entry, to the coordinator
+   * (`divisionId` null) or straight to one team. The items of a list run one
+   * after another; the first starts now.
+   */
+  submitWork(officeId: string, input: { items: string[]; divisionId: string | null; createdBy: string | null }): OfficeCase[];
   recoverInterruptedCases(): number;
 };
 
@@ -145,6 +151,15 @@ const isFailureNote = (note: OfficeMessage): boolean => note.payload.type === 't
 
 const conflict = (message: string, code: string, details?: unknown): AppError =>
   new AppError(message, { code, statusCode: 409, details });
+
+/** How many items one work list may carry. */
+const MAX_WORK_ITEMS = 20;
+
+/** A work item's title: its first line, without list markers, clipped to the title limit. */
+const workTitle = (item: string): string => {
+  const firstLine = item.split('\n').find((line) => line.trim()) ?? item;
+  return clipTitle(firstLine.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').trim() || firstLine.trim());
+};
 
 const clipTitle = (title: string): string => (
   title.length > MAX_SESSION_TITLE_LENGTH ? `${title.slice(0, MAX_SESSION_TITLE_LENGTH - 1)}…` : title
@@ -197,6 +212,14 @@ export function createOfficeOrchestrator(dependencies: {
     const updated = officeCasesDb.updateCase(caseId, patch);
     if (updated) {
       broadcastOfficeUpdate(updated.officeId, { entity: 'case', id: updated.id, case: updated });
+      if (patch.status === 'done' || patch.status === 'failed') {
+        // The next item of a work list starts once this one has finished,
+        // and teams this case held may now pick up other work.
+        setImmediate(() => {
+          startFollowers(updated);
+          tickOffice(updated.officeId);
+        });
+      }
     }
     return updated;
   };
@@ -305,6 +328,29 @@ export function createOfficeOrchestrator(dependencies: {
       pendingTicks.delete(caseId);
       tick(caseId);
     });
+  };
+
+  /** Re-evaluates every running case of an office, e.g. after one of its teams became free. */
+  const tickOffice = (officeId: string): void => {
+    for (const caseItem of officeCasesDb.listCases(officeId)) {
+      if (caseItem.status === 'running') {
+        scheduleTick(caseItem.id);
+      }
+    }
+  };
+
+  /** Starts the work-list items that waited for this case; one that cannot start fails, so the list moves on. */
+  const startFollowers = (finished: OfficeCase): void => {
+    for (const follower of officeCasesDb.listFollowers(finished.id)) {
+      if (follower.status !== 'draft') {
+        continue;
+      }
+      try {
+        api.startCase(follower.officeId, follower.id);
+      } catch (error) {
+        failCase(follower.id, error instanceof Error ? error.message : String(error));
+      }
+    }
   };
 
   /**
@@ -531,6 +577,26 @@ export function createOfficeOrchestrator(dependencies: {
       changedFiles: [...new Set(officeCasesDb.listTasks(candidate.id).flatMap((task) => task.changedFiles))],
     }));
 
+  /** The other work items running in the workspace and which team does what in them right now. */
+  const describeConcurrentWork = (context: CaseContext): PromptConcurrentWork[] => {
+    const runningByCase = new Map<string, OfficeTask[]>();
+    for (const task of officeCasesDb.listRunningTasksForOffice(context.office.id)) {
+      if (task.caseId !== context.caseItem.id) {
+        runningByCase.set(task.caseId, [...(runningByCase.get(task.caseId) ?? []), task]);
+      }
+    }
+    return officeCasesDb
+      .listCases(context.office.id)
+      .filter((candidate) => candidate.id !== context.caseItem.id && (candidate.status === 'running' || candidate.status === 'waiting_user'))
+      .map((candidate) => ({
+        title: candidate.title,
+        running: (runningByCase.get(candidate.id) ?? []).map((task) => ({
+          divisionName: (task.divisionId && context.divisionsById.get(task.divisionId)?.name) || '?',
+          taskTitle: task.title,
+        })),
+      }));
+  };
+
   /** The workspace flow as `slug -> slug` pairs of enabled divisions, for the coordinator prompts. */
   const describeFlowFor = (context: CaseContext): Array<[string, string]> => officesDb
     .listFlowEdges(context.office.id)
@@ -642,6 +708,7 @@ export function createOfficeOrchestrator(dependencies: {
       flow: describeFlowFor(context),
       workspace: { name: context.office.name, projectPath: context.office.projectPath },
       recentCases: describeRecentCases(context),
+      concurrentWork: describeConcurrentWork(context),
     });
     const allowedDivisionSlugs = context.workers.map((division) => division.slug);
     const result = await coordinatorJsonTurn(
@@ -843,6 +910,7 @@ export function createOfficeOrchestrator(dependencies: {
         skills,
         resumedAfterRestart: Boolean(task.sessionId),
         handsOffTo: flowTargets,
+        concurrentWork: describeConcurrentWork(context),
       });
 
     const turn = await runAgentTurn(context, handle, {
@@ -1017,6 +1085,8 @@ export function createOfficeOrchestrator(dependencies: {
       .finally(() => {
         releaseHandle(caseId, handle);
         scheduleTick(caseId);
+        // The team is free again: work items waiting for it may start.
+        tickOffice(context.office.id);
       });
   };
 
@@ -1121,8 +1191,21 @@ export function createOfficeOrchestrator(dependencies: {
       for (const taskId of step.audit) {
         launchAudit(context, tasksById.get(taskId) as OfficeTask);
       }
+      // A team works on one task at a time across every work item of the
+      // workspace; its other tasks stay queued until it is free.
+      const busyDivisionIds = new Set(officeCasesDb
+        .listRunningTasksForOffice(context.office.id)
+        .map((task) => task.divisionId)
+        .filter((divisionId): divisionId is string => Boolean(divisionId)));
       for (const taskId of step.start) {
-        launchTask(context, tasksById.get(taskId) as OfficeTask);
+        const task = tasksById.get(taskId) as OfficeTask;
+        if (task.divisionId && busyDivisionIds.has(task.divisionId)) {
+          continue;
+        }
+        if (task.divisionId) {
+          busyDivisionIds.add(task.divisionId);
+        }
+        launchTask(context, task);
       }
 
       if (step.settled && !checkpointRunning && workHandles.length === 0) {
@@ -1151,7 +1234,7 @@ export function createOfficeOrchestrator(dependencies: {
     }
   };
 
-  return {
+  const api: OfficeOrchestrator = {
     startCase(officeId, caseId) {
       const caseItem = officeService.requireCase(officeId, caseId);
       if (caseItem.status !== 'draft') {
@@ -1338,5 +1421,40 @@ export function createOfficeOrchestrator(dependencies: {
       }
       return cases.length;
     },
+
+    submitWork(officeId, input) {
+      const items = input.items.map((item) => item.trim()).filter(Boolean);
+      if (items.length === 0 || items.length > MAX_WORK_ITEMS) {
+        throw new AppError(`Send 1 to ${MAX_WORK_ITEMS} work items at a time.`, {
+          code: 'INVALID_OFFICE_INPUT',
+          statusCode: 400,
+        });
+      }
+      const created: OfficeCase[] = [];
+      let previous: OfficeCase | null = null;
+      for (const item of items) {
+        const caseItem = officeService.createCase(officeId, {
+          title: workTitle(item),
+          description: item,
+          createdBy: input.createdBy,
+          quickDivisionId: input.divisionId,
+          followsCaseId: previous?.id ?? null,
+        });
+        created.push(caseItem);
+        previous = caseItem;
+      }
+      try {
+        created[0] = api.startCase(officeId, created[0].id);
+      } catch (error) {
+        // Nothing of the list may linger as a draft when it cannot start at all.
+        for (const caseItem of created) {
+          officeService.deleteCase(officeId, caseItem.id);
+        }
+        throw error;
+      }
+      return created;
+    },
   };
+
+  return api;
 }

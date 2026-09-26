@@ -416,6 +416,17 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     res.status(201).json(createApiSuccessResponse(created));
   }));
 
+  // New work for the workspace: one prompt or a list, to the orchestrator or straight to one team.
+  router.post('/:officeId/work', asyncHandler(async (req, res) => {
+    const officeId = readParam(req, 'officeId');
+    const body = readBody(req);
+    const items = readOptionalStringArray(body, 'items') ?? [];
+    const divisionId = readOptionalString(body, 'divisionId') ?? null;
+    await office.requireConnectedProviders(officeId, undefined, divisionId ? [divisionId] : undefined);
+    const created = orchestrator.submitWork(officeId, { items, divisionId, createdBy: readUserId(req) });
+    res.status(201).json(createApiSuccessResponse(created));
+  }));
+
   router.get('/:officeId/cases/:caseId', asyncHandler(async (req, res) => {
     res.json(createApiSuccessResponse(office.getCaseDetail(readParam(req, 'officeId'), readParam(req, 'caseId'))));
   }));

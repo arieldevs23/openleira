@@ -910,7 +910,14 @@ export const officeService = {
    */
   createCase(
     officeId: string,
-    input: { title: string; description?: string; createdBy: string | null; quickDivisionId?: string | null },
+    input: {
+      title: string;
+      description?: string;
+      createdBy: string | null;
+      quickDivisionId?: string | null;
+      /** An item of a work list: it starts once this earlier item has finished. */
+      followsCaseId?: string | null;
+    },
   ): OfficeCase {
     requireOffice(officeId);
     if (input.quickDivisionId) {
@@ -925,6 +932,7 @@ export const officeService = {
       description: readBoundedText(input.description ?? '', 'description', LIMITS.caseDescription, false),
       createdBy: input.createdBy,
       quickDivisionId: input.quickDivisionId ?? null,
+      followsCaseId: input.followsCaseId ? requireCase(officeId, input.followsCaseId).id : null,
     });
     broadcastOfficeUpdate(officeId, { entity: 'case', id: caseItem.id, case: caseItem });
     return caseItem;
@@ -955,8 +963,17 @@ export const officeService = {
     if (current.status === 'running' || current.status === 'waiting_user') {
       throw conflict('Cancel the case before deleting it.', 'OFFICE_CASE_ACTIVE');
     }
+    // Items of a work list that waited for this one now wait for whatever it waited for.
+    const followerIds = officeCasesDb.listFollowers(caseId).map((follower) => follower.id);
+    officeCasesDb.repointFollowers(caseId, current.followsCaseId);
     officeCasesDb.deleteCase(caseId);
     broadcastOfficeUpdate(officeId, { entity: 'case', id: caseId, case: null });
+    for (const followerId of followerIds) {
+      const follower = officeCasesDb.getCase(followerId);
+      if (follower) {
+        broadcastOfficeUpdate(officeId, { entity: 'case', id: follower.id, case: follower });
+      }
+    }
   },
 
   getCaseDetail(officeId: string, caseId: string): OfficeCaseDetail {

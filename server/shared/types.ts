@@ -1802,6 +1802,8 @@ export type OfficeCase = {
   error: string | null;
   /** A quick task: straight to this division's agent, with no plan, audit or summary turn. Null for a full task. */
   quickDivisionId: string | null;
+  /** One item of a work list: it starts by itself once this earlier item has finished. */
+  followsCaseId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
