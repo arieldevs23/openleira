@@ -2,16 +2,15 @@ import { AlertTriangle, Building2, CheckCircle2, ChevronRight, FolderPlus, Loade
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import CaseList from '@/modules/office/CaseList';
 import MarkdownPreview from '@/modules/office/MarkdownPreview';
 import { analysisStage } from '@/modules/office/utils/officeAnalysis';
 import { ContextMenu } from '@/shared/ui';
-import type { OfficeAnalysis, OfficeCase, OfficeDivision, OfficeWorkspaceSummary } from '@/shared/types';
+import type { OfficeAnalysis, OfficeDivision, OfficeWorkspaceSummary } from '@/shared/types';
 import { cn } from '@/shared/utils';
 
 const COLLAPSE_STORAGE_KEY = 'office-sidebar-collapsed';
 
-type SidebarGroup = 'workspaces' | 'cases' | 'agents';
+type SidebarGroup = 'workspaces' | 'agents';
 
 const readCollapsed = (): Set<SidebarGroup> => {
   try {
@@ -34,19 +33,16 @@ type WorkspaceSidebarProps = {
   onDismissAnalysis: (analysisId: string) => void;
   onOpenSettings: () => void;
   onDeleteWorkspace: (workspace: OfficeWorkspaceSummary) => void;
-  /** The selected workspace's cases and divisions; empty while it loads. */
-  cases: OfficeCase[];
+  /** The selected workspace's divisions; empty while it loads. */
   divisions: OfficeDivision[];
-  selectedCaseId: string | null;
-  onSelectCase: (caseId: string) => void;
-  onCreateCase: (input: { title: string; description: string }) => Promise<void>;
   selectedDivisionId: string | null;
   onSelectDivision: (divisionId: string) => void;
 };
 
 /**
  * Left column of workspace mode: every workspace (one per app folder), and
- * for the open one its cases and its agents. Each group folds, each agent
+ * for the open one its agents. Work is handed out from the chat dock on the
+ * canvas, so there is no task list here. Each group folds, each agent
  * unfolds to show its model and its role as rendered markdown. Replaces the
  * project/chat sidebar while workspace mode is on.
  */
@@ -61,11 +57,7 @@ export default function WorkspaceSidebar({
   onDismissAnalysis,
   onOpenSettings,
   onDeleteWorkspace,
-  cases,
   divisions,
-  selectedCaseId,
-  onSelectCase,
-  onCreateCase,
   selectedDivisionId,
   onSelectDivision,
 }: WorkspaceSidebarProps) {
@@ -201,10 +193,6 @@ export default function WorkspaceSidebar({
               {t('sidebar.addWorkspace')}
             </button>
           </div>
-        ))}
-
-        {selectedWorkspace && group('cases', t('cases.title'), cases.length, (
-          <CaseList cases={cases} selectedCaseId={selectedCaseId} onSelect={onSelectCase} onCreate={onCreateCase} variant="section" />
         ))}
 
         {selectedWorkspace && group('agents', t('sidebar.agents'), divisions.length, (

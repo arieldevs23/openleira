@@ -104,6 +104,25 @@ test('the model wizard route validates every assignment row', async () => {
   }]);
 });
 
+test('new work goes to the orchestrator with a null target or to one team, and checks that team\'s provider', async () => {
+  const calls: Call[] = [];
+  await withServer(calls, async (request) => {
+    assert.equal((await request('POST', '/api/office/o1/work', { items: ['add dark mode'], divisionId: null })).status, 201);
+    assert.equal((await request('POST', '/api/office/o1/work', { items: ['- a', '- b'], divisionId: 'd1' })).status, 201);
+    assert.equal((await request('POST', '/api/office/o1/work', { items: ['x'] })).status, 201, 'no target is the orchestrator');
+    assert.equal((await request('POST', '/api/office/o1/work', { items: 'x' })).status, 400);
+    assert.equal((await request('POST', '/api/office/o1/work', { items: ['x'], divisionId: 7 })).status, 400);
+  });
+  assert.deepEqual(calls.map((call) => [call.method, call.args.slice(1)]), [
+    ['office.requireConnectedProviders', [undefined, undefined]],
+    ['orchestrator.submitWork', [{ items: ['add dark mode'], divisionId: null, createdBy: '42' }]],
+    ['office.requireConnectedProviders', [undefined, ['d1']]],
+    ['orchestrator.submitWork', [{ items: ['- a', '- b'], divisionId: 'd1', createdBy: '42' }]],
+    ['office.requireConnectedProviders', [undefined, undefined]],
+    ['orchestrator.submitWork', [{ items: ['x'], divisionId: null, createdBy: '42' }]],
+  ]);
+});
+
 test('case routes record the author and route controls to the orchestrator', async () => {
   const calls: Call[] = [];
   await withServer(calls, async (request) => {

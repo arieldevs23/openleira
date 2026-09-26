@@ -32,14 +32,6 @@
     "showPanel": "tampilin panel",
     "hidePanel": "sembunyiin panel"
   },
-  "cases": {
-    "title": "task",
-    "new": "task baru",
-    "titlePlaceholder": "judul task",
-    "descriptionPlaceholder": "jelasin apa yang mau dikerjain...",
-    "create": "bikin",
-    "empty": "belum ada task. bikin satu buat mulai."
-  },
   "status": {
     "draft": "draft",
     "running": "jalan",
@@ -73,7 +65,7 @@
   },
   "tree": {
     "label": "canvas workspace",
-    "caseNode": "task",
+    "caseNode": "kerjaan",
     "noCase": "pilih atau bikin task",
     "noModel": "belum ada model",
     "queued": "{{count}} antri",
@@ -121,7 +113,7 @@
     "finalSummary": "ringkasan akhir",
     "timeline": "timeline subtask",
     "noTasks": "belum ada subtask.",
-    "noTasksDraft": "subtask bakal muncul di sini setelah orchestrator nyusun rencana.",
+    "noTasksDraft": "subtask bakal muncul di sini setelah kerjaannya mulai.",
     "auditAttempts": "gagal audit {{count}}x",
     "deletedDivision": "tim udah dihapus",
     "openSession": "buka sesinya di chat",
@@ -131,7 +123,7 @@
     "coordinator": "orchestrator",
     "notePlaceholder": "kirim pesan ke orchestrator (ctrl+enter buat kirim)",
     "send": "kirim",
-    "noCaseSelected": "pilih task di kiri, atau bikin yang baru.",
+    "noCaseSelected": "belum ada kerjaan. tulis prompt di chat bawah canvas.",
     "retry": "ulangi yang gagal",
     "retrying": "ngulang…"
   },
@@ -354,7 +346,7 @@
     "unlinkSkill": "lepas skill dari agent",
     "addSkillHere": "tambah skill di sini",
     "pasteSkill": "tempel skill \"{{name}}\" (Ctrl+V)",
-    "quickTask": "Kasih task cepat",
+    "quickTask": "kasih kerjaan ke agent ini",
     "resetMarked": "reset posisi {{count}} yang dipilih",
     "clearMarked": "batal pilih",
     "deleteMarkedSkills": "hapus {{count}} skill/bentuk yang dipilih"
@@ -419,24 +411,10 @@
     "noMatch": "ga ada skill yang cocok.",
     "useName": "pakai \"{{name}}\""
   },
-  "quickTask": {
-    "title": "Task cepat buat {{name}}",
-    "hint": "Langsung ke agent ini: tanpa plan dari orchestrator, tanpa audit, tanpa ringkasan. Cocok buat kerjaan kecil.",
-    "titleLabel": "Task",
-    "titlePlaceholder": "misal: benerin typo di halaman login",
-    "descriptionLabel": "Detail",
-    "descriptionPlaceholder": "Detail (opsional)",
-    "submit": "Jalanin",
-    "badge": "cepat"
-  },
   "dock": {
-    "show": "chat sama {{name}}",
     "collapse": "kecilin chat",
     "expand": "buka semua chat",
-    "hide": "sembunyiin chat",
-    "finished": "task ini udah kelar, chatnya cuma bisa dibaca.",
-    "title": "chat sama {{name}}",
-    "empty": "belum ada pesan. tulis ke {{name}} di bawah."
+    "hide": "sembunyiin chat"
   },
   "shapes": {
     "toolbar": "alat gambar",
@@ -476,5 +454,29 @@
     "auto": "otomatis",
     "custom": "warna lain",
     "fontSize": "ukuran teks"
+  },
+  "work": {
+    "title": "kerjaan",
+    "show": "chat kerjaan",
+    "openCount_one": "{{count}} jalan",
+    "openCount_other": "{{count}} jalan",
+    "empty": "belum ada kerjaan. tulis prompt atau list di bawah: ke orchestrator, atau langsung ke satu agent.",
+    "to": "ke",
+    "target": "siapa yang dapet pesan ini",
+    "planned": "dibagi ke tim",
+    "directGroup": "langsung ke satu agent",
+    "noteGroup": "catatan buat kerjaan yang jalan",
+    "answer": "jawab",
+    "placeholder": "prompt atau list kerjaan buat orchestrator (satu item per baris \"- \"). ctrl+enter buat kirim.",
+    "teamPlaceholder": "prompt atau list kerjaan buat agent ini. ctrl+enter buat kirim.",
+    "notePlaceholder": "catatan buat kerjaan ini (ctrl+enter buat kirim)",
+    "message": "pesan",
+    "splitList": "kirim jadi {{count}} kerjaan terpisah, gantian",
+    "sendList": "kirim {{count}} kerjaan",
+    "tooMany": "maks {{max}} item per list.",
+    "queued": "nunggu kerjaan sebelumnya",
+    "asking": "nanya ke lo",
+    "openResult": "buka hasilnya",
+    "queuedBody": "item list ini nunggu kerjaan sebelumnya kelar, abis itu jalan sendiri."
   }
 }

@@ -805,8 +805,8 @@
     "automatic": "Automatic",
     "manual": "On request",
     "canvasTitle": "Canvas",
-    "dockLabel": "Coordinator chat",
-    "dockBody": "How the chat with the coordinator opens at the bottom of the canvas. You can change it on the canvas too.",
+    "dockLabel": "Work chat",
+    "dockBody": "The chat at the bottom of the canvas where you hand out work: a prompt or a list, to the orchestrator or straight to one agent, at any time. Work running side by side is told about the rest, a team works on one thing at a time, and list items run one after another. How it opens can also be changed on the canvas.",
     "dock": {
       "collapsed": "Collapsed (message box)",
       "expanded": "Expanded (whole chat)",
@@ -830,8 +830,8 @@
     "limitBody": "A reply that is only a provider limit message parks the task instead of failing it; press Resume after the limit resets.",
     "retryLabel": "Retry failed",
     "retryBody": "A failed task can be retried: failed subtasks run again with fresh audits, finished ones are kept.",
-    "quickLabel": "Quick task",
-    "quickBody": "Right-click a team on the canvas for a small job straight to it: no plan, no audit, no summary.",
+    "quickLabel": "Work straight to an agent",
+    "quickBody": "In the chat at the bottom of the canvas, pick an agent instead of the orchestrator (or right-click a team → give work): it goes straight there, with no plan, audit or summary.",
     "shortcutsTitle": "Canvas shortcuts",
     "shortcuts": {
       "select": {

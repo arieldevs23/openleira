@@ -61,11 +61,7 @@ test('the sidebar lists background analyses and reopens them', () => {
       onDismissAnalysis={() => {}}
       onOpenSettings={() => {}}
       onDeleteWorkspace={() => {}}
-      cases={[]}
       divisions={[]}
-      selectedCaseId={null}
-      onSelectCase={() => {}}
-      onCreateCase={async () => {}}
       selectedDivisionId={null}
       onSelectDivision={() => {}}
     />,

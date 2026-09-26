@@ -57,6 +57,8 @@ export default function CasePanel({
   const divisionsById = new Map(divisions.map((division) => [division.id, division]));
   const coordinator = divisions.find((division) => division.isCoordinator);
   const isActive = caseItem.status === 'running' || caseItem.status === 'waiting_user';
+  // An item of a work list waits for the one before it; it starts by itself.
+  const isQueued = caseItem.status === 'draft' && Boolean(caseItem.followsCaseId);
   const canStart = caseItem.status === 'draft' && missingModelAgents.length === 0 && disconnectedProviders.length === 0;
 
   const run = async (name: string, action: () => Promise<unknown>) => {
@@ -110,6 +112,10 @@ export default function CasePanel({
         </div>
       )}
 
+      {isQueued && (
+        <p className="rounded-[10px] border border-border bg-muted/40 p-2.5 text-xs text-muted-foreground">{t('work.queuedBody')}</p>
+      )}
+
       {caseItem.status === 'draft' && missingModelAgents.length > 0 && (
         <div className="rounded-[10px] border border-warn/40 bg-warn/5 p-2.5 text-xs text-warn">
           <p>{t('case.modelsMissing', { names: missingModelAgents.map((division) => division.name).join(', ') })}</p>
@@ -131,7 +137,7 @@ export default function CasePanel({
       {actionError && <p className="text-xs text-err">{actionError}</p>}
 
       <div className="flex flex-wrap gap-1.5">
-        {caseItem.status === 'draft' && (
+        {caseItem.status === 'draft' && !isQueued && (
           <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={!canStart || busyAction !== null} onClick={() => void run('start', onStart)}>
             <Play className="h-3.5 w-3.5" />
             {busyAction === 'start' ? t('case.starting') : t('case.run')}

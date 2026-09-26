@@ -123,6 +123,7 @@ const CASE: OfficeCase = {
   startedAt: NOW,
   finishedAt: null,
   quickDivisionId: null,
+  followsCaseId: null,
 };
 
 const TASKS: OfficeTask[] = [
@@ -389,11 +390,11 @@ test('a working team menu offers a quick task; the coordinator menu does not', (
   const picked: string[] = [];
   renderTree({ onQuickTask: (division) => picked.push(division.id) });
   fireEvent.contextMenu(screen.getByTestId('office-node-backend'), { clientX: 50, clientY: 50 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Quick task' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Give work to this agent' }));
   assert.deepEqual(picked, ['div-backend']);
 
   fireEvent.contextMenu(screen.getByTestId('office-node-coordinator'), { clientX: 50, clientY: 50 });
-  assert.ok(!screen.getAllByRole('menuitem').some((item) => item.textContent === 'Quick task'));
+  assert.ok(!screen.getAllByRole('menuitem').some((item) => item.textContent === 'Give work to this agent'));
 });
 
 test('the coordinator menu offers no flow or delete entries', () => {

@@ -187,6 +187,7 @@ export function useOffice(projectId: string | null) {
     },
     caseAction: (caseId, action) => call((id) => api.office.caseAction(id, caseId, action)),
     postNote: (caseId, text) => call((id) => api.office.postNote(id, caseId, text)),
+    submitWork: (input) => call((id) => api.office.submitWork(id, input)),
   };
 
   return { snapshot, loadState, loadError, reload: load, actions };

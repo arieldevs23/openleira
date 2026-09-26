@@ -31,6 +31,7 @@ const CASE: OfficeCase = {
   startedAt: NOW,
   finishedAt: NOW,
   quickDivisionId: null,
+  followsCaseId: null,
 };
 
 const renderPanel = (caseItem: OfficeCase, calls: string[] = []) => {

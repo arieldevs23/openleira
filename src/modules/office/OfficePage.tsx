@@ -44,9 +44,9 @@ import DivisionModal from '@/modules/office/modals/DivisionModal';
 import ModelWizardModal from '@/modules/office/modals/ModelWizardModal';
 import OfficeSettingsModal from '@/modules/office/modals/OfficeSettingsModal';
 import PermissionWarningModal from '@/modules/office/modals/PermissionWarningModal';
-import QuickTaskModal from '@/modules/office/modals/QuickTaskModal';
 import SkillPickerModal from '@/modules/office/modals/SkillPickerModal';
 import type { CanvasPoint } from '@/modules/office/utils/officeCanvasLayout';
+import { isOpenWork, type WorkTarget } from '@/modules/office/utils/workItems';
 import { ProviderLoginModal } from '@/modules/provider-auth';
 import { api, readApiJson } from '@/shared/api';
 import { OFFICE_CHAT_DOCK_STORAGE_KEY, OFFICE_COLLAPSED_PANELS_STORAGE_KEY } from '@/shared/constants';
@@ -217,15 +217,18 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
   // The background analysis the add-workspace dialog reopens, if it was opened from the sidebar.
   const [resumeAnalysisId, setResumeAnalysisId] = useState<string | null>(null);
   // The case waiting on the one-time bypass-permissions warning before it starts.
-  const [pendingStartCaseId, setPendingStartCaseId] = useState<string | null>(null);
+  // Work waiting on the one-time bypass-permissions warning: a draft case to start, or new work to hand out.
+  const [pendingStart, setPendingStart] = useState<
+    { kind: 'case'; caseId: string } | { kind: 'work'; items: string[]; divisionId: string | null } | null
+  >(null);
   // Which side columns are folded away to give the canvas room (desktop only); remembered per browser.
   const [collapsed, setCollapsed] = useState<CollapsedPanels>(readCollapsedPanels);
   // The skill copied with Ctrl+C on the canvas; kept here so it can be pasted into another workspace.
   const [skillClipboard, setSkillClipboard] = useState<string | null>(null);
   // "Add skill here": where on the canvas the picked skill goes; undefined while the picker is closed.
   const [skillPickerAt, setSkillPickerAt] = useState<CanvasPoint | undefined>(undefined);
-  // The team a quick task is being written for; null while that dialog is closed.
-  const [quickTaskDivision, setQuickTaskDivision] = useState<OfficeDivision | null>(null);
+  // Where the chat dock sends the next message; null follows the selected work (an open question gets the answer).
+  const [workTargetChoice, setWorkTargetChoice] = useState<WorkTarget | null>(null);
   // How much of the coordinator chat is shown over the canvas; remembered per browser.
   const [dockMode, setDockModeState] = useState<CoordinatorDockMode>(readDockMode);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -267,7 +270,14 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
       .map((division) => division.agent.provider as LLMProvider))]
     : [];
 
-  const activeCaseId = cases.some((caseItem) => caseItem.id === selectedCaseId) ? selectedCaseId : cases[0]?.id ?? null;
+  // Until the user picks one: the newest work waiting on the user, else the newest running one, else
+  // the newest queued one, else the newest of all.
+  const activeCaseId = cases.some((caseItem) => caseItem.id === selectedCaseId)
+    ? selectedCaseId
+    : (cases.find((caseItem) => caseItem.status === 'waiting_user')
+      ?? cases.find((caseItem) => caseItem.status === 'running')
+      ?? cases.find(isOpenWork)
+      ?? cases[0])?.id ?? null;
   const detail = useCaseDetail(office?.id ?? null, activeCaseId);
   const caseItem = detail?.case ?? cases.find((candidate) => candidate.id === activeCaseId) ?? null;
   const tasks = detail?.tasks ?? [];
@@ -334,8 +344,11 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     }
   };
 
-  /** "Message the coordinator": brings the chat dock up and puts the cursor in its message box. */
-  const focusComposer = () => {
+  /** Brings the chat dock up, points it at `target` and puts the cursor in its message box. */
+  const focusComposer = (target?: WorkTarget) => {
+    if (target) {
+      setWorkTargetChoice(target);
+    }
     if (dockMode === 'hidden') {
       setDockMode('collapsed');
     }
@@ -369,7 +382,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
       return;
     }
     if (office.permissionMode === 'bypassPermissions' && !office.permissionWarningAcknowledged) {
-      setPendingStartCaseId(caseId);
+      setPendingStart({ kind: 'case', caseId });
       return;
     }
     await actions.caseAction(caseId, 'start');
@@ -381,27 +394,59 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     }
   };
 
-  const submitQuickTask = async (division: OfficeDivision, input: { title: string; description: string }) => {
-    const created = await actions.createCase({ ...input, quickDivisionId: division.id });
-    setSelectedCaseId(created.id);
-    setSelection({ type: 'case' });
-    setQuickTaskDivision(null);
-    await startCaseById(created.id).catch(reportError);
+  const needsPermissionWarning = Boolean(office && office.permissionMode === 'bypassPermissions' && !office.permissionWarningAcknowledged);
+
+  /** Hands new work to the workspace and shows the first item of it. */
+  const handOutWork = async (items: string[], divisionId: string | null) => {
+    const created = await actions.submitWork({ items, divisionId });
+    if (created[0]) {
+      setSelectedCaseId(created[0].id);
+      setSelection({ type: 'case' });
+    }
+  };
+
+  const submitWork = async (items: string[], divisionId: string | null) => {
+    if (needsPermissionWarning) {
+      setPendingStart({ kind: 'work', items, divisionId });
+      return;
+    }
+    await handOutWork(items, divisionId);
   };
 
   const confirmPermissionAndStart = async () => {
     setPageError(null);
     try {
       await actions.updateOffice({ permissionWarningAcknowledged: true });
-      if (pendingStartCaseId) {
-        await actions.caseAction(pendingStartCaseId, 'start');
+      if (pendingStart?.kind === 'case') {
+        await actions.caseAction(pendingStart.caseId, 'start');
+      } else if (pendingStart?.kind === 'work') {
+        await handOutWork(pendingStart.items, pendingStart.divisionId);
       }
     } catch (error) {
       reportError(error);
     } finally {
-      setPendingStartCaseId(null);
+      setPendingStart(null);
     }
   };
+
+  // The dock's target: the user's pick while it still exists, else the answer to an open question of the
+  // selected work, else the orchestrator.
+  const workTarget: WorkTarget = (() => {
+    const choice = workTargetChoice;
+    if (choice?.kind === 'team' && divisions.some((division) => division.id === choice.divisionId && division.agent.enabled)) {
+      return choice;
+    }
+    if (choice?.kind === 'note' && cases.some((candidate) => candidate.id === choice.caseId && (candidate.status === 'running' || candidate.status === 'waiting_user'))) {
+      return choice;
+    }
+    if (choice?.kind === 'coordinator') {
+      return choice;
+    }
+    if (caseItem && !caseItem.quickDivisionId && caseItem.status === 'waiting_user' && caseItem.waitingReason === 'question') {
+      return { kind: 'note', caseId: caseItem.id };
+    }
+    return { kind: 'coordinator' };
+  })();
 
   const selectedDivision = selection.type === 'division' || selection.type === 'messages'
     ? divisions.find((division) => division.id === selection.divisionId) ?? null
@@ -609,8 +654,12 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
         skillClipboard={skillClipboard}
         onCopySkill={setSkillClipboard}
         onAnswerQuestion={caseItem ? async (text) => { await actions.postNote(caseItem.id, text); } : undefined}
-        onMessageCoordinator={caseItem?.quickDivisionId ? undefined : focusComposer}
-        onQuickTask={(division) => setQuickTaskDivision(division)}
+        onMessageCoordinator={() => focusComposer(
+          caseItem && !caseItem.quickDivisionId && (caseItem.status === 'running' || caseItem.status === 'waiting_user')
+            ? { kind: 'note', caseId: caseItem.id }
+            : { kind: 'coordinator' },
+        )}
+        onQuickTask={(division) => focusComposer({ kind: 'team', divisionId: division.id })}
       />
     );
   };
@@ -638,19 +687,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
       }}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onDeleteWorkspace={(workspace) => setPendingDelete({ kind: 'workspace', workspace })}
-      cases={cases}
       divisions={divisions}
-      selectedCaseId={activeCaseId}
-      onSelectCase={(caseId) => {
-        setSelectedCaseId(caseId);
-        setSelection({ type: 'case' });
-        setIsSidebarOpen(false);
-      }}
-      onCreateCase={async (input) => {
-        const created = await actions.createCase(input);
-        setSelectedCaseId(created.id);
-        setSelection({ type: 'case' });
-      }}
       selectedDivisionId={selection.type === 'division' ? selection.divisionId : null}
       onSelectDivision={(divisionId) => {
         select({ type: 'division', divisionId });
@@ -745,15 +782,25 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
         <div className="flex min-h-0 flex-1">
           <main className="relative min-h-0 min-w-0 flex-1">
             {renderMain()}
-            {office && caseItem && !caseItem.quickDivisionId && (
+            {office && (
               <CoordinatorDock
                 ref={composerRef}
-                caseItem={caseItem}
-                messages={messages}
-                coordinator={divisions.find((division) => division.isCoordinator) ?? null}
+                cases={cases}
+                divisions={divisions}
+                selectedCaseId={activeCaseId}
+                selectedMessages={messages}
                 mode={dockMode}
                 onModeChange={setDockMode}
-                onSend={async (text) => { await actions.postNote(caseItem.id, text); }}
+                target={workTarget}
+                onTargetChange={setWorkTargetChoice}
+                onSelectCase={(caseId) => {
+                  setSelectedCaseId(caseId);
+                  setSelection({ type: 'case' });
+                  setCaseTab('result');
+                  setIsPanelOpen(true);
+                }}
+                onSubmitWork={submitWork}
+                onSendNote={async (caseId, text) => { await actions.postNote(caseId, text); }}
               />
             )}
           </main>
@@ -872,18 +919,11 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
           }}
         />
       )}
-      {quickTaskDivision && (
-        <QuickTaskModal
-          agentName={quickTaskDivision.agent.name || quickTaskDivision.name}
-          onCancel={() => setQuickTaskDivision(null)}
-          onSubmit={(input) => submitQuickTask(quickTaskDivision, input)}
-        />
-      )}
-      {pendingStartCaseId && (
+      {pendingStart && (
         <PermissionWarningModal
           open
           onOpenChange={(open) => {
-            if (!open) setPendingStartCaseId(null);
+            if (!open) setPendingStart(null);
           }}
           onConfirm={confirmPermissionAndStart}
         />

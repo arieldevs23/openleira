@@ -421,7 +421,8 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     const officeId = readParam(req, 'officeId');
     const body = readBody(req);
     const items = readOptionalStringArray(body, 'items') ?? [];
-    const divisionId = readOptionalString(body, 'divisionId') ?? null;
+    // null (or leaving it out) hands the work to the orchestrator.
+    const divisionId = body.divisionId === null ? null : readOptionalString(body, 'divisionId') ?? null;
     await office.requireConnectedProviders(officeId, undefined, divisionId ? [divisionId] : undefined);
     const created = orchestrator.submitWork(officeId, { items, divisionId, createdBy: readUserId(req) });
     res.status(201).json(createApiSuccessResponse(created));

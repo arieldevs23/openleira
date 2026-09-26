@@ -60,11 +60,7 @@ const renderSidebar = (overrides: {
     onDismissAnalysis={() => {}}
     onOpenSettings={() => {}}
     onDeleteWorkspace={() => {}}
-    cases={[]}
     divisions={[division('backend', '## Owns\n- `server/`'), division('docs')]}
-    selectedCaseId={null}
-    onSelectCase={() => {}}
-    onCreateCase={async () => {}}
     selectedDivisionId={null}
     onSelectDivision={() => {}}
   />,

@@ -17,7 +17,7 @@ test('the Node Design tab sets the canvas chat dock, shows the panels again and 
   const opened: SettingsMainTab[] = [];
   render(<WorkspaceSettingsTab onOpenTab={(tab) => opened.push(tab)} />);
 
-  fireEvent.change(screen.getByRole('combobox', { name: 'Coordinator chat' }), { target: { value: 'hidden' } });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Work chat' }), { target: { value: 'hidden' } });
   assert.equal(window.localStorage.getItem(OFFICE_CHAT_DOCK_STORAGE_KEY), 'hidden');
 
   fireEvent.click(screen.getByRole('button', { name: 'Show both' }));

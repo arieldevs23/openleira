@@ -33,14 +33,6 @@
     "showPanel": "Show panel",
     "hidePanel": "Hide panel"
   },
-  "cases": {
-    "title": "Tasks",
-    "new": "New task",
-    "titlePlaceholder": "Task title",
-    "descriptionPlaceholder": "Describe what needs to be done...",
-    "create": "Create",
-    "empty": "No tasks yet. Create one to get started."
-  },
   "status": {
     "draft": "Draft",
     "running": "Running",
@@ -74,7 +66,7 @@
   },
   "tree": {
     "label": "Workspace canvas",
-    "caseNode": "Task",
+    "caseNode": "Work",
     "noCase": "Pick or create a task",
     "noModel": "no model",
     "queued": "{{count}} queued",
@@ -125,7 +117,7 @@
     "finalSummary": "Final summary",
     "timeline": "Subtask timeline",
     "noTasks": "No subtasks yet.",
-    "noTasksDraft": "Subtasks appear here once the orchestrator has planned the task.",
+    "noTasksDraft": "Subtasks appear here once the work has started.",
     "auditAttempts_one": "audit failed {{count}}×",
     "auditAttempts_other": "audit failed {{count}}×",
     "deletedDivision": "deleted team",
@@ -136,7 +128,7 @@
     "coordinator": "Orchestrator",
     "notePlaceholder": "Message the orchestrator (Ctrl+Enter to send)",
     "send": "Send",
-    "noCaseSelected": "Pick a task on the left, or create a new one.",
+    "noCaseSelected": "No work yet. Write a prompt in the chat at the bottom of the canvas.",
     "retry": "Retry failed",
     "retrying": "Retrying…"
   },
@@ -364,7 +356,7 @@
     "unlinkSkill": "Remove skill from agent",
     "addSkillHere": "Add skill here",
     "pasteSkill": "Paste skill \"{{name}}\" (Ctrl+V)",
-    "quickTask": "Quick task",
+    "quickTask": "Give work to this agent",
     "resetMarked": "Reset position of {{count}} selected",
     "clearMarked": "Clear selection",
     "deleteMarkedSkills": "Delete {{count}} selected skill(s) and shape(s)"
@@ -432,24 +424,10 @@
     "noMatch": "No installed skill matches.",
     "useName": "Use \"{{name}}\""
   },
-  "quickTask": {
-    "title": "Quick task for {{name}}",
-    "hint": "Goes straight to this agent: no plan from the orchestrator, no audit, no summary. Good for small jobs.",
-    "titleLabel": "Task",
-    "titlePlaceholder": "e.g. fix the typo on the login page",
-    "descriptionLabel": "Details",
-    "descriptionPlaceholder": "Details (optional)",
-    "submit": "Run",
-    "badge": "quick"
-  },
   "dock": {
-    "show": "Chat with {{name}}",
     "collapse": "Collapse chat",
     "expand": "Show the whole chat",
-    "hide": "Hide chat",
-    "finished": "This task has finished; the chat is read-only.",
-    "title": "Chat with {{name}}",
-    "empty": "No messages yet. Write to {{name}} below."
+    "hide": "Hide chat"
   },
   "shapes": {
     "toolbar": "Drawing tools",
@@ -489,5 +467,29 @@
     "auto": "Auto",
     "custom": "Custom colour",
     "fontSize": "Text size"
+  },
+  "work": {
+    "title": "Work",
+    "show": "Work chat",
+    "openCount_one": "{{count}} going",
+    "openCount_other": "{{count}} going",
+    "empty": "No work yet. Write a prompt or a list below: to the orchestrator, or straight to one agent.",
+    "to": "To",
+    "target": "Who gets this message",
+    "planned": "plans it across the teams",
+    "directGroup": "Straight to one agent",
+    "noteGroup": "Note for running work",
+    "answer": "Answer",
+    "placeholder": "Prompt or list of work for the orchestrator (one item per \"- \" line). Ctrl+Enter sends.",
+    "teamPlaceholder": "Prompt or list of work for this agent. Ctrl+Enter sends.",
+    "notePlaceholder": "Note for this work (Ctrl+Enter to send)",
+    "message": "Message",
+    "splitList": "send as {{count}} separate items, one after another",
+    "sendList": "Send {{count}} items",
+    "tooMany": "At most {{max}} items per list.",
+    "queued": "waiting for the item before it",
+    "asking": "has a question",
+    "openResult": "open the result",
+    "queuedBody": "This item of a work list waits for the item before it and starts by itself once that one is finished."
   }
 }

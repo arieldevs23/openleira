@@ -2105,6 +2105,8 @@ export type OfficeActions = {
   deleteCase(caseId: string): Promise<void>;
   caseAction(caseId: string, action: 'start' | 'pause' | 'resume' | 'retry' | 'cancel'): Promise<OfficeCase>;
   postNote(caseId: string, text: string): Promise<OfficeMessage>;
+  /** Hands new work to the workspace: one case per item, a list runs in order; the first starts now. */
+  submitWork(input: { items: string[]; divisionId: string | null }): Promise<OfficeCase[]>;
 };
 
 /** One provider's model catalog, rendered as one option group of the office agent model menus. */

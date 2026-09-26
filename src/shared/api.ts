@@ -482,6 +482,9 @@ export const api = {
       put(`/api/office/${encodeURIComponent(officeId)}/agents/models`, { assignments }),
     createCase: (officeId: string, input: { title: string; description: string; quickDivisionId?: string }) =>
       post(`/api/office/${encodeURIComponent(officeId)}/cases`, input),
+    /** New work: one prompt or a list, to the orchestrator (`divisionId` null) or one team. */
+    submitWork: (officeId: string, input: { items: string[]; divisionId: string | null }) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/work`, input),
     caseDetail: (officeId: string, caseId: string) =>
       get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
     deleteCase: (officeId: string, caseId: string) =>
