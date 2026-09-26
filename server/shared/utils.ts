@@ -970,6 +970,48 @@ export function readJsonRecord(value: unknown): AnyRecord | null {
   }
 }
 
+/**
+ * Parses a JSON text column that holds an array of strings.
+ *
+ * Used by the database module's office repositories for columns such as
+ * `allowed_tools`, `skills` and `depends_on`. Invalid JSON, non-arrays and
+ * non-string members degrade to an empty array / are dropped, so one corrupt
+ * row cannot break loading an office.
+ */
+export function readJsonStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return readStringArray(value) ?? [];
+  }
+  if (typeof value !== 'string' || !value.trim()) {
+    return [];
+  }
+
+  try {
+    return readStringArray(JSON.parse(value)) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Builds the `column = ?` list and bound values for a partial SQL UPDATE.
+ *
+ * Used by the database module's office repositories: entries whose value is
+ * `undefined` are skipped (the column is left alone) while `null` is kept (the
+ * column is cleared). An empty `sql` means there is nothing to update, and
+ * callers must skip the statement. Column names are always code-supplied
+ * literals, never user input.
+ */
+export function buildSqlAssignments(
+  entries: Array<[column: string, value: unknown]>,
+): { sql: string; values: unknown[] } {
+  const present = entries.filter(([, value]) => value !== undefined);
+  return {
+    sql: present.map(([column]) => `${column} = ?`).join(', '),
+    values: present.map(([, value]) => value),
+  };
+}
+
 // ---------------------------
 //----------------- OPENCODE SESSION STORAGE UTILITIES ------------
 /**

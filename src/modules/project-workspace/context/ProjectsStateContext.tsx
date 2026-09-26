@@ -10,7 +10,10 @@ type ProjectsState = ReturnType<typeof useProjectsState>;
 type ProjectSidebarState = Pick<
   ProjectsState,
   'sidebarOpen' | 'setSidebarOpen' | 'sidebarSharedProps'
->;
+> & {
+  /** Workspace mode brings its own sidebar, so the project sidebar steps aside. */
+  isWorkspaceMode: boolean;
+};
 
 type ProjectMainState = Pick<
   ProjectsState,
@@ -82,8 +85,9 @@ export function ProjectsStateProvider({
       sidebarOpen: state.sidebarOpen,
       setSidebarOpen: state.setSidebarOpen,
       sidebarSharedProps: state.sidebarSharedProps,
+      isWorkspaceMode: state.activeTab === 'office',
     }),
-    [state.sidebarOpen, state.setSidebarOpen, state.sidebarSharedProps],
+    [state.sidebarOpen, state.setSidebarOpen, state.sidebarSharedProps, state.activeTab],
   );
 
   const mainState = useMemo<ProjectMainState>(

@@ -33,6 +33,12 @@ type ChatRun = {
   writer: ChatSessionWriter;
   startedAt: number;
   completedAt: number | null;
+  /**
+   * Server-side listener for this run's outbound events, set by callers that
+   * need to read what a run produced (the Office orchestrator reads its agents'
+   * answers this way). Null for ordinary chat runs.
+   */
+  observer: ((event: NormalizedMessage) => void) | null;
 };
 
 /**
@@ -131,6 +137,16 @@ function decorateAndRecordEvent(run: ChatRun, message: NormalizedMessage): Norma
     run.events.splice(0, run.events.length - MAX_BUFFERED_EVENTS_PER_RUN);
   }
 
+  if (run.observer) {
+    // An observer that throws must never break delivery to the clients.
+    try {
+      run.observer(outbound);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[ChatRunRegistry] Run observer failed', { appSessionId: run.appSessionId, error: message });
+    }
+  }
+
   return outbound;
 }
 
@@ -200,6 +216,8 @@ export const chatRunRegistry = {
      */
     connection: RealtimeClientConnection | null;
     userId: string | number | null;
+    /** Receives every outbound event of the run, after it is sequenced. */
+    observer?: (event: NormalizedMessage) => void;
   }): ChatRun | null {
     const existing = runs.get(input.appSessionId);
     if (existing && existing.status === 'running') {
@@ -216,6 +234,7 @@ export const chatRunRegistry = {
       writer: null as unknown as ChatSessionWriter,
       startedAt: Date.now(),
       completedAt: null,
+      observer: input.observer ?? null,
     };
 
     run.writer = new ChatSessionWriter({

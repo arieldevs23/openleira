@@ -311,3 +311,34 @@ test('startRun rejects a second concurrent run for the same session', async () =
     assert.ok(third);
   });
 });
+
+test('a run observer sees every sequenced event, and a throwing observer does not stop delivery', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createAppSession('app-run-observed', 'claude', '/workspace/demo');
+    const connection = new FakeConnection();
+    const observed: Array<Record<string, unknown>> = [];
+    const run = chatRunRegistry.startRun({
+      appSessionId: 'app-run-observed',
+      provider: 'claude',
+      providerSessionId: null,
+      connection,
+      userId: null,
+      observer: (event) => {
+        observed.push(event);
+        if (event.kind === 'text') {
+          throw new Error('observer bug');
+        }
+      },
+    });
+    assert.ok(run);
+
+    run.writer.send({ kind: 'text', role: 'assistant', content: 'hello', sessionId: 'provider-x', provider: 'claude', id: 'm1', timestamp: '' });
+    run.writer.sendComplete({ exitCode: 0 });
+
+    assert.deepEqual(observed.map((event) => event.kind), ['text', 'complete']);
+    assert.equal(observed[0].sessionId, 'app-run-observed');
+    assert.equal(observed[0].seq, 1);
+    // The client still received both frames despite the observer throwing.
+    assert.deepEqual(connection.frames.map((frame) => frame.kind), ['text', 'complete']);
+  });
+});

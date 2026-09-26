@@ -6,6 +6,10 @@ export { credentialsDb } from '@/modules/database/repositories/credentials.js';
 export { githubTokensDb } from '@/modules/database/repositories/github-tokens.js';
 export { notificationChannelEndpointsDb } from '@/modules/database/repositories/notification-channel-endpoints.js';
 export { notificationPreferencesDb } from '@/modules/database/repositories/notification-preferences.js';
+// officesDb / officeCasesDb: used by the Office module (Kantor AI) to persist
+// offices, divisions, agents, cases, tasks and the message bus.
+export { officesDb } from '@/modules/database/repositories/offices.db.js';
+export { officeCasesDb } from '@/modules/database/repositories/office-cases.db.js';
 // providerModelsDb: used by Providers to persist user-managed custom model rows.
 export { providerModelsDb } from '@/modules/database/repositories/provider-models.js';
 // projectsDb: used by Projects, Worktrees, Git, WebSocket, and notification modules to persist and resolve project records.
