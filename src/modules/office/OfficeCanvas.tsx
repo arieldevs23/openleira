@@ -1741,7 +1741,7 @@ export default function OfficeCanvas({
                   y1={start.y}
                   x2={end.x}
                   y2={end.y}
-                  stroke="hsl(var(--primary))"
+                  stroke="var(--accent)"
                   strokeWidth={2}
                   strokeDasharray="6 4"
                   markerEnd={`url(#office-arrow-${officeId})`}
@@ -1828,8 +1828,8 @@ export default function OfficeCanvas({
                       data-edge-from={from.id}
                       data-edge-to={to.id}
                       data-testid={`office-flow-end-${end}-${from.slug}-${to.slug}`}
-                      fill="hsl(var(--background))"
-                      stroke="hsl(var(--primary))"
+                      fill="var(--bg)"
+                      stroke="var(--accent)"
                       strokeWidth={2}
                       style={{ pointerEvents: 'all', cursor: 'move' }}
                     >

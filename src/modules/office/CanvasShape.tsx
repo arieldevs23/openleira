@@ -127,7 +127,7 @@ export default function CanvasShape({
             shape.kind === 'text' ? 'justify-start text-left' : 'justify-center text-center',
             !shape.text && shape.kind !== 'text' && 'text-transparent',
           )}
-          style={{ fontSize: shape.fontSize, color: shape.textColor ?? 'hsl(var(--foreground))' }}
+          style={{ fontSize: shape.fontSize, color: shape.textColor ?? 'var(--text)' }}
         >
           {shape.text || (shape.kind === 'text' ? <span className="text-muted-foreground">{label}</span> : '')}
         </span>
