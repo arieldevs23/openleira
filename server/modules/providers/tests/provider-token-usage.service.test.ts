@@ -8,6 +8,7 @@ import Database from 'better-sqlite3';
 
 import {
   createProviderTokenUsageService,
+  sumClaudeTokenUsage,
   summarizeClaudeTokenUsage,
 } from '@/modules/providers/services/provider-token-usage.service.js';
 import { AppError } from '@/shared/utils.js';
@@ -370,4 +371,22 @@ test('Codex token usage falls back to the whole file when the tail has no token_
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
   }
+});
+
+test('sumClaudeTokenUsage counts every API response once over the whole transcript', () => {
+  const turn = (id: string, input: number, output: number, cacheRead = 0) => ({
+    type: 'assistant',
+    message: { id, usage: { input_tokens: input, output_tokens: output, cache_read_input_tokens: cacheRead } },
+  });
+  const usage = sumClaudeTokenUsage([
+    turn('m1', 10, 5, 100),
+    // Claude repeats the usage block on every content row of the same message.
+    turn('m1', 10, 5, 100),
+    { type: 'user', message: { content: 'hi' } },
+    turn('m2', 3, 7, 200),
+  ]);
+  assert.equal(usage.inputTokens, 13);
+  assert.equal(usage.outputTokens, 12);
+  assert.equal(usage.cacheReadTokens, 300);
+  assert.equal(usage.used, 325);
 });

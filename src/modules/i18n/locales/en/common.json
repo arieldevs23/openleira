@@ -24,7 +24,8 @@
     "git": "Source Control",
     "tasks": "Tasks",
     "browser": "Browser",
-    "computer": "Computer"
+    "computer": "Computer",
+    "office": "Workspace"
   },
   "status": {
     "loading": "Loading...",
@@ -316,7 +317,8 @@
     "browseAllFiles": "Browse all files ({{count}})",
     "browseAllCommits": "Browse all commits ({{count}})",
     "browseAllBranches": "Browse all branches ({{count}})",
-    "switchTo": "Switch to: {{name}}"
+    "switchTo": "Switch to: {{name}}",
+    "navOffice": "Open workspace mode"
   },
   "folderBrowser": {
     "title": "Select Folder",
@@ -401,5 +403,11 @@
     "pickModel": "Choose model",
     "addWorkspace": "Add workspace",
     "activeProvider": "Active provider"
+  },
+  "mode": {
+    "label": "Mode",
+    "normal": "Normal",
+    "workspace": "Workspace",
+    "workspaceTitle": "Workspace"
   }
 }

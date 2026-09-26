@@ -6,6 +6,12 @@ export { providerRuntimeService } from './services/provider-runtime.service.js';
 // providerModelsService: used by Commands to list models and resolve the active session model.
 export { providerModelsService } from './services/provider-models.service.js';
 
+// providerTokenUsageService: used by the Office module to total the tokens a case spent.
+export { providerTokenUsageService } from './services/provider-token-usage.service.js';
+
+// providerAuthService: used by the Office module to refuse running a case on a provider that is not logged in.
+export { providerAuthService } from './services/provider-auth.service.js';
+
 // sessionsService: used by the websocket module's chat gateway to resolve an
 // edited message's resume point, which only the providers module can read.
 export { sessionsService } from './services/sessions.service.js';

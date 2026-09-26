@@ -3,7 +3,7 @@ export {
   getProjectsWithSessions,
 } from './services/projects-with-sessions-fetch.service.js';
 export { updateProjectDisplayName } from './services/project-management.service.js';
-// createProject: used by the worktrees module to register a worktree directory as a switchable project.
+// createProject: used by the worktrees module to register a worktree directory as a switchable project, and by the Office module to register a new workspace folder.
 export { createProject } from './services/project-management.service.js';
 // deleteOrArchiveProject: used by Projects routes and Worktrees cleanup to hide or permanently remove a project.
 export { deleteOrArchiveProject, deleteSessionJsonlFilesForProjectPath } from './services/project-delete.service.js';

@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import type { Project, ProjectSession } from '@/shared/types';
+import type { OfficeCaseStatus, OfficeNodeStatus, OfficeTaskStatus, Project, ProjectSession } from '@/shared/types';
 import { HOME_BROWSER_PATH, OBROLAN_WORKSPACE_PATH } from '@/shared/constants';
 
 //----------------- DEPLOYMENT MODE ------------
@@ -244,4 +244,31 @@ export const isHomeBrowserProject = (project: Pick<Project, 'fullPath' | 'path'>
 /** Built-in workspaces are real projects on the backend but never listed as projects in the UI. */
 export const isBuiltInWorkspaceProject = (project: Pick<Project, 'fullPath' | 'path'> | null | undefined): boolean => (
   isObrolanProject(project) || isHomeBrowserProject(project)
+);
+
+// ---------------------------
+
+//----------------- OFFICE (KANTOR AI) STATUS TONES ------------
+
+/**
+ * Maps a case status onto the office palette tone its badge uses. Used by the
+ * office module's case list and case panel so a case reads the same in both.
+ */
+export const officeCaseTone = (status: OfficeCaseStatus): OfficeNodeStatus => {
+  switch (status) {
+    case 'running': return 'running';
+    case 'waiting_user': return 'review';
+    case 'done': return 'done';
+    case 'failed': return 'failed';
+    default: return 'idle';
+  }
+};
+
+/**
+ * Maps a task status onto the office palette tone. A queued task is shown as
+ * idle (it waits for its dependencies or a free slot). Used by the office
+ * module's tree and task timeline.
+ */
+export const officeTaskTone = (status: OfficeTaskStatus): OfficeNodeStatus => (
+  status === 'queued' ? 'idle' : status
 );

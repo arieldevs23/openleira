@@ -23,7 +23,7 @@ function ProjectSidebarRegion({
   isMobile,
 }: Pick<ProjectWorkspaceShellProps, 'isMobile'>) {
   const { t } = useTranslation('common');
-  const { sidebarOpen, setSidebarOpen, sidebarSharedProps } = useProjectSidebarState();
+  const { sidebarOpen, setSidebarOpen, sidebarSharedProps, isWorkspaceMode } = useProjectSidebarState();
   const { width: sidebarWidth, setWidth: setSidebarWidth, resetWidth: resetSidebarWidth } = useSidebarWidth();
   // Hide sidebar leaves a 48px icon rail behind, which sizes itself — the stored
   // width and the drag handle only apply while the full sidebar is on screen.
@@ -114,6 +114,11 @@ function ProjectSidebarRegion({
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
     document.body.style.userSelect = '';
   }, []);
+
+  // Workspace mode draws its own workspace sidebar inside the main region.
+  if (isWorkspaceMode) {
+    return null;
+  }
 
   if (!isMobile) {
     return (

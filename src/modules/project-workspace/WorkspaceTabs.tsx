@@ -4,6 +4,7 @@ import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Tooltip, PillBar, Pill } from '@/shared/ui';
+import { cn } from '@/shared/utils';
 import type { AppTab } from '@/shared/types';
 import { usePlugins,PluginIcon } from '@/modules/plugins';
 
@@ -12,6 +13,8 @@ type WorkspaceTabsProps = {
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
   shouldShowTasksTab: boolean;
   shouldShowBrowserTab: boolean;
+  /** `vertical` is the icon rail beside the content; the header now holds the mode switch. */
+  orientation?: 'horizontal' | 'vertical';
 };
 
 type BuiltInTab = {
@@ -51,13 +54,19 @@ const TASKS_TAB: BuiltInTab = {
   icon: ClipboardCheck,
 };
 
-/** Rendered by WorkspaceHeader to show the built-in workspace tabs plus any enabled plugin tabs. */
+/**
+ * The normal-mode view tabs (chat, shell, files, plus optional and plugin
+ * tabs). WorkspaceMain renders them as a vertical icon rail beside the
+ * content on desktop and as a strip under the header on mobile.
+ */
 export default function WorkspaceTabs({
   activeTab,
   setActiveTab,
   shouldShowTasksTab,
   shouldShowBrowserTab,
+  orientation = 'horizontal',
 }: WorkspaceTabsProps) {
+  const isVertical = orientation === 'vertical';
   const { t } = useTranslation();
   const { plugins } = usePlugins();
 
@@ -87,8 +96,10 @@ export default function WorkspaceTabs({
     const currentIndex = tabButtons.indexOf(event.currentTarget);
     let nextIndex: number;
 
-    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabButtons.length;
-    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+    const nextKey = isVertical ? 'ArrowDown' : 'ArrowRight';
+    const previousKey = isVertical ? 'ArrowUp' : 'ArrowLeft';
+    if (event.key === nextKey) nextIndex = (currentIndex + 1) % tabButtons.length;
+    else if (event.key === previousKey) nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
     else if (event.key === 'Home') nextIndex = 0;
     else if (event.key === 'End') nextIndex = tabButtons.length - 1;
     else return;
@@ -102,7 +113,11 @@ export default function WorkspaceTabs({
     <PillBar
       role="tablist"
       aria-label={t('tabs.views', { defaultValue: 'Workspace views' })}
-      className="min-w-max border border-border/40 bg-muted/50 shadow-inner shadow-black/[0.025] dark:shadow-black/10"
+      aria-orientation={orientation}
+      className={cn(
+        'border border-border/40 bg-muted/50 shadow-inner shadow-black/[0.025] dark:shadow-black/10',
+        isVertical ? 'flex-col' : 'min-w-max',
+      )}
     >
       {tabs.map((tab, index) => {
         const isActive = tab.id === activeTab;
@@ -111,9 +126,9 @@ export default function WorkspaceTabs({
         return (
           <Fragment key={`${tab.id}-${index}`}>
             {index === builtInTabs.length && pluginTabs.length > 0 && (
-              <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-border" />
+              <span aria-hidden="true" className={isVertical ? 'my-1 h-px w-4 shrink-0 bg-border' : 'mx-1 h-4 w-px shrink-0 bg-border'} />
             )}
-            <Tooltip content={displayLabel} position="bottom">
+            <Tooltip content={displayLabel} position={isVertical ? 'right' : 'bottom'}>
               <Pill
                 role="tab"
                 aria-label={displayLabel}
@@ -122,7 +137,7 @@ export default function WorkspaceTabs({
                 isActive={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 onKeyDown={handleTabKeyDown}
-                className="h-8 max-w-44 px-2.5 py-[5px]"
+                className={isVertical ? 'h-9 w-9 justify-center px-0 py-0' : 'h-8 max-w-44 px-2.5 py-[5px]'}
               >
                 {tab.kind === 'builtin' ? (
                   <tab.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
@@ -133,9 +148,11 @@ export default function WorkspaceTabs({
                     className="flex h-3.5 w-3.5 shrink-0 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
                   />
                 )}
-                <span className={`${isActive ? 'inline max-w-28' : 'hidden'} truncate sm:max-w-36 lg:inline`}>
-                  {displayLabel}
-                </span>
+                {!isVertical && (
+                  <span className={`${isActive ? 'inline max-w-28' : 'hidden'} truncate sm:max-w-36 lg:inline`}>
+                    {displayLabel}
+                  </span>
+                )}
               </Pill>
             </Tooltip>
           </Fragment>

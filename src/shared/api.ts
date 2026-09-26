@@ -424,6 +424,53 @@ export const api = {
       post(`/api/providers/${provider}/skills`, payload),
   },
 
+  // Kantor AI: one office per project, its divisions/agents, cases and controls.
+  office: {
+    forProject: (projectId: string) => get(`/api/office${query({ projectId })}`),
+    create: (projectId: string, locale: string, extra: { divisions?: unknown[]; appSummary?: string | null } = {}) =>
+      post('/api/office', { projectId, locale, ...extra }),
+    workspaces: () => get('/api/office/workspaces'),
+    remove: (officeId: string) => del(`/api/office/${encodeURIComponent(officeId)}`),
+    prepareFolder: (path: string, mode: 'new' | 'existing') => post('/api/office/folders', { path, mode }),
+    startAnalysis: (input: { projectId: string; provider: string; model: string; locale: string }) =>
+      post('/api/office/analyses', input),
+    analysis: (analysisId: string) => get(`/api/office/analyses/${encodeURIComponent(analysisId)}`),
+    addFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
+    deleteFlowEdge: (officeId: string, fromDivisionId: string, toDivisionId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/flow`, { fromDivisionId, toDivisionId }),
+    caseUsage: (officeId: string, caseId: string) =>
+      get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/usage`),
+    update: (
+      officeId: string,
+      changes: { name?: string; maxParallel?: number; permissionMode?: string; permissionWarningAcknowledged?: boolean },
+    ) => patch(`/api/office/${encodeURIComponent(officeId)}`, changes),
+    createDivision: (officeId: string, input: Record<string, unknown>) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/divisions`, input),
+    updateDivision: (
+      officeId: string,
+      divisionId: string,
+      changes: Record<string, unknown>,
+    ) => patch(`/api/office/${encodeURIComponent(officeId)}/divisions/${encodeURIComponent(divisionId)}`, changes),
+    deleteDivision: (officeId: string, divisionId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/divisions/${encodeURIComponent(divisionId)}`),
+    // `model: null` clears the agent's model; `provider` + `model` set it.
+    updateAgent: (officeId: string, agentId: string, changes: Record<string, unknown>) =>
+      patch(`/api/office/${encodeURIComponent(officeId)}/agents/${encodeURIComponent(agentId)}`, changes),
+    assignModels: (officeId: string, assignments: Array<{ agentId: string; provider: string; model: string }>) =>
+      put(`/api/office/${encodeURIComponent(officeId)}/agents/models`, { assignments }),
+    createCase: (officeId: string, input: { title: string; description: string }) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/cases`, input),
+    caseDetail: (officeId: string, caseId: string) =>
+      get(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
+    deleteCase: (officeId: string, caseId: string) =>
+      del(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}`),
+    caseAction: (officeId: string, caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel') =>
+      post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/${action}`),
+    postNote: (officeId: string, caseId: string, text: string) =>
+      post(`/api/office/${encodeURIComponent(officeId)}/cases/${encodeURIComponent(caseId)}/notes`, { text }),
+  },
+
   // Slash commands
   commands: {
     // `projectPath` stays optional: a workspace without a resolved path omits
