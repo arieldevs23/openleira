@@ -188,6 +188,19 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
     return projectRoot;
   }
 
+  /** Project root for an edit; refused with 423 while a canvas task works in the project. */
+  async function resolveEditableProjectRoot(projectId: string): Promise<string> {
+    const projectRoot = await resolveProjectRoot(projectId);
+    if (dependencies.projects.isProjectBusy(projectRoot)) {
+      throw createFileTreeError(
+        'A workspace task is running in this project; files are read-only until it finishes.',
+        423,
+        'PROJECT_BUSY',
+      );
+    }
+    return projectRoot;
+  }
+
   /**
    * Streams one directory and keeps only the entries the tree will show.
    *
@@ -494,7 +507,7 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
     },
 
     async saveTextFile(projectId, filePath, content) {
-      const projectRoot = await resolveProjectRoot(projectId);
+      const projectRoot = await resolveEditableProjectRoot(projectId);
       const resolvedPath = resolvePathInsideProject(projectRoot, filePath);
       try {
         await fileSystem.writeTextFile(resolvedPath, content);
@@ -536,7 +549,7 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
 
     async createEntry(input) {
       validateFilename(input.name);
-      const projectRoot = await resolveProjectRoot(input.projectId);
+      const projectRoot = await resolveEditableProjectRoot(input.projectId);
       const targetPath = input.parentPath
         ? path.join(input.parentPath, input.name)
         : input.name;
@@ -583,7 +596,7 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
 
     async renameEntry(input) {
       validateFilename(input.newName);
-      const projectRoot = await resolveProjectRoot(input.projectId);
+      const projectRoot = await resolveEditableProjectRoot(input.projectId);
       const resolvedOldPath = resolvePathInsideProject(projectRoot, input.oldPath);
 
       try {
@@ -625,7 +638,7 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
     },
 
     async deleteEntry(input) {
-      const projectRoot = await resolveProjectRoot(input.projectId);
+      const projectRoot = await resolveEditableProjectRoot(input.projectId);
       const resolvedPath = resolvePathInsideProject(projectRoot, input.targetPath);
       let stats;
       try {
@@ -667,7 +680,7 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
       }
 
       try {
-        const projectRoot = await resolveProjectRoot(input.projectId);
+        const projectRoot = await resolveEditableProjectRoot(input.projectId);
         const resolvedTargetDirectory = !input.targetPath
           || input.targetPath === '.'
           || input.targetPath === './'

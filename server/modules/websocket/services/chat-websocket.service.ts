@@ -20,7 +20,7 @@ import type {
   ProviderPermissionDecision,
   ProviderRuntimeWriter,
 } from '@/shared/types.js';
-import { parseIncomingJsonObject } from '@/shared/utils.js';
+import { isFreeChatPath, parseIncomingJsonObject } from '@/shared/utils.js';
 
 /**
  * Trust boundary for client-supplied image attachments: chat.send options come
@@ -189,6 +189,20 @@ function resolveSendTarget(
       ws,
       'SESSION_NOT_FOUND',
       `Session "${sessionId}" was not found. Create it via POST /api/providers/sessions first.`,
+      sessionId
+    );
+    return null;
+  }
+
+  // Projects are prompted only through the workspace canvas, whose runs skip
+  // this function (runDetachedChatTurn). A client-sent cwd is checked too, since
+  // it would otherwise override the session's folder.
+  const clientCwd = typeof data.options?.cwd === 'string' ? data.options.cwd : null;
+  if (!isFreeChatPath(session.project_path) || (clientCwd !== null && !isFreeChatPath(clientCwd))) {
+    sendProtocolError(
+      ws,
+      'PROJECT_CANVAS_ONLY',
+      'This project is prompted only through the workspace canvas. Use free chat for anything else.',
       sessionId
     );
     return null;

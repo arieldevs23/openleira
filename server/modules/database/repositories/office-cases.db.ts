@@ -26,6 +26,7 @@ type CaseRow = {
   coordinator_session_id: string | null;
   final_summary: string | null;
   error: string | null;
+  quick_division_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -81,6 +82,7 @@ const toCase = (row: CaseRow): OfficeCase => ({
   coordinatorSessionId: row.coordinator_session_id,
   finalSummary: row.final_summary,
   error: row.error,
+  quickDivisionId: row.quick_division_id,
   createdBy: row.created_by,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -156,7 +158,7 @@ type TaskPatch = {
 };
 
 const CASE_COLUMNS = `id, office_id, title, description, status, waiting_reason, phase, coordinator_busy,
-  coordinator_session_id, final_summary, error, created_by, created_at, updated_at, started_at, finished_at`;
+  coordinator_session_id, final_summary, error, quick_division_id, created_by, created_at, updated_at, started_at, finished_at`;
 
 const TASK_COLUMNS = `id, case_id, division_id, parent_task_id, ref, title, instruction, depends_on, status,
   attempts, result_summary, audit_notes, session_id, audit_session_id, error, changed_files, sort_order, created_at,
@@ -173,13 +175,14 @@ export const officeCasesDb = {
     title: string;
     description: string;
     createdBy: string | null;
+    quickDivisionId?: string | null;
   }): OfficeCase {
     const id = randomUUID();
     const now = new Date().toISOString();
     getConnection().prepare(`
-      INSERT INTO office_cases (id, office_id, title, description, status, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, 'draft', ?, ?, ?)
-    `).run(id, input.officeId, input.title, input.description, input.createdBy, now, now);
+      INSERT INTO office_cases (id, office_id, title, description, status, quick_division_id, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?)
+    `).run(id, input.officeId, input.title, input.description, input.quickDivisionId ?? null, input.createdBy, now, now);
 
     const created = this.getCase(id);
     if (!created) {
@@ -314,6 +317,20 @@ export const officeCasesDb = {
         .run(...values, new Date().toISOString(), taskId);
     }
     return this.getTask(taskId);
+  },
+
+  /**
+   * Is a case running in the workspace of this project folder? File Tree and the
+   * shell use it to keep the user's edits away from files the agents are writing.
+   */
+  hasRunningCaseForProjectPath(projectPath: string): boolean {
+    const row = getConnection().prepare(`
+      SELECT 1 FROM office_cases c
+      JOIN offices o ON o.id = c.office_id
+      WHERE o.project_path = ? AND c.status = 'running'
+      LIMIT 1
+    `).get(projectPath);
+    return Boolean(row);
   },
 
   /** Does any case of this office still reference the division through a live task? */

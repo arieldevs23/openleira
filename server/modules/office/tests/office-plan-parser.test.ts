@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  detectProviderLimit,
+  scopeResultToDivision,
   extractJsonValue,
   extractResultSummary,
   parseAuditVerdict,
@@ -162,4 +164,39 @@ test('result summaries come from the last summary heading, or the tail of the an
 test('braces inside strings do not confuse JSON extraction', () => {
   const value = extractJsonValue('Note: {not json}\n{"notes": "use {curly} braces", "pass": true}');
   assert.deepEqual(value, { notes: 'use {curly} braces', pass: true });
+});
+
+test('detectProviderLimit recognises out-of-quota replies but not real reports about limits', () => {
+  assert.equal(detectProviderLimit("You've hit your session limit · resets 6pm (UTC)"), "You've hit your session limit · resets 6pm (UTC)");
+  assert.ok(detectProviderLimit('Claude usage limit reached. Your limit will reset at 3pm.'));
+  assert.ok(detectProviderLimit('ERROR: You exceeded your current quota (insufficient_quota).'));
+  assert.equal(detectProviderLimit('## Summary\nDone.'), null);
+  assert.equal(detectProviderLimit(''), null);
+  assert.equal(detectProviderLimit(null), null);
+  const report = `## Summary\nAdded a rate limiter: requests over the usage limit reached state get a 429 and the limit resets every minute.\n${'details '.repeat(80)}`;
+  assert.equal(detectProviderLimit(report), null);
+});
+
+test('scopeResultToDivision forwards the shared part and only the receiving team\'s subsection', () => {
+  const teams = [{ name: 'Frontend', slug: 'frontend' }, { name: 'Backend', slug: 'backend' }, { name: 'Designer UI/UX', slug: 'designer' }];
+  const plan = [
+    'Plan for a calculator app.',
+    '',
+    '### Frontend',
+    'Build the keypad in src/App.tsx.',
+    '',
+    '### Backend',
+    'No server needed.',
+    '',
+    '### Designer UI/UX',
+    'Use the iOS layout.',
+  ].join('\n');
+  const frontend = scopeResultToDivision(plan, teams[0], teams);
+  assert.match(frontend, /Plan for a calculator app/);
+  assert.match(frontend, /keypad/);
+  assert.doesNotMatch(frontend, /No server needed/);
+  assert.doesNotMatch(frontend, /iOS layout/);
+  assert.match(scopeResultToDivision(plan, teams[2], teams), /iOS layout/);
+  // A result that is not split per team is forwarded whole.
+  assert.equal(scopeResultToDivision('## Summary\nall done', teams[0], teams), '## Summary\nall done');
 });

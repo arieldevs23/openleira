@@ -54,7 +54,7 @@ import { worktreesRoutes } from './modules/worktrees/index.js';
 import { initializeOffice, officeRoutes } from './modules/office/index.js';
 import browserUseMcpRoutes from './modules/browser-use/browser-use-mcp.routes.js';
 import { browserUseService } from './modules/browser-use/browser-use.service.js';
-import { initializeDatabase, sessionsDb } from './modules/database/index.js';
+import { initializeDatabase, officeCasesDb, sessionsDb } from './modules/database/index.js';
 import { configureWebPush } from './modules/notifications/index.js';
 import compression from 'compression';
 
@@ -123,6 +123,7 @@ createWebSocketServer(server, {
 
             return null;
         },
+        isProjectBusy: (projectPath) => officeCasesDb.hasRunningCaseForProjectPath(projectPath),
     },
     getPluginPort,
 });

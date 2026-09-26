@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import i18n from 'i18next';
 
 import { api, readApiJson } from '@/shared/api';
 import type { CodeEditorFile } from '@/shared/types';
@@ -111,7 +112,12 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
         const contentType = response.headers.get('content-type');
         if (contentType?.includes('application/json')) {
           const errorData = await response.json();
-          throw new Error(errorData.error || `Save failed: ${response.status}`);
+          const apiError = errorData.error;
+          // A canvas task is writing to this project: the server keeps its files read-only until it ends.
+          if (apiError?.code === 'PROJECT_BUSY') {
+            throw new Error(i18n.t('codeEditor:errors.projectBusy'));
+          }
+          throw new Error((typeof apiError === 'string' ? apiError : apiError?.message) || `Save failed: ${response.status}`);
         }
 
         const textError = await response.text();

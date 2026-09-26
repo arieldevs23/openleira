@@ -4,7 +4,7 @@ import path from 'path';
 import express from 'express';
 
 import type { ProviderRunFunction } from '@/shared/types.js';
-import { AppError } from '@/shared/utils.js';
+import { AppError, buildGithubTokenGitEnvironment } from '@/shared/utils.js';
 
 // cross-spawn: drop-in spawn with Windows .cmd/PATHEXT resolution.
 import { parseGitLogWithStats, parseGitStatusOutput } from './git-parsing.service.js';
@@ -16,6 +16,8 @@ type GitRouterDependencies = {
   resolveProjectPathById(projectId: string): string | null;
   queryClaude: ProviderRunFunction;
   queryCursor: ProviderRunFunction;
+  /** The user's active GitHub token, used for https github.com remotes; null means none. */
+  resolveGithubToken?: (userId: unknown) => string | null;
 };
 
 /** Creates Git routes around explicit repository, filesystem, subprocess, and AI adapters. */
@@ -27,6 +29,15 @@ const queryClaudeSDK = dependencies.queryClaude;
 const spawnCursor = dependencies.queryCursor;
 const router = express.Router();
 const COMMIT_DIFF_CHARACTER_LIMIT = 500_000;
+
+/**
+ * Environment for a command that talks to the remote: the user's stored GitHub
+ * token for https github.com remotes (SSH remotes keep using the server's keys).
+ */
+function remoteEnvironment(req) {
+  const token = dependencies.resolveGithubToken?.(req.user?.id) ?? null;
+  return buildGithubTokenGitEnvironment(token);
+}
 
 function spawnAsync(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -1257,7 +1268,7 @@ router.post('/fetch', async (req, res) => {
     }
 
     validateRemoteName(remoteName);
-    const { stdout } = await spawnAsync('git', ['fetch', remoteName], { cwd: projectPath });
+    const { stdout } = await spawnAsync('git', ['fetch', remoteName], { cwd: projectPath, env: remoteEnvironment(req) });
 
     res.json({ success: true, output: stdout || 'Fetch completed successfully', remoteName });
   } catch (error) {
@@ -1302,7 +1313,7 @@ router.post('/pull', async (req, res) => {
 
     validateRemoteName(remoteName);
     validateBranchName(remoteBranch);
-    const { stdout } = await spawnAsync('git', ['pull', remoteName, remoteBranch], { cwd: projectPath });
+    const { stdout } = await spawnAsync('git', ['pull', remoteName, remoteBranch], { cwd: projectPath, env: remoteEnvironment(req) });
 
     res.json({
       success: true,
@@ -1370,7 +1381,7 @@ router.post('/push', async (req, res) => {
 
     validateRemoteName(remoteName);
     validateBranchName(remoteBranch);
-    const { stdout } = await spawnAsync('git', ['push', remoteName, remoteBranch], { cwd: projectPath });
+    const { stdout } = await spawnAsync('git', ['push', remoteName, remoteBranch], { cwd: projectPath, env: remoteEnvironment(req) });
 
     res.json({
       success: true,
@@ -1455,7 +1466,7 @@ router.post('/publish', async (req, res) => {
 
     // Publish the branch (set upstream and push)
     validateRemoteName(remoteName);
-    const { stdout } = await spawnAsync('git', ['push', '--set-upstream', remoteName, branch], { cwd: projectPath });
+    const { stdout } = await spawnAsync('git', ['push', '--set-upstream', remoteName, branch], { cwd: projectPath, env: remoteEnvironment(req) });
     
     res.json({ 
       success: true, 

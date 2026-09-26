@@ -3,6 +3,7 @@ import express, { type Request } from 'express';
 import type { OfficeAnalyzer } from '@/modules/office/services/office-analysis.service.js';
 import type { OfficeOrchestrator } from '@/modules/office/services/office-orchestrator.service.js';
 import type { officeService } from '@/modules/office/services/office.service.js';
+import type { OfficeShapeKind, OfficeShapePatch } from '@/shared/types.js';
 import { AppError, asyncHandler, createApiSuccessResponse } from '@/shared/utils.js';
 
 /** The application services the Office HTTP API delegates to; tests pass fakes. */
@@ -57,6 +58,54 @@ function readOptionalInteger(body: JsonBody, field: string): number | undefined 
     throw badRequest(`${field} must be an integer.`);
   }
   return value;
+}
+
+function readOptionalNumber(body: JsonBody, field: string): number | undefined {
+  const value = body[field];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw badRequest(`${field} must be a number.`);
+  }
+  return value;
+}
+
+function readRequiredNumber(body: JsonBody, field: string): number {
+  const value = readOptionalNumber(body, field);
+  if (value === undefined) {
+    throw badRequest(`${field} is required.`);
+  }
+  return value;
+}
+
+/** A colour field: a string, or null for "none"; absent means unchanged. */
+function readOptionalColor(body: JsonBody, field: string): string | null | undefined {
+  const value = body[field];
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    throw badRequest(`${field} must be a string or null.`);
+  }
+  return value;
+}
+
+/** The optional fields of a drawn shape; the service validates their ranges. */
+function readShapeFields(body: JsonBody): OfficeShapePatch {
+  return {
+    kind: readOptionalString(body, 'kind') as OfficeShapeKind | undefined,
+    x: readOptionalNumber(body, 'x'),
+    y: readOptionalNumber(body, 'y'),
+    width: readOptionalNumber(body, 'width'),
+    height: readOptionalNumber(body, 'height'),
+    text: readOptionalString(body, 'text'),
+    fill: readOptionalColor(body, 'fill'),
+    stroke: readOptionalColor(body, 'stroke'),
+    textColor: readOptionalColor(body, 'textColor'),
+    fontSize: readOptionalNumber(body, 'fontSize'),
+    z: readOptionalInteger(body, 'z'),
+  };
 }
 
 function readOptionalBoolean(body: JsonBody, field: string): boolean | undefined {
@@ -190,8 +239,21 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     res.status(202).json(createApiSuccessResponse(analysis));
   }));
 
+  router.get('/analyses', asyncHandler(async (_req, res) => {
+    res.json(createApiSuccessResponse({ analyses: analyzer.list() }));
+  }));
+
   router.get('/analyses/:analysisId', asyncHandler(async (req, res) => {
     res.json(createApiSuccessResponse(analyzer.get(readParam(req, 'analysisId'))));
+  }));
+
+  router.post('/analyses/:analysisId/cancel', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse(await analyzer.cancel(readParam(req, 'analysisId'))));
+  }));
+
+  router.delete('/analyses/:analysisId', asyncHandler(async (req, res) => {
+    analyzer.dismiss(readParam(req, 'analysisId'));
+    res.json(createApiSuccessResponse({ dismissed: true }));
   }));
 
   router.get('/:officeId', asyncHandler(async (req, res) => {
@@ -213,6 +275,63 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
     const body = readBody(req);
     const flow = office.deleteFlowEdge(readParam(req, 'officeId'), readRequiredString(body, 'fromDivisionId'), readRequiredString(body, 'toDivisionId'));
     res.json(createApiSuccessResponse({ flow }));
+  }));
+
+  router.post('/:officeId/skills', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const node = office.addSkillNode(readParam(req, 'officeId'), {
+      skillName: readRequiredString(body, 'skillName'),
+      position: readOptionalPosition(body),
+    });
+    res.status(201).json(createApiSuccessResponse(node));
+  }));
+
+  router.patch('/:officeId/skills/:nodeId', asyncHandler(async (req, res) => {
+    const position = readOptionalPosition(readBody(req));
+    if (position === undefined) {
+      throw badRequest('position is required.');
+    }
+    res.json(createApiSuccessResponse({ skillNodes: office.moveSkillNode(readParam(req, 'officeId'), readParam(req, 'nodeId'), position) }));
+  }));
+
+  router.delete('/:officeId/skills/:nodeId', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse({ skillNodes: office.deleteSkillNode(readParam(req, 'officeId'), readParam(req, 'nodeId')) }));
+  }));
+
+  router.post('/:officeId/shapes', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const shape = office.addShape(readParam(req, 'officeId'), {
+      ...readShapeFields(body),
+      kind: readRequiredString(body, 'kind') as OfficeShapeKind,
+      x: readRequiredNumber(body, 'x'),
+      y: readRequiredNumber(body, 'y'),
+      width: readRequiredNumber(body, 'width'),
+      height: readRequiredNumber(body, 'height'),
+    });
+    res.status(201).json(createApiSuccessResponse(shape));
+  }));
+
+  router.patch('/:officeId/shapes/:shapeId', asyncHandler(async (req, res) => {
+    const body = readBody(req);
+    const stack = body.stack === 'front' || body.stack === 'back' ? body.stack : undefined;
+    res.json(createApiSuccessResponse(office.updateShape(readParam(req, 'officeId'), readParam(req, 'shapeId'), { ...readShapeFields(body), stack })));
+  }));
+
+  router.delete('/:officeId/shapes/:shapeId', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse({ shapes: office.deleteShape(readParam(req, 'officeId'), readParam(req, 'shapeId')) }));
+  }));
+
+  router.post('/:officeId/skills/:nodeId/links', asyncHandler(async (req, res) => {
+    const divisionId = readRequiredString(readBody(req), 'divisionId');
+    res.status(201).json(createApiSuccessResponse({
+      skillNodes: office.linkSkill(readParam(req, 'officeId'), readParam(req, 'nodeId'), divisionId),
+    }));
+  }));
+
+  router.delete('/:officeId/skills/:nodeId/links/:divisionId', asyncHandler(async (req, res) => {
+    res.json(createApiSuccessResponse({
+      skillNodes: office.unlinkSkill(readParam(req, 'officeId'), readParam(req, 'nodeId'), readParam(req, 'divisionId')),
+    }));
   }));
 
   router.patch('/:officeId', asyncHandler(async (req, res) => {
@@ -292,6 +411,7 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
       title: readRequiredString(body, 'title'),
       description: readOptionalString(body, 'description'),
       createdBy: readUserId(req),
+      quickDivisionId: readOptionalString(body, 'quickDivisionId') ?? null,
     });
     res.status(201).json(createApiSuccessResponse(created));
   }));
@@ -321,7 +441,8 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
   router.post('/:officeId/cases/:caseId/start', asyncHandler(async (req, res) => {
     const officeId = readParam(req, 'officeId');
     const caseId = readParam(req, 'caseId');
-    await office.requireConnectedProviders(officeId);
+    const quickDivisionId = office.requireCase(officeId, caseId).quickDivisionId;
+    await office.requireConnectedProviders(officeId, undefined, quickDivisionId ? [quickDivisionId] : undefined);
     res.json(createApiSuccessResponse(orchestrator.startCase(officeId, caseId)));
   }));
 
@@ -332,8 +453,17 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
   router.post('/:officeId/cases/:caseId/resume', asyncHandler(async (req, res) => {
     const officeId = readParam(req, 'officeId');
     const caseId = readParam(req, 'caseId');
-    await office.requireConnectedProviders(officeId);
+    const quickDivisionId = office.requireCase(officeId, caseId).quickDivisionId;
+    await office.requireConnectedProviders(officeId, undefined, quickDivisionId ? [quickDivisionId] : undefined);
     res.json(createApiSuccessResponse(orchestrator.resumeCase(officeId, caseId)));
+  }));
+
+  router.post('/:officeId/cases/:caseId/retry', asyncHandler(async (req, res) => {
+    const officeId = readParam(req, 'officeId');
+    const caseId = readParam(req, 'caseId');
+    const quickDivisionId = office.requireCase(officeId, caseId).quickDivisionId;
+    await office.requireConnectedProviders(officeId, undefined, quickDivisionId ? [quickDivisionId] : undefined);
+    res.json(createApiSuccessResponse(orchestrator.retryCase(officeId, caseId)));
   }));
 
   router.post('/:officeId/cases/:caseId/cancel', asyncHandler(async (req, res) => {

@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 
 import spawn from 'cross-spawn';
 
-import { projectsDb } from '@/modules/database/index.js';
+import { githubTokensDb, projectsDb } from '@/modules/database/index.js';
 
 import { createGitRouter } from './git.routes.js';
 
@@ -17,6 +17,11 @@ export function createGitModule(externalDependencies: GitExternalDependencies) {
     fileSystem: fs,
     spawnProcess: spawn,
     resolveProjectPathById: (projectId) => projectsDb.getProjectPathById(projectId),
+    // Push, pull and fetch to https github.com remotes use the user's active stored token.
+    resolveGithubToken: (userId) => {
+      const numericUserId = Number(userId);
+      return Number.isInteger(numericUserId) ? githubTokensDb.getActiveGithubToken(numericUserId) : null;
+    },
     ...externalDependencies,
   });
 }

@@ -117,7 +117,8 @@
     "browser": "Browser",
     "notifications": "Notifications",
     "plugins": "Plugins",
-    "about": "About"
+    "about": "About",
+    "workspace": "Node Design"
   },
   "notifications": {
     "title": "Notifications",
@@ -789,6 +790,90 @@
       "shell": "Terminal",
       "extensions": "MCP, skills & plugins",
       "voice": "Voice input"
+    }
+  },
+  "workspace": {
+    "modelTitle": "Projects and chat",
+    "modelBody": "Projects are worked on by the agent teams of their workspace; free chat is for everything else.",
+    "projectsLabel": "Projects",
+    "projectsBody": "A project's agents are prompted only through its Node Design canvas. Its old chat sessions are hidden (not deleted); agent sessions opened from the canvas are read-only.",
+    "canvasOnly": "Canvas only",
+    "freeChatLabel": "Free chat folder",
+    "freeChatBody": "The only place with a normal chat box. Set with VITE_OBROLAN_DIR (or VITE_HOME_DIR) on the server and the build.",
+    "lockLabel": "File lock while a task runs",
+    "lockBody": "While a task runs in a project, saving, creating, renaming, deleting and uploading files there is refused, and the terminal warns.",
+    "automatic": "Automatic",
+    "manual": "On request",
+    "canvasTitle": "Canvas",
+    "dockLabel": "Coordinator chat",
+    "dockBody": "How the chat with the coordinator opens at the bottom of the canvas. You can change it on the canvas too.",
+    "dock": {
+      "collapsed": "Collapsed (message box)",
+      "expanded": "Expanded (whole chat)",
+      "hidden": "Hidden (small button)"
+    },
+    "panelsLabel": "Side panels",
+    "panelsBody": "Show the workspace sidebar and the result panel again if they were folded away.",
+    "panelsReset": "Show both",
+    "panelsDone": "Done",
+    "flowLabel": "Default flow of a new workspace",
+    "flowBody": "Coordinator → planner → teams (designer → frontend, backend → security); each team only receives the part of the plan meant for it.",
+    "gitTitle": "Git access",
+    "gitBody": "Workspaces can start from a GitHub repository, and the git panel pushes and pulls to it.",
+    "tokensLabel": "GitHub tokens",
+    "tokensBody": "Used to clone private repositories and for fetch, pull and push to https github.com remotes. Kept on this server.",
+    "openGit": "Manage in Git",
+    "sshLabel": "SSH and the server",
+    "sshBody": "SSH remotes (git@…) use the SSH keys of the server this app runs on. Agents run git with the server's own credentials, so set up SSH keys or git credentials on the server for agents to push.",
+    "failTitle": "When a task fails",
+    "limitLabel": "Provider out of quota",
+    "limitBody": "A reply that is only a provider limit message parks the task instead of failing it; press Resume after the limit resets.",
+    "retryLabel": "Retry failed",
+    "retryBody": "A failed task can be retried: failed subtasks run again with fresh audits, finished ones are kept.",
+    "quickLabel": "Quick task",
+    "quickBody": "Right-click a team on the canvas for a small job straight to it: no plan, no audit, no summary.",
+    "shortcutsTitle": "Canvas shortcuts",
+    "shortcuts": {
+      "select": {
+        "action": "Pointer (select and move)",
+        "keys": "V"
+      },
+      "shapes": {
+        "action": "Draw a box, rounded box, ellipse, diamond, text",
+        "keys": "R · U · O · D · T"
+      },
+      "marquee": {
+        "action": "Select an area",
+        "keys": "Shift + drag"
+      },
+      "shiftClick": {
+        "action": "Add or remove a node from the selection",
+        "keys": "Shift + click"
+      },
+      "selectAll": {
+        "action": "Select everything",
+        "keys": "Ctrl/Cmd + A"
+      },
+      "delete": {
+        "action": "Delete the selected line, shape or skills",
+        "keys": "Delete"
+      },
+      "arrowEnd": {
+        "action": "Move or cut an arrow",
+        "keys": "drag its end"
+      },
+      "copySkill": {
+        "action": "Copy and paste a skill node",
+        "keys": "Ctrl/Cmd + C / V"
+      },
+      "zoom": {
+        "action": "Zoom, fit",
+        "keys": "+ · − · 0"
+      },
+      "escape": {
+        "action": "Cancel, clear selection, back to pointer",
+        "keys": "Esc"
+      }
     }
   }
 }

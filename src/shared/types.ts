@@ -1315,7 +1315,7 @@ export type AgentContext = {
 };
 
 /** Identifier of a top-level section in the settings dialog; use it whenever a tab is stored, compared or requested so deep links, the sidebar and the command palette all agree on the same set of names. */
-export type SettingsMainTab = 'agents' | 'appearance' | 'git' | 'api' | 'voice' | 'tasks' | 'browser' | 'notifications' | 'plugins' | 'about';
+export type SettingsMainTab = 'agents' | 'workspace' | 'appearance' | 'git' | 'api' | 'voice' | 'tasks' | 'browser' | 'notifications' | 'plugins' | 'about';
 
 /** The coding-agent CLI a settings screen is configuring, aliasing LLMProvider so agent-scoped settings read as being about an agent rather than a chat model. */
 export type AgentProvider = LLMProvider;
@@ -1759,7 +1759,7 @@ type TaskPriority = 'high' | 'medium' | 'low' | string;
 export type OfficeCaseStatus = 'draft' | 'running' | 'waiting_user' | 'done' | 'failed';
 
 /** Why a case waits for the user: paused by them, a coordinator question, or a server restart. */
-export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted';
+export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted' | 'provider_limit';
 
 /** Lifecycle of one sub-task handed to a division. */
 export type OfficeTaskStatus = 'queued' | 'running' | 'review' | 'done' | 'failed' | 'blocked';
@@ -1817,6 +1817,49 @@ export type OfficeDivision = {
 /** One flow arrow: work of `toDivisionId` waits for the work of `fromDivisionId`. */
 export type OfficeFlowEdge = { fromDivisionId: string; toDivisionId: string; createdAt: string };
 
+/**
+ * A skill placed on the workspace canvas. Divisions linked to it have the
+ * skill; the same skill may be placed more than once to keep lines short.
+ */
+export type OfficeSkillNode = {
+  id: string;
+  skillName: string;
+  /** Null means automatic layout. */
+  position: { x: number; y: number } | null;
+  divisionIds: string[];
+  createdAt: string;
+};
+
+/** What a drawn shape on the workspace canvas looks like. */
+export type OfficeShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'text';
+
+/**
+ * A shape the user drew on the workspace canvas to arrange or annotate the
+ * chart (a box around a group of teams, a label, a note). Purely visual: the
+ * orchestrator never reads shapes. Colours are `#rrggbb` or null for "none"
+ * (fill, stroke) or the theme's text colour (text).
+ */
+export type OfficeShape = {
+  id: string;
+  kind: OfficeShapeKind;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  fill: string | null;
+  stroke: string | null;
+  textColor: string | null;
+  fontSize: number;
+  /** Stacking order; higher draws on top of lower. */
+  z: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Fields of a shape the UI may change; every one optional. */
+export type OfficeShapePatch = Partial<Pick<OfficeShape, 'kind' | 'x' | 'y' | 'width' | 'height' | 'text' | 'fill' | 'stroke' | 'textColor' | 'fontSize' | 'z'>>;
+
 /** One workspace in the workspace sidebar: the office, its project folder and case counts. */
 export type OfficeWorkspaceSummary = {
   office: Office;
@@ -1840,12 +1883,23 @@ export type OfficeDivisionProposal = {
 export type OfficeAnalysis = {
   id: string;
   projectId: string;
-  status: 'running' | 'done' | 'failed';
+  /** The folder being analysed, so the page can show it without another lookup. */
+  projectName: string;
+  projectPath: string;
+  provider: LLMProvider;
+  model: string;
+  status: 'running' | 'done' | 'failed' | 'cancelled';
+  /** One-paragraph summary of the app (stack, structure, how it runs). */
   summary: string | null;
   divisions: OfficeDivisionProposal[];
+  /** What the agent has done so far (files read, searches, notes), newest last; capped. */
+  steps: OfficeLogEntry[];
+  /** How many steps there were in total, including those dropped by the cap. */
+  stepCount: number;
   sessionId: string | null;
   error: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 /** Tokens one session of a case spent. */
@@ -1891,6 +1945,8 @@ export type OfficeCase = {
   coordinatorSessionId: string | null;
   finalSummary: string | null;
   error: string | null;
+  /** A quick task: straight to this division's agent, with no plan, audit or summary turn. Null for a full task. */
+  quickDivisionId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1942,6 +1998,8 @@ export type OfficeSnapshot = {
   office: Office;
   divisions: OfficeDivision[];
   flow: OfficeFlowEdge[];
+  skillNodes: OfficeSkillNode[];
+  shapes: OfficeShape[];
   cases: OfficeCase[];
 };
 
@@ -1961,6 +2019,8 @@ export type OfficeUpdateEvent = {
     | { entity: 'office'; office: Office }
     | { entity: 'division'; id: string; division: OfficeDivision | null }
     | { entity: 'flow'; flow: OfficeFlowEdge[] }
+    | { entity: 'skills'; skillNodes: OfficeSkillNode[] }
+  | { entity: 'shapes'; shapes: OfficeShape[] }
     | { entity: 'deleted' }
     | { entity: 'case'; id: string; case: OfficeCase | null }
     | { entity: 'task'; task: OfficeTask }
@@ -1968,7 +2028,12 @@ export type OfficeUpdateEvent = {
 };
 
 /** The `office:analysis` websocket frame: an app analysis started, finished or failed. */
-export type OfficeAnalysisEvent = { kind: 'office:analysis'; analysis: OfficeAnalysis };
+export type OfficeAnalysisEvent = {
+  kind: 'office:analysis';
+  analysis: OfficeAnalysis;
+  /** The user dismissed the analysis; clients drop it from their list. */
+  removed?: boolean;
+};
 
 /** One compact transcript line of an office session, live or rebuilt from history. */
 export type OfficeLogEntry = {
@@ -2018,15 +2083,25 @@ export type OfficeActions = {
     },
   ): Promise<OfficeDivision>;
   addFlowEdge(fromDivisionId: string, toDivisionId: string): Promise<void>;
+  addSkillNode(input: { skillName: string; position?: { x: number; y: number } | null }): Promise<OfficeSkillNode>;
+  moveSkillNode(nodeId: string, position: { x: number; y: number } | null): Promise<void>;
+  deleteSkillNode(nodeId: string): Promise<void>;
+  addShape(input: OfficeShapePatch & Pick<OfficeShape, 'kind' | 'x' | 'y' | 'width' | 'height'>): Promise<OfficeShape>;
+  /** `stack` moves the shape to the front or the back of the others. */
+  updateShape(shapeId: string, changes: OfficeShapePatch & { stack?: 'front' | 'back' }): Promise<OfficeShape>;
+  deleteShape(shapeId: string): Promise<void>;
+  linkSkill(nodeId: string, divisionId: string): Promise<void>;
+  unlinkSkill(nodeId: string, divisionId: string): Promise<void>;
   deleteFlowEdge(fromDivisionId: string, toDivisionId: string): Promise<void>;
   deleteOffice(): Promise<void>;
   deleteDivision(divisionId: string): Promise<void>;
   /** `model: null` clears the model; `provider` + `model` set it. */
   updateAgent(agentId: string, changes: Record<string, unknown>): Promise<OfficeDivision>;
   assignModels(assignments: Array<{ agentId: string; provider: string; model: string }>): Promise<void>;
-  createCase(input: { title: string; description: string }): Promise<OfficeCase>;
+  /** `quickDivisionId` makes a quick task: straight to that team, no plan, audit or summary. */
+  createCase(input: { title: string; description: string; quickDivisionId?: string }): Promise<OfficeCase>;
   deleteCase(caseId: string): Promise<void>;
-  caseAction(caseId: string, action: 'start' | 'pause' | 'resume' | 'cancel'): Promise<OfficeCase>;
+  caseAction(caseId: string, action: 'start' | 'pause' | 'resume' | 'retry' | 'cancel'): Promise<OfficeCase>;
   postNote(caseId: string, text: string): Promise<OfficeMessage>;
 };
 
@@ -2048,4 +2123,5 @@ export type OfficeSelection =
   | { type: 'division'; divisionId: string; taskId?: string; focus?: OfficeAgentSection }
   | { type: 'edge'; fromDivisionId: string; toDivisionId: string }
   | { type: 'messages'; divisionId: string }
-  | { type: 'skills' };
+  | { type: 'skill'; nodeId: string }
+  | { type: 'shape'; shapeId: string };

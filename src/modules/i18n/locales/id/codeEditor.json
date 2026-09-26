@@ -39,5 +39,8 @@
     "loading": "bentar, lagi load preview...",
     "error": "file ini ga bisa ditampilin.",
     "openInNewTab": "buka di tab baru"
+  },
+  "errors": {
+    "projectBusy": "Ada task workspace yang lagi jalan di proyek ini. File dikunci (cuma bisa dibaca) sampai task-nya kelar."
   }
 }

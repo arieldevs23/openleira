@@ -1267,6 +1267,12 @@ export type FileTreeFileSystem = {
  */
 export type FileTreeProjectGateway = {
   getProjectPathById(projectId: string): string | null | Promise<string | null>;
+  /**
+   * Whether a workspace-canvas task is running in this project folder. While it
+   * is, File Tree refuses every edit (save, create, rename, delete, upload) so
+   * the user and the agents never write the same files at once.
+   */
+  isProjectBusy(projectPath: string): boolean;
 };
 
 /**
@@ -1547,7 +1553,7 @@ export type OfficeCaseStatus = 'draft' | 'running' | 'waiting_user' | 'done' | '
  * Why a case sits in `waiting_user`: the user paused it, the coordinator asked
  * the user a question, or the server restarted while it ran. Resuming clears it.
  */
-export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted';
+export type OfficeCaseWaitingReason = 'paused' | 'question' | 'interrupted' | 'provider_limit';
 
 /**
  * Which orchestration step a case is in. Recovery uses it to know what to
@@ -1645,6 +1651,49 @@ export type OfficeFlowEdge = {
 };
 
 /**
+ * A skill placed on the workspace canvas. Divisions linked to it have the
+ * skill; the same skill may be placed more than once to keep lines short.
+ */
+export type OfficeSkillNode = {
+  id: string;
+  skillName: string;
+  /** Null means automatic layout. */
+  position: { x: number; y: number } | null;
+  divisionIds: string[];
+  createdAt: string;
+};
+
+/** What a drawn shape on the workspace canvas looks like. */
+export type OfficeShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'text';
+
+/**
+ * A shape the user drew on the workspace canvas to arrange or annotate the
+ * chart (a box around a group of teams, a label, a note). Purely visual: the
+ * orchestrator never reads shapes. Colours are `#rrggbb` or null for "none"
+ * (fill, stroke) or the theme's text colour (text).
+ */
+export type OfficeShape = {
+  id: string;
+  kind: OfficeShapeKind;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  fill: string | null;
+  stroke: string | null;
+  textColor: string | null;
+  fontSize: number;
+  /** Stacking order; higher draws on top of lower. */
+  z: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Fields of a shape the UI may change; every one optional. */
+export type OfficeShapePatch = Partial<Pick<OfficeShape, 'kind' | 'x' | 'y' | 'width' | 'height' | 'text' | 'fill' | 'stroke' | 'textColor' | 'fontSize' | 'z'>>;
+
+/**
  * One workspace in the workspace switcher: the office plus the project folder
  * it works in and how many of its cases are live.
  */
@@ -1670,19 +1719,31 @@ export type OfficeDivisionProposal = {
 export type OfficeAnalysis = {
   id: string;
   projectId: string;
-  status: 'running' | 'done' | 'failed';
+  /** The folder being analysed, so the page can show it without another lookup. */
+  projectName: string;
+  projectPath: string;
+  provider: LLMProvider;
+  model: string;
+  status: 'running' | 'done' | 'failed' | 'cancelled';
   /** One-paragraph summary of the app (stack, structure, how it runs). */
   summary: string | null;
   divisions: OfficeDivisionProposal[];
+  /** What the agent has done so far (files read, searches, notes), newest last; capped. */
+  steps: OfficeLogEntry[];
+  /** How many steps there were in total, including those dropped by the cap. */
+  stepCount: number;
   sessionId: string | null;
   error: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 /** Realtime frame for an analysis run; sent when it starts, finishes or fails. */
 export type OfficeAnalysisEvent = {
   kind: 'office:analysis';
   analysis: OfficeAnalysis;
+  /** The user dismissed the analysis; clients drop it from their list. */
+  removed?: boolean;
 };
 
 /** Token use of one office session, as the provider's own transcript reports it. */
@@ -1739,6 +1800,8 @@ export type OfficeCase = {
   coordinatorSessionId: string | null;
   finalSummary: string | null;
   error: string | null;
+  /** A quick task: straight to this division's agent, with no plan, audit or summary turn. Null for a full task. */
+  quickDivisionId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1805,6 +1868,8 @@ export type OfficeSnapshot = {
   office: Office;
   divisions: OfficeDivision[];
   flow: OfficeFlowEdge[];
+  skillNodes: OfficeSkillNode[];
+  shapes: OfficeShape[];
   cases: OfficeCase[];
 };
 
@@ -1823,6 +1888,8 @@ export type OfficeUpdateChange =
   | { entity: 'office'; office: Office }
   | { entity: 'division'; id: string; division: OfficeDivision | null }
   | { entity: 'flow'; flow: OfficeFlowEdge[] }
+  | { entity: 'skills'; skillNodes: OfficeSkillNode[] }
+  | { entity: 'shapes'; shapes: OfficeShape[] }
   | { entity: 'deleted' }
   | { entity: 'case'; id: string; case: OfficeCase | null }
   | { entity: 'task'; task: OfficeTask }

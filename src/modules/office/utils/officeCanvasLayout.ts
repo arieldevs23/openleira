@@ -3,6 +3,11 @@ import type { OfficeDivision, OfficeFlowEdge } from '@/shared/types';
 /** Size of every agent node on the canvas, in canvas pixels. */
 export const NODE_WIDTH = 176;
 export const NODE_HEIGHT = 96;
+/** A skill node: smaller than an agent node. */
+export const SKILL_WIDTH = 152;
+export const SKILL_HEIGHT = 52;
+const SKILL_GAP = 16;
+
 /** The case card that sits above the coordinator. */
 export const CASE_WIDTH = 248;
 export const CASE_HEIGHT = 58;
@@ -130,4 +135,32 @@ export function formatTokens(value: number): string {
     return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0)}k`;
   }
   return `${(value / 1_000_000).toFixed(1)}M`;
+}
+
+/**
+ * Where skill nodes the user has not dragged go: one row under the audit
+ * layer, starting at the layout's skills anchor, in the order they were added.
+ */
+export function autoSkillPositions(anchor: CanvasPoint, nodeIds: string[]): Map<string, CanvasPoint> {
+  return new Map(nodeIds.map((id, index) => [id, { x: anchor.x + index * (SKILL_WIDTH + SKILL_GAP), y: anchor.y + NODE_HEIGHT + 36 }]));
+}
+
+/**
+ * Where a connector drawn by `connectorPath` starts and ends: the bottom (or
+ * facing side) of the first box and the top of the second. The canvas puts
+ * the draggable end handles of a selected arrow here.
+ */
+export function connectorEnds(
+  from: CanvasPoint,
+  fromSize: { width: number; height: number },
+  to: CanvasPoint,
+  toSize: { width: number; height: number },
+): { start: CanvasPoint; end: CanvasPoint } {
+  const startX = from.x + fromSize.width / 2;
+  const end = { x: to.x + toSize.width / 2, y: to.y };
+  if (to.y >= from.y + fromSize.height - 8) {
+    return { start: { x: startX, y: from.y + fromSize.height }, end };
+  }
+  const leavesRight = end.x >= startX;
+  return { start: { x: leavesRight ? from.x + fromSize.width : from.x, y: from.y + fromSize.height / 2 }, end };
 }

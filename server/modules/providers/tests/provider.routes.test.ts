@@ -57,8 +57,37 @@ async function withProviderServer(
   }
 }
 
-test('session creation route names a CloudCLI session from the initial message', async () => {
+/** Runs `body` with `directory` as the free-chat workspace, the only place a user may open a chat. */
+async function asFreeChat<T>(directory: string, body: () => Promise<T>): Promise<T> {
+  const previous = process.env.VITE_OBROLAN_DIR;
+  process.env.VITE_OBROLAN_DIR = directory;
+  try {
+    return await body();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.VITE_OBROLAN_DIR;
+    } else {
+      process.env.VITE_OBROLAN_DIR = previous;
+    }
+  }
+}
+
+test('session creation route refuses a project folder: projects are prompted through the canvas', async () => {
   await withProviderServer(async (baseUrl, workspacePath) => {
+    const response = await fetch(`${baseUrl}/api/providers/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: 'codex', projectPath: workspacePath, initialMessage: 'hi' }),
+    });
+    const payload = await response.json() as { error?: { code?: string } };
+
+    assert.equal(response.status, 403);
+    assert.equal(payload.error?.code, 'PROJECT_CANVAS_ONLY');
+  });
+});
+
+test('session creation route names a CloudCLI session from the initial message', async () => {
+  await withProviderServer(async (baseUrl, workspacePath) => asFreeChat(workspacePath, async () => {
     const response = await fetch(`${baseUrl}/api/providers/sessions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -78,7 +107,7 @@ test('session creation route names a CloudCLI session from the initial message',
       sessionsDb.getSessionById(payload.data.sessionId)?.custom_name,
       'abcd efg hij klm',
     );
-  });
+  }));
 });
 
 test('conversation search streams title matches before transcript results', async () => {

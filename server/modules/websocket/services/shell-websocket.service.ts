@@ -5,7 +5,7 @@ import path from 'node:path';
 import pty, { type IPty } from 'node-pty';
 import { WebSocket, type RawData } from 'ws';
 
-import { parseIncomingJsonObject, stripAnsiSequences } from '@/shared/utils.js';
+import { isFreeChatPath, parseIncomingJsonObject, stripAnsiSequences } from '@/shared/utils.js';
 
 type ShellIncomingMessage = {
   type?: string;
@@ -102,6 +102,8 @@ type ShellWebSocketDependencies = {
     provider: string,
   ) => string | null | undefined;
   spawnPty?: typeof pty.spawn;
+  /** Whether a workspace-canvas task is running in this folder; the terminal then warns about editing. */
+  isProjectBusy?: (projectPath: string) => boolean;
 };
 
 /**
@@ -392,11 +394,16 @@ export function handleShellConnection(
           return;
         }
 
+        // Projects are prompted only through the workspace canvas, so an agent
+        // CLI is started only in the free-chat workspace; anywhere else the
+        // terminal is a plain interactive shell.
+        const isCanvasOnlyProject = !isPlainShell && !isFreeChatPath(resolvedProjectPath);
         const shellCommand = buildShellCommand(data, dependencies);
         const resumeSessionId = resolveResumeSessionId(data, dependencies);
         const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
-        const shellArgs =
-          os.platform() === 'win32' ? ['-Command', shellCommand] : ['-c', shellCommand];
+        const shellArgs = isCanvasOnlyProject
+          ? (os.platform() === 'win32' ? [] : ['-l'])
+          : os.platform() === 'win32' ? ['-Command', shellCommand] : ['-c', shellCommand];
         const termCols = readNumber(data.cols, 80);
         const termRows = readNumber(data.rows, 24);
         const prioritizedPath = prioritizeUserNpmGlobalBin(process.env);
@@ -530,7 +537,9 @@ export function handleShellConnection(
         });
 
         let welcomeMsg = `\x1b[36mStarting terminal in: ${projectPath}\x1b[0m\r\n`;
-        if (!isPlainShell) {
+        if (isCanvasOnlyProject) {
+          welcomeMsg += '\x1b[33mAgents in this project are prompted through the workspace canvas; this terminal is a plain shell.\x1b[0m\r\n';
+        } else if (!isPlainShell) {
           const providerName =
             provider === 'cursor'
               ? 'Cursor'
@@ -542,6 +551,11 @@ export function handleShellConnection(
           welcomeMsg = hasSession && resumeSessionId
             ? `\x1b[36mResuming ${providerName} session ${resumeSessionId} in: ${projectPath}\x1b[0m\r\n`
             : `\x1b[36mStarting new ${providerName} session in: ${projectPath}\x1b[0m\r\n`;
+        }
+
+        // A canvas task writing to this project right now: say so, the files may change under the user.
+        if (dependencies.isProjectBusy?.(resolvedProjectPath)) {
+          welcomeMsg += '\x1b[33mA workspace task is running in this project. Avoid editing files until it finishes.\x1b[0m\r\n';
         }
 
         ws.send(

@@ -7,7 +7,7 @@ import spawn from 'cross-spawn';
 import { githubTokensDb } from '@/modules/database/index.js';
 import { createProject } from '@/modules/projects/services/project-management.service.js';
 import type { WorkspacePathValidationResult } from '@/shared/types.js';
-import { AppError, validateWorkspacePath } from '@/shared/utils.js';
+import { AppError, buildGithubTokenGitEnvironment, validateWorkspacePath } from '@/shared/utils.js';
 
 type CloneProjectInput = {
   workspacePath: string;
@@ -72,39 +72,10 @@ async function defaultPathExists(targetPath: string): Promise<boolean> {
 }
 
 /**
- * The only origin the credential helper answers for. The token is a GitHub
- * token; a helper that answered every challenge would hand it to whatever
- * host the clone URL names — and over plain http, in the clear.
+ * Builds the environment the clone runs in (see buildGithubTokenGitEnvironment
+ * for why the token never goes into the clone URL).
  */
-const GITHUB_TOKEN_CREDENTIAL_SCOPE = 'credential.https://github.com.helper';
-
-/**
- * Builds the environment the clone runs in. The token never goes into the
- * clone URL: git echoes that URL on stderr (which is the SSE progress stream),
- * it sits in the process argv (readable through /proc) and it is written to the
- * cloned repo's `.git/config` as the remote. Instead env-only config points git
- * at a credential helper that reads the token from its own environment, so no
- * channel git exposes carries it. The empty first helper entry clears any
- * helper configured on the machine so a credential stored there cannot shadow
- * the one the user selected; the helper itself is scoped to github.com over
- * https, so a clone from any other host gets no credential at all.
- */
-function buildGitCloneEnvironment(githubToken: string | null): NodeJS.ProcessEnv {
-  if (!githubToken) {
-    return { ...process.env, GIT_TERMINAL_PROMPT: '0' };
-  }
-
-  return {
-    ...process.env,
-    GIT_CONFIG_COUNT: '2',
-    GIT_CONFIG_KEY_0: 'credential.helper',
-    GIT_CONFIG_VALUE_0: '',
-    GIT_CONFIG_KEY_1: GITHUB_TOKEN_CREDENTIAL_SCOPE,
-    GIT_CONFIG_VALUE_1: '!f() { echo username=x-access-token; echo "password=$CLOUDCLI_GITHUB_TOKEN"; }; f',
-    CLOUDCLI_GITHUB_TOKEN: githubToken,
-    GIT_TERMINAL_PROMPT: '0',
-  };
-}
+const buildGitCloneEnvironment = (githubToken: string | null): NodeJS.ProcessEnv => buildGithubTokenGitEnvironment(githubToken);
 
 function resolveCloneFailureMessage(lastError: string): string {
   if (lastError.includes('Authentication failed') || lastError.includes('could not read Username')) {

@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ChipMultiSelect from '@/modules/office/ChipMultiSelect';
@@ -95,8 +95,6 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus
   );
   // Tool allow-list; empty means all tools.
   const [allowedTools, setAllowedTools] = useState(agent.allowedTools);
-  // Skill names the agent is told to use.
-  const [agentSkills, setAgentSkills] = useState(agent.skills);
   // Whether the division takes work (for audit: whether results are audited).
   const [enabled, setEnabled] = useState(agent.enabled);
   // Save/delete in flight, which disables the buttons.
@@ -108,10 +106,6 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus
   // The role prompt shows rendered markdown until the user switches to editing it.
   const [isEditingRole, setIsEditingRole] = useState(focus === 'role' || !agent.rolePrompt.trim());
 
-  const skillOptions = useMemo(
-    () => skills.map((skill) => ({ value: skill.name, label: skill.name, description: skill.description })),
-    [skills],
-  );
 
   const divisionChanged = name !== division.name || description !== division.description || color !== division.color;
   const modelChanged = (model?.provider ?? null) !== agent.provider || (model?.model ?? null) !== agent.model;
@@ -119,8 +113,7 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus
     || rolePrompt !== agent.rolePrompt
     || modelChanged
     || enabled !== agent.enabled
-    || allowedTools.join('|') !== agent.allowedTools.join('|')
-    || agentSkills.join('|') !== agent.skills.join('|');
+    || allowedTools.join('|') !== agent.allowedTools.join('|');
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
@@ -136,7 +129,6 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus
           rolePrompt,
           ...(modelChanged ? (model ? { provider: model.provider, model: model.model } : { model: null }) : {}),
           allowedTools,
-          skills: agentSkills,
           enabled,
         });
       }
@@ -263,12 +255,27 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus
 
       <PanelSection
         title={t('agent.skills')}
-        summary={String(agentSkills.length)}
+        summary={String(agent.skills.length)}
         defaultOpen={isOpen('skills', focus)}
         focused={focus === 'skills'}
         testId="office-agent-section-skills"
       >
-        <ChipMultiSelect options={skillOptions} value={agentSkills} onChange={setAgentSkills} emptyLabel={t('agent.noSkills')} ariaLabel={t('agent.skills')} />
+        {agent.skills.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t('agent.noLinkedSkills')}</p>
+        ) : (
+          <ul className="flex flex-wrap gap-1">
+            {agent.skills.map((name) => (
+              <li
+                key={name}
+                title={skills.find((skill) => skill.name === name)?.description || undefined}
+                className="rounded-full border border-primary/50 bg-primary/5 px-2 py-0.5 text-[11px] text-foreground"
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
+        )}
+        <span className="block text-[10px] text-muted-foreground">{t('agent.skillsFromCanvas')}</span>
       </PanelSection>
 
       {feedback && (

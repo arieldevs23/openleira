@@ -205,6 +205,74 @@ test('a case runs plan → tasks by dependency → audit → final summary, stre
   });
 });
 
+test('a new case is planned with the workspace folder and what earlier cases did', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') return { text: PLAN };
+      if (turn.kind === 'task') return { text: `## Summary\nresult of ${turn.ref}` };
+      if (turn.kind === 'audit') return { text: PASS };
+      if (turn.kind === 'final') return { text: 'Calculator built in calculator/index.html.' };
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+
+    const first = officeService.createCase(office.id, { title: 'Kalkulator', description: 'buat kalkulator simple', createdBy: null });
+    orchestrator.startCase(office.id, first.id);
+    await waitFor(first.id, isFinished);
+    const [firstTask] = officeCasesDb.listTasks(first.id);
+    officeCasesDb.updateTask(firstTask.id, { changedFiles: ['calculator/index.html', 'calculator/script.js'] });
+
+    const second = officeService.createCase(office.id, { title: 'tambahin fitur', description: 'fitur kaya iphone', createdBy: null });
+    orchestrator.startCase(office.id, second.id);
+    await waitFor(second.id, isFinished);
+
+    const plans = turns.filter((turn) => turn.kind === 'plan').map((turn) => turn.request.prompt);
+    assert.equal(plans.length, 2);
+    assert.match(plans[0], new RegExp(`Folder \\(your working directory\\): ${office.projectPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    assert.doesNotMatch(plans[0], /Earlier cases in this workspace/, 'the first case has no history');
+    assert.match(plans[1], /Earlier cases in this workspace[\s\S]*"Kalkulator" \(done\)/);
+    assert.match(plans[1], /Result: Calculator built in calculator\/index\.html\./);
+    assert.match(plans[1], /Files changed: calculator\/index\.html, calculator\/script\.js/);
+    assert.match(plans[1], /Do not ask the user which project or app they mean/);
+  });
+});
+
+test('a quick task goes straight to one team: no plan, no audit, its result is the summary', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'task') return { text: 'Changed the button.\n\n## Summary\nButton is blue now.' };
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const frontend = officesDb.listDivisions(office.id).find((division) => division.slug === 'frontend');
+    assert.ok(frontend);
+
+    const created = officeService.createCase(office.id, {
+      title: 'Blue button', description: 'make the submit button blue', createdBy: null, quickDivisionId: frontend.id,
+    });
+    assert.equal(created.quickDivisionId, frontend.id);
+    orchestrator.startCase(office.id, created.id);
+    const finished = await waitFor(created.id, isFinished);
+
+    assert.equal(finished.status, 'done');
+    assert.equal(finished.finalSummary, 'Button is blue now.');
+    assert.deepEqual(turns.map((turn) => turn.kind), ['task'], 'only the one agent ran');
+    assert.match(turns[0].request.prompt, /make the submit button blue/);
+    const [task] = officeCasesDb.listTasks(created.id);
+    assert.equal(task.divisionId, frontend.id);
+    assert.equal(task.status, 'done');
+
+    assert.throws(() => orchestrator.postNote(office.id, created.id, 'hi'), /finished|quick task/);
+    const draft = officeService.createCase(office.id, { title: 'x', createdBy: null, quickDivisionId: frontend.id });
+    assert.throws(() => orchestrator.postNote(office.id, draft.id, 'hi'), /quick task/);
+    const coordinator = officesDb.listDivisions(office.id).find((division) => division.isCoordinator);
+    assert.throws(
+      () => officeService.createCase(office.id, { title: 'x', createdBy: null, quickDivisionId: coordinator?.id }),
+      /working team/,
+    );
+  });
+});
+
 test('a failed audit re-runs the task in its session with the notes, and passes on the retry', async () => {
   await withOffice(async ({ office }) => {
     let audits = 0;
@@ -271,6 +339,150 @@ test('a third failed audit fails the task, blocks its dependants and tells the c
     assert.ok(checkpoint, 'the coordinator got a check-in turn about the failure');
     assert.match(checkpoint.request.prompt, /T1 API/);
     assert.ok(officeCasesDb.listMessages(created.id).some((message) => message.payload.type === 'task_failed'));
+  });
+});
+
+test('the planner is told who gets its plan, and each team only receives its own part', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return {
+          text: json({
+            tasks: [
+              { id: 'T1', division_slug: 'planner', title: 'Plan', instruction: 'Plan it' },
+              { id: 'T2', division_slug: 'frontend', title: 'UI', instruction: 'Build it', depends_on: ['T1'] },
+              { id: 'T3', division_slug: 'backend', title: 'API', instruction: 'Build it', depends_on: ['T1'] },
+            ],
+          }),
+        };
+      }
+      if (turn.kind === 'task' && turn.ref === 'T1') {
+        return { text: '## Summary\nShared: a calculator.\n\n### Frontend\nKEYPAD-FOR-FRONTEND\n\n### Backend\nENDPOINT-FOR-BACKEND' };
+      }
+      if (turn.kind === 'task') return { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') return { text: PASS };
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+    assert.equal((await waitFor(created.id, isFinished)).status, 'done');
+
+    const promptOf = (ref: string) => turns.find((turn) => turn.kind === 'task' && turn.ref === ref)?.request.prompt ?? '';
+    assert.match(promptOf('T1'), /Your result is forwarded to: .*Frontend/);
+    assert.match(promptOf('T2'), /Shared: a calculator/);
+    assert.match(promptOf('T2'), /KEYPAD-FOR-FRONTEND/);
+    assert.doesNotMatch(promptOf('T2'), /ENDPOINT-FOR-BACKEND/);
+    assert.match(promptOf('T3'), /ENDPOINT-FOR-BACKEND/);
+    assert.doesNotMatch(promptOf('T3'), /KEYPAD-FOR-FRONTEND/);
+  });
+});
+
+const LIMIT = "You've hit your session limit · resets 6pm (UTC)";
+
+test('a provider limit parks the case without spending an audit retry, and resume redoes only that turn', async () => {
+  await withOffice(async ({ office }) => {
+    let limitHit = true;
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return { text: json({ tasks: [{ division_slug: 'backend', title: 'API', instruction: 'Add it' }] }) };
+      }
+      if (turn.kind === 'task' || turn.kind === 'revision') return { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') {
+        if (limitHit) return { text: LIMIT };
+        return { text: PASS };
+      }
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+
+    const parked = await waitFor(created.id, (caseItem) => caseItem.status === 'waiting_user');
+    assert.equal(parked.waitingReason, 'provider_limit');
+    assert.match(parked.error ?? '', /session limit/);
+    const [waiting] = officeCasesDb.listTasks(created.id);
+    assert.equal(waiting.status, 'review', 'the audit is redone, not counted as failed');
+    assert.equal(waiting.attempts, 0);
+    assert.ok(!officeCasesDb.listMessages(created.id).some((message) => message.kind === 'audit_fail'));
+
+    limitHit = false;
+    orchestrator.resumeCase(office.id, created.id);
+    const finished = await waitFor(created.id, isFinished);
+    assert.equal(finished.status, 'done');
+    assert.equal(finished.error, null);
+    assert.equal(finished.finalSummary, 'final report for the user');
+    assert.deepEqual(turns.filter((turn) => turn.kind === 'task').length, 1, 'the finished work is not redone');
+  });
+});
+
+test('a provider limit during a task puts the task back in the queue', async () => {
+  await withOffice(async ({ office }) => {
+    let limitHit = true;
+    const { runner } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return { text: json({ tasks: [{ division_slug: 'backend', title: 'API', instruction: 'Add it' }] }) };
+      }
+      if (turn.kind === 'task') return limitHit ? { text: '', failed: true, error: LIMIT } : { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') return { text: PASS };
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+
+    await waitFor(created.id, (caseItem) => caseItem.waitingReason === 'provider_limit');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const [task] = officeCasesDb.listTasks(created.id);
+    assert.equal(task.status, 'queued');
+    assert.equal(task.error, null);
+
+    limitHit = false;
+    orchestrator.resumeCase(office.id, created.id);
+    assert.equal((await waitFor(created.id, isFinished)).status, 'done');
+  });
+});
+
+test('retrying a failed case re-queues its failed and blocked subtasks with fresh audits and keeps finished ones', async () => {
+  await withOffice(async ({ office }) => {
+    let apiFails = true;
+    const { runner, turns } = createScriptedRunner((turn) => {
+      if (turn.kind === 'plan') {
+        return {
+          text: json({
+            tasks: [
+              { id: 'T1', division_slug: 'docs', title: 'Docs', instruction: 'Write' },
+              { id: 'T2', division_slug: 'backend', title: 'API', instruction: 'Add it' },
+              { id: 'T3', division_slug: 'frontend', title: 'UI', instruction: 'Use it', depends_on: ['T2'] },
+            ],
+          }),
+        };
+      }
+      if (turn.kind === 'task' || turn.kind === 'revision') return { text: '## Summary\ndone' };
+      if (turn.kind === 'audit') return { text: apiFails && turn.ref === 'T2' ? FAIL : PASS };
+      if (turn.kind === 'checkpoint') return { text: json({ reply: 'noted', tasks: [] }) };
+      return { text: 'final report for the user' };
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'x', createdBy: null });
+    orchestrator.startCase(office.id, created.id);
+    assert.equal((await waitFor(created.id, isFinished)).status, 'failed');
+    assert.throws(() => orchestrator.resumeCase(office.id, created.id), AppError);
+
+    apiFails = false;
+    const docsTurns = turns.filter((turn) => turn.kind === 'task' && turn.ref === 'T1').length;
+    const retried = orchestrator.retryCase(office.id, created.id);
+    assert.equal(retried.status, 'running');
+    assert.equal(retried.finalSummary, null);
+    const finished = await waitFor(created.id, isFinished);
+
+    assert.equal(finished.status, 'done');
+    const byRef = new Map(officeCasesDb.listTasks(created.id).map((task) => [task.ref, task]));
+    assert.equal(byRef.get('T2')?.status, 'done');
+    assert.equal(byRef.get('T2')?.attempts, 0, 'a fresh set of audit retries');
+    assert.equal(byRef.get('T3')?.status, 'done');
+    assert.equal(turns.filter((turn) => turn.kind === 'task' && turn.ref === 'T1').length, docsTurns, 'finished work is kept');
+    assert.throws(() => orchestrator.retryCase(office.id, created.id), AppError);
   });
 });
 

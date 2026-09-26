@@ -13,6 +13,8 @@ type WorkspaceTabsProps = {
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
   shouldShowTasksTab: boolean;
   shouldShowBrowserTab: boolean;
+  /** False for a project: it is prompted only through its canvas, so it has no chat tab. */
+  shouldShowChatTab?: boolean;
   /** `vertical` is the icon rail beside the content; the header now holds the mode switch. */
   orientation?: 'horizontal' | 'vertical';
 };
@@ -64,6 +66,7 @@ export default function WorkspaceTabs({
   setActiveTab,
   shouldShowTasksTab,
   shouldShowBrowserTab,
+  shouldShowChatTab = true,
   orientation = 'horizontal',
 }: WorkspaceTabsProps) {
   const isVertical = orientation === 'vertical';
@@ -71,7 +74,7 @@ export default function WorkspaceTabs({
   const { plugins } = usePlugins();
 
   const builtInTabs: BuiltInTab[] = [
-    ...BASE_TABS,
+    ...BASE_TABS.filter((tab) => shouldShowChatTab || tab.id !== 'chat'),
     ...(shouldShowBrowserTab ? [BROWSER_TAB] : []),
     ...(shouldShowTasksTab ? [TASKS_TAB] : []),
   ];

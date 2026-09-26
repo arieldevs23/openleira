@@ -340,6 +340,8 @@ CREATE TABLE IF NOT EXISTS office_cases (
     coordinator_session_id TEXT,
     final_summary TEXT,
     error TEXT,
+    -- A quick task goes straight to this division's agent: no plan, no audit, no summary turn.
+    quick_division_id TEXT,
     created_by TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -397,6 +399,53 @@ CREATE TABLE IF NOT EXISTS office_flow_edges (
     FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE,
     FOREIGN KEY (from_division_id) REFERENCES office_divisions(id) ON DELETE CASCADE,
     FOREIGN KEY (to_division_id) REFERENCES office_divisions(id) ON DELETE CASCADE
+);
+`;
+
+export const OFFICE_SKILL_NODES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_skill_nodes (
+    id TEXT PRIMARY KEY NOT NULL,
+    office_id TEXT NOT NULL,
+    -- The installed skill this node stands for; several nodes may show the same skill.
+    skill_name TEXT NOT NULL,
+    pos_x REAL,
+    pos_y REAL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE
+);
+`;
+
+export const OFFICE_SHAPES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_shapes (
+    id TEXT PRIMARY KEY NOT NULL,
+    office_id TEXT NOT NULL,
+    -- rect | rounded | ellipse | diamond | text; drawn by the user, never read by the orchestrator.
+    kind TEXT NOT NULL,
+    x REAL NOT NULL,
+    y REAL NOT NULL,
+    width REAL NOT NULL,
+    height REAL NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    fill TEXT,
+    stroke TEXT,
+    text_color TEXT,
+    font_size INTEGER NOT NULL DEFAULT 14,
+    z INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE
+);
+`;
+
+export const OFFICE_SKILL_LINKS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_skill_links (
+    -- A division linked to a skill node on the canvas has that skill.
+    skill_node_id TEXT NOT NULL,
+    division_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (skill_node_id, division_id),
+    FOREIGN KEY (skill_node_id) REFERENCES office_skill_nodes(id) ON DELETE CASCADE,
+    FOREIGN KEY (division_id) REFERENCES office_divisions(id) ON DELETE CASCADE
 );
 `;
 

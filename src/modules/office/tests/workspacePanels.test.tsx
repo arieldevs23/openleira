@@ -6,7 +6,7 @@ import { beforeAll, test } from 'vitest';
 import { i18n } from '@/modules/i18n';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
-import type { OfficeDivision, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
+import type { OfficeAnalysis, OfficeDivision, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
 
 beforeAll(async () => {
   await i18n.changeLanguage('en');
@@ -44,13 +44,20 @@ const workspace = (projectId: string, name: string, activeCases = 0): OfficeWork
   totalCases: 3,
 });
 
-const renderSidebar = (overrides: { onSelectWorkspace?: (id: string) => void } = {}) => render(
+const renderSidebar = (overrides: {
+  onSelectWorkspace?: (id: string) => void;
+  analyses?: OfficeAnalysis[];
+  onOpenAnalysis?: (id: string) => void;
+} = {}) => render(
   <WorkspaceSidebar
     workspaces={[workspace('shop', 'Shop team', 1), workspace('blog', 'Blog team')]}
     workspacesError={null}
     selectedProjectId="shop"
     onSelectWorkspace={overrides.onSelectWorkspace ?? (() => {})}
     onAddWorkspace={() => {}}
+    analyses={overrides.analyses ?? []}
+    onOpenAnalysis={overrides.onOpenAnalysis ?? (() => {})}
+    onDismissAnalysis={() => {}}
     onOpenSettings={() => {}}
     onDeleteWorkspace={() => {}}
     cases={[]}
@@ -105,4 +112,25 @@ test('the result files panel says where the work was saved and shows the changed
 
   fireEvent.click(screen.getByRole('button', { name: /server/ }));
   assert.equal(screen.queryByText('app.ts'), null, 'a folder folds');
+});
+
+test('right-click on a result file or folder offers downloads', () => {
+  const task = (ref: string, divisionId: string, changedFiles: string[]) => ({
+    id: ref, ref, divisionId, changedFiles,
+  }) as unknown as OfficeTask;
+  render(
+    <ResultFilesPanel
+      projectId="shop"
+      projectPath="/srv/shop"
+      tasks={[task('T1', 'div-backend', ['server/app.ts', 'server/db.ts', 'README.md'])]}
+      divisions={[division('backend')]}
+    />,
+  );
+  fireEvent.contextMenu(screen.getByText('app.ts'));
+  assert.ok(screen.getByRole('menuitem', { name: 'Download file' }));
+  fireEvent.keyDown(document, { key: 'Escape' });
+
+  fireEvent.contextMenu(screen.getByRole('button', { name: /server/ }));
+  assert.ok(screen.getByRole('menuitem', { name: 'Download folder (zip)' }));
+  assert.ok(screen.getByRole('menuitem', { name: 'Download changed files only (zip, 2)' }));
 });

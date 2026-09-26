@@ -73,7 +73,7 @@ export default function SidebarRecentConversations({
       <div className="px-4 py-10 text-center">
         <MessageSquare className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">
-          {t('recent.loadFailed', 'Could not load recent conversations')}
+          {t('recent.loadFailed', 'Could not load recent sessions')}
         </p>
         <Button variant="ghost" size="sm" className="mt-2" onClick={onRetry}>
           {t('buttons.retry', { ns: 'common', defaultValue: 'Try again' })}
@@ -87,10 +87,10 @@ export default function SidebarRecentConversations({
       <div className="px-4 py-10 text-center">
         <MessageSquare className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">
-          {t('recent.emptyTitle', 'No conversations yet')}
+          {t('recent.emptyTitle', 'No sessions yet')}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          {t('recent.emptyDescription', 'Your most recently updated conversations will appear here.')}
+          {t('recent.emptyDescription', 'Your most recently updated sessions will appear here.')}
         </p>
       </div>
     );
@@ -100,7 +100,7 @@ export default function SidebarRecentConversations({
     <div className="px-1" data-testid="recent-conversations-list">
       <div className="flex items-center justify-between px-2 pb-1.5 pt-0.5">
         <span className="text-[11px] font-medium text-muted-foreground">
-          {t('recent.title', 'Recent conversations')}
+          {t('recent.title', 'Recent sessions')}
         </span>
         <span className="text-[10px] tabular-nums text-muted-foreground">{total}</span>
       </div>
@@ -247,7 +247,7 @@ export default function SidebarRecentConversations({
         >
           {isLoadingMore
             ? t('recent.loadingMore', 'Loading more...')
-            : t('recent.loadMore', 'Load older conversations')}
+            : t('recent.loadMore', 'Load older sessions')}
         </Button>
       )}
     </div>

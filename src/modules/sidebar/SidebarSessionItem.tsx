@@ -33,7 +33,7 @@ type SidebarSessionItemProps = {
   t: TFunction;
 };
 
-/** Rendered by SidebarProjectSessions for one session row, with its actions on a right-click / long-press context menu. */
+/** Rendered by SidebarObrolanList for one chat row, with its actions on a right-click / long-press context menu. */
 function SidebarSessionItem({
   project,
   session,
@@ -178,7 +178,7 @@ function SidebarSessionItem({
  * Memoized: a websocket session delta re-renders the sidebar roughly every
  * 0.5-2s during a run, and a rename keystroke re-renders it per character.
  *
- * SidebarProjectSessions hands every row but the one being renamed a constant
+ * SidebarObrolanList hands every row but the one being renamed a constant
  * draft, and the session objects come from a per-project cache, so the compare
  * succeeds for the rest. See sidebarRowProps.test.tsx.
  */

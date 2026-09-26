@@ -36,9 +36,9 @@ export function broadcastOfficeUpdate(officeId: string, change: OfficeUpdateChan
 }
 
 /** Streams one transcript line of a running office session to every client. */
-/** Sends an `office:analysis` frame: an app analysis started, finished or failed. */
-export function broadcastOfficeAnalysis(analysis: OfficeAnalysis): void {
-  broadcast(JSON.stringify({ kind: 'office:analysis', analysis } satisfies OfficeAnalysisEvent));
+/** Sends an `office:analysis` frame: an app analysis started, made progress, finished, failed or was dismissed. */
+export function broadcastOfficeAnalysis(analysis: OfficeAnalysis, removed = false): void {
+  broadcast(JSON.stringify({ kind: 'office:analysis', analysis, ...(removed ? { removed } : {}) } satisfies OfficeAnalysisEvent));
 }
 
 export function broadcastOfficeLog(event: Omit<OfficeLogEvent, 'kind'>): void {

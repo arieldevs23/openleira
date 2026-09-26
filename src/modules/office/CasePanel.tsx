@@ -1,10 +1,11 @@
-import { AlertTriangle, ExternalLink, Pause, Play, Send, Square, Trash2 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { AlertTriangle, ExternalLink, Pause, Play, RotateCcw, Square, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import OfficeStatusBadge from '@/modules/office/OfficeStatusBadge';
+import { coordinatorThread } from '@/modules/office/utils/coordinatorThread';
 import { Button } from '@/shared/ui';
 import type { OfficeActions, OfficeCase, OfficeDivision, OfficeMessage, OfficeTask } from '@/shared/types';
 import { cn, officeCaseTone, officeTaskTone } from '@/shared/utils';
@@ -30,7 +31,7 @@ const formatTime = (value: string | null) => (value ? new Date(value).toLocaleTi
 
 const messageText = (message: OfficeMessage) => String(message.payload.text ?? '');
 
-/** Right panel of the office page for the selected case: controls, timeline, coordinator thread and final summary. */
+/** Right panel of the office page for the selected case: controls, timeline and final summary (the coordinator chat is the dock over the canvas). */
 export default function CasePanel({
   caseItem,
   tasks,
@@ -46,8 +47,6 @@ export default function CasePanel({
   onOpenSession,
 }: CasePanelProps) {
   const { t } = useTranslation('office');
-  // Text of the message to the coordinator being typed.
-  const [note, setNote] = useState('');
   // The control currently waiting on the in-flight request, to disable the buttons meanwhile.
   const [busyAction, setBusyAction] = useState<string | null>(null);
   // Which destructive action asked "are you sure?" and waits for the second click.
@@ -73,23 +72,8 @@ export default function CasePanel({
     }
   };
 
-  const sendNote = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!note.trim()) {
-      return;
-    }
-    await run('note', async () => {
-      await actions.postNote(caseItem.id, note.trim());
-      setNote('');
-    });
-  };
-
-  // The thread between the user and the coordinator: user notes, replies, questions, the final report.
-  const thread = messages.filter((message) => (
-    (message.kind === 'note' || message.kind === 'question')
-    && message.payload.type !== 'task_failed'
-    && (message.fromDivisionId === null || (message.fromDivisionId === coordinator?.id && message.toDivisionId === null))
-  ));
+  // The open question lives in the chat dock over the canvas; the panel only repeats it next to the case state.
+  const thread = coordinatorThread(messages, coordinator?.id);
   const pendingQuestion = caseItem.waitingReason === 'question'
     ? [...thread].reverse().find((message) => message.kind === 'question')
     : undefined;
@@ -113,6 +97,9 @@ export default function CasePanel({
         <div className="rounded-[10px] border border-navy/20 bg-navy/5 p-2.5 text-xs text-foreground">
           <p className="font-medium">{t(`case.waiting.${caseItem.waitingReason}`)}</p>
           {pendingQuestion && <p className="mt-1 whitespace-pre-wrap">{messageText(pendingQuestion)}</p>}
+          {caseItem.waitingReason === 'provider_limit' && caseItem.error && (
+            <p className="mt-1 whitespace-pre-wrap text-muted-foreground" data-testid="office-provider-limit">{caseItem.error}</p>
+          )}
         </div>
       )}
 
@@ -162,6 +149,13 @@ export default function CasePanel({
             onClick={() => void run('resume', () => actions.caseAction(caseItem.id, 'resume'))}>
             <Play className="h-3.5 w-3.5" />
             {t('case.resume')}
+          </Button>
+        )}
+        {caseItem.status === 'failed' && (
+          <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={busyAction !== null}
+            onClick={() => void run('retry', () => actions.caseAction(caseItem.id, 'retry'))}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            {busyAction === 'retry' ? t('case.retrying') : t('case.retry')}
           </Button>
         )}
         {isActive && (
@@ -249,51 +243,6 @@ export default function CasePanel({
         )}
       </section>
 
-      <section className="space-y-1.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('case.conversation')}</h3>
-        {thread.length === 0 && <p className="text-xs text-muted-foreground">{t('case.noConversation')}</p>}
-        <ul className="space-y-1.5">
-          {thread.filter((message) => !message.payload.final).map((message) => {
-            const fromUser = message.fromDivisionId === null;
-            return (
-              <li
-                key={message.id}
-                className={cn(
-                  'rounded-[10px] px-2.5 py-1.5 text-xs',
-                  fromUser ? 'ml-6 bg-primary/10 text-foreground' : 'mr-6 border border-border bg-card/70',
-                  message.kind === 'question' && 'border-navy/30',
-                )}
-              >
-                <span className="mb-0.5 block text-[10px] text-muted-foreground">
-                  {fromUser ? t('case.you') : coordinator?.agent.name ?? t('case.coordinator')}
-                  {message.kind === 'question' ? ` · ${t('kinds.question')}` : ''} · {formatTime(message.createdAt)}
-                </span>
-                <span className="whitespace-pre-wrap break-words">{messageText(message)}</span>
-              </li>
-            );
-          })}
-        </ul>
-        {caseItem.status !== 'done' && caseItem.status !== 'failed' && (
-          <form onSubmit={(event) => void sendNote(event)} className="flex items-end gap-1.5">
-            <textarea
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                  void sendNote(event);
-                }
-              }}
-              rows={2}
-              placeholder={t('case.notePlaceholder')}
-              aria-label={t('case.notePlaceholder')}
-              className="min-h-10 flex-1 resize-y rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <Button type="submit" size="icon" className="h-9 w-9" disabled={!note.trim() || busyAction === 'note'} aria-label={t('case.send')}>
-              <Send className="h-3.5 w-3.5" />
-            </Button>
-          </form>
-        )}
-      </section>
     </div>
   );
 }
