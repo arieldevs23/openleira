@@ -50,9 +50,9 @@ export default function SkillsPanel({ divisions, skills, onSelectDivision }: Ski
           </li>
         ))}
         {missing.map((name) => (
-          <li key={name} className="rounded-[10px] border border-amber-400/40 bg-amber-500/5 p-2.5 text-xs">
+          <li key={name} className="rounded-[10px] border border-warn/40 bg-warn/5 p-2.5 text-xs">
             <span className="font-medium text-foreground">{name}</span>
-            <p className="mt-0.5 text-amber-800 dark:text-amber-200">{t('skills.missing')}</p>
+            <p className="mt-0.5 text-warn">{t('skills.missing')}</p>
             <div className="mt-1.5 flex flex-wrap gap-1 text-[10.5px]">{renderUsers(name)}</div>
           </li>
         ))}

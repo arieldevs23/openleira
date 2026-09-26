@@ -80,7 +80,7 @@ export default function OfficeSettingsModal({ open, onOpenChange, office, onSave
             </select>
             <span className="block text-[10px] text-muted-foreground">{t(`settings.modeHints.${permissionMode}`)}</span>
           </label>
-          {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+          {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}

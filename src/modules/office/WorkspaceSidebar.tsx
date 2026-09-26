@@ -114,7 +114,7 @@ export default function WorkspaceSidebar({
             {workspaces === null && (
               <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('loading')}</div>
             )}
-            {workspacesError && <p className="px-2 text-xs text-red-600 dark:text-red-300">{workspacesError}</p>}
+            {workspacesError && <p className="px-2 text-xs text-err">{workspacesError}</p>}
             {workspaces?.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">{t('sidebar.noWorkspaces')}</p>}
             {workspaces?.map((workspace) => {
               const isSelected = workspace.projectId === selectedProjectId;

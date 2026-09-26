@@ -192,7 +192,7 @@ export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, 
             <p className="text-xs text-muted-foreground">{mode === 'new' ? t('addWorkspace.newFolderHint') : t('addWorkspace.existingFolderHint')}</p>
             <WorkspacePathField value={folderPath} onChange={setFolderPath} onAdvanceToConfirm={() => void prepareFolder()} disabled={isBusy} />
             {error && (
-              <p className="text-xs text-red-600 dark:text-red-300">
+              <p className="text-xs text-err">
                 {error}
                 {folder?.hasWorkspace && (
                   <button type="button" className="ml-1 font-medium underline" onClick={() => { onReady(folder.projectId); onOpenChange(false); }}>
@@ -218,7 +218,7 @@ export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, 
               <span className="flex items-center gap-1.5 text-sm font-medium text-foreground"><Sparkles className="h-4 w-4 text-primary" />{t('addWorkspace.analyseTitle')}</span>
               <p className="text-xs text-muted-foreground">{t('addWorkspace.analyseBody')}</p>
               {groups.length === 0 ? (
-                <p className="text-xs text-amber-700 dark:text-amber-300">
+                <p className="text-xs text-warn">
                   {t('addWorkspace.noProvider')}
                   <button type="button" className="ml-1 font-medium underline" onClick={onConnectProviders}>{t('providers.connectAction')}</button>
                 </p>
@@ -234,7 +234,7 @@ export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, 
             <button type="button" className="text-xs text-primary hover:underline" disabled={isBusy} onClick={() => void createWith(null)}>
               {t('addWorkspace.useDefaults')}
             </button>
-            {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+            {error && <p className="text-xs text-err">{error}</p>}
           </div>
         )}
 
@@ -275,7 +275,7 @@ export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, 
                       <input type="color" value={proposal.color} onChange={(event) => updateProposal(index, { color: event.target.value })} className="h-6 w-7 shrink-0 cursor-pointer rounded border border-input" aria-label={t('division.color')} />
                       <input value={proposal.name} onChange={(event) => updateProposal(index, { name: event.target.value })} placeholder={t('division.name')} aria-label={t('division.name')} className={`${inputClass} h-7 min-w-0 flex-1`} />
                       <input value={proposal.agentName} onChange={(event) => updateProposal(index, { agentName: event.target.value })} placeholder={t('agent.name')} aria-label={t('agent.name')} className={`${inputClass} h-7 w-28 shrink-0`} />
-                      <button type="button" onClick={() => setProposals((current) => current.filter((_, position) => position !== index))} className="rounded-md p-1 text-muted-foreground hover:text-red-600" aria-label={t('addWorkspace.removeDivision')}>
+                      <button type="button" onClick={() => setProposals((current) => current.filter((_, position) => position !== index))} className="rounded-md p-1 text-muted-foreground hover:text-err" aria-label={t('addWorkspace.removeDivision')}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -292,7 +292,7 @@ export default function AddWorkspaceModal({ open, onOpenChange, locale, groups, 
             <button type="button" className="flex items-center gap-1 self-start text-xs text-primary hover:underline" onClick={() => setProposals((current) => [...current, emptyProposal()])}>
               <Plus className="h-3.5 w-3.5" />{t('addWorkspace.addDivision')}
             </button>
-            {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+            {error && <p className="text-xs text-err">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => setStep('setup')}>{t('addWorkspace.back')}</Button>
               <Button type="button" size="sm" className="h-8 px-3 text-xs" disabled={isBusy || !proposals.some((proposal) => proposal.name.trim())} onClick={() => void createWith(proposals)}>

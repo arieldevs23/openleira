@@ -161,7 +161,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
             <Copy className="h-3.5 w-3.5" />
           </button>
         </div>
-        {copied && <span className="text-[10px] text-emerald-700 dark:text-emerald-300">{t('files.copied')}</span>}
+        {copied && <span className="text-[10px] text-ok">{t('files.copied')}</span>}
       </div>
 
       {files.length === 0 ? (
@@ -187,7 +187,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
           {isLoading ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('loading')}</div>
           ) : preview?.error ? (
-            <p className="text-xs text-red-600 dark:text-red-300">{preview.error}</p>
+            <p className="text-xs text-err">{preview.error}</p>
           ) : (
             <pre className="max-h-80 overflow-auto rounded-[10px] border border-border bg-muted/40 p-2 text-[11px] leading-relaxed" data-testid="office-file-preview">
               {preview?.content ?? ''}

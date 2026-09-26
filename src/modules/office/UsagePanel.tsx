@@ -54,12 +54,12 @@ export default function UsagePanel({ usage, divisions, tasks }: UsagePanelProps)
         {rows.map(({ division, total }) => (
           <li key={division?.id ?? 'unknown'} className="space-y-0.5">
             <div className="flex items-center gap-1.5 text-xs">
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: division?.color ?? 'hsl(var(--muted-foreground))' }} />
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: division?.color ?? 'var(--muted)' }} />
               <span className="min-w-0 flex-1 truncate">{division?.name ?? t('usage.removedDivision')}</span>
               <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{formatTokens(total)}</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full" style={{ width: `${(total / max) * 100}%`, backgroundColor: division?.color ?? 'hsl(var(--primary))' }} />
+              <div className="h-full rounded-full" style={{ width: `${(total / max) * 100}%`, backgroundColor: division?.color ?? 'var(--accent)' }} />
             </div>
           </li>
         ))}

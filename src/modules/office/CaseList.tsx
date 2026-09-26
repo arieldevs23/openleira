@@ -79,7 +79,7 @@ export default function CaseList({ cases, selectedCaseId, onSelect, onCreate, va
             rows={4}
             className="w-full resize-y rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+          {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-1.5">
             <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setIsComposing(false)}>
               {t('common.cancel')}

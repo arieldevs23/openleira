@@ -1220,8 +1220,8 @@ h1, h2, h3, h4 {
 }
 
 @keyframes office-node-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.32); }
-  50% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 32%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 0%, transparent); }
 }
 
 @keyframes office-edge-flow {
@@ -1251,5 +1251,5 @@ h1, h2, h3, h4 {
 
 /* Workspace canvas: a faint dot grid that pans and zooms with the chart. */
 .office-canvas {
-  background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.18) 1px, transparent 1.2px);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--muted) 18%, transparent) 1px, transparent 1.2px);
 }

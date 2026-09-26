@@ -272,7 +272,7 @@ function DivisionForm({ division, modelGroups, skills, actions, onDeleted, focus
       </PanelSection>
 
       {feedback && (
-        <p className={feedback.tone === 'error' ? 'text-xs text-red-600 dark:text-red-300' : 'text-xs text-emerald-700 dark:text-emerald-300'}>
+        <p className={feedback.tone === 'error' ? 'text-xs text-err' : 'text-xs text-ok'}>
           {feedback.text}
         </p>
       )}
@@ -349,7 +349,7 @@ function DivisionTranscript({ division, caseItem, tasks, focusTaskId, onOpenSess
         </div>
       )}
       {task.auditNotes && (
-        <div className="rounded-[10px] border border-navy/20 bg-navy/5 p-2 text-xs dark:border-blue-300/20">
+        <div className="rounded-[10px] border border-navy/20 bg-navy/5 p-2 text-xs">
           <span className="mb-1 block text-[10px] uppercase tracking-wide text-muted-foreground">{t('agent.auditNotes')}</span>
           <p className="whitespace-pre-wrap">{task.auditNotes}</p>
         </div>

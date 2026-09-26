@@ -110,21 +110,21 @@ export default function CasePanel({
       </header>
 
       {caseItem.status === 'waiting_user' && caseItem.waitingReason && (
-        <div className="rounded-[10px] border border-navy/20 bg-navy/5 p-2.5 text-xs text-foreground dark:border-blue-300/20 dark:bg-blue-400/5">
+        <div className="rounded-[10px] border border-navy/20 bg-navy/5 p-2.5 text-xs text-foreground">
           <p className="font-medium">{t(`case.waiting.${caseItem.waitingReason}`)}</p>
           {pendingQuestion && <p className="mt-1 whitespace-pre-wrap">{messageText(pendingQuestion)}</p>}
         </div>
       )}
 
       {caseItem.status === 'failed' && caseItem.error && (
-        <div className="flex gap-2 rounded-[10px] border border-red-500/30 bg-red-500/5 p-2.5 text-xs text-red-700 dark:text-red-300">
+        <div className="flex gap-2 rounded-[10px] border border-err/30 bg-err/5 p-2.5 text-xs text-err">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{caseItem.error}</span>
         </div>
       )}
 
       {caseItem.status === 'draft' && missingModelAgents.length > 0 && (
-        <div className="rounded-[10px] border border-amber-400/40 bg-amber-500/5 p-2.5 text-xs text-amber-800 dark:text-amber-200">
+        <div className="rounded-[10px] border border-warn/40 bg-warn/5 p-2.5 text-xs text-warn">
           <p>{t('case.modelsMissing', { names: missingModelAgents.map((division) => division.name).join(', ') })}</p>
           <button type="button" onClick={onOpenWizard} className="mt-1 font-medium underline underline-offset-2">
             {t('missingModels.action')}
@@ -133,7 +133,7 @@ export default function CasePanel({
       )}
 
       {['draft', 'waiting_user'].includes(caseItem.status) && disconnectedProviders.length > 0 && (
-        <div className="rounded-[10px] border border-amber-400/40 bg-amber-500/5 p-2.5 text-xs text-amber-800 dark:text-amber-200">
+        <div className="rounded-[10px] border border-warn/40 bg-warn/5 p-2.5 text-xs text-warn">
           <p>{t('case.providersMissing', { providers: disconnectedProviders.join(', ') })}</p>
           <button type="button" onClick={onConnectProviders} className="mt-1 font-medium underline underline-offset-2">
             {t('providers.connectAction')}
@@ -141,7 +141,7 @@ export default function CasePanel({
         </div>
       )}
 
-      {actionError && <p className="text-xs text-red-600 dark:text-red-300">{actionError}</p>}
+      {actionError && <p className="text-xs text-err">{actionError}</p>}
 
       <div className="flex flex-wrap gap-1.5">
         {caseItem.status === 'draft' && (
@@ -216,7 +216,7 @@ export default function CasePanel({
               return (
                 <li key={task.id}>
                   <div className="flex items-start gap-2 rounded-[10px] px-2 py-1.5 hover:bg-muted/60">
-                    <span aria-hidden className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: division?.color ?? '#717784' }} />
+                    <span aria-hidden className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: division?.color ?? 'var(--muted)' }} />
                     <button type="button" onClick={() => onSelectTask(task)} className="min-w-0 flex-1 text-left">
                       <span className="flex items-center gap-1.5">
                         <span className="font-mono text-[10px] text-muted-foreground">{task.ref}</span>
@@ -228,7 +228,7 @@ export default function CasePanel({
                         {task.attempts > 0 && <span>{t('case.auditAttempts', { count: task.attempts })}</span>}
                         {task.startedAt && <span>{formatTime(task.startedAt)}{task.finishedAt ? ` – ${formatTime(task.finishedAt)}` : ''}</span>}
                       </span>
-                      {task.error && <span className="mt-0.5 block text-[10.5px] text-red-600 dark:text-red-300">{task.error}</span>}
+                      {task.error && <span className="mt-0.5 block text-[10.5px] text-err">{task.error}</span>}
                     </button>
                     {task.sessionId && (
                       <button
@@ -261,7 +261,7 @@ export default function CasePanel({
                 className={cn(
                   'rounded-[10px] px-2.5 py-1.5 text-xs',
                   fromUser ? 'ml-6 bg-primary/10 text-foreground' : 'mr-6 border border-border bg-card/70',
-                  message.kind === 'question' && 'border-navy/30 dark:border-blue-300/30',
+                  message.kind === 'question' && 'border-navy/30',
                 )}
               >
                 <span className="mb-0.5 block text-[10px] text-muted-foreground">

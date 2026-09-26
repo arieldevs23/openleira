@@ -1,23 +1,26 @@
 import type { OfficeNodeStatus } from '@/shared/types';
+import { StatusMark } from '@/shared/ui';
+import type { StatusMarkKind } from '@/shared/ui';
 import { cn } from '@/shared/utils';
 
-/** Palette tones per live state: running = primary, review = navy, done/failed = soft green/red. */
+/** Theme status tones per live state: running = primary, review = navy, done/failed/blocked = ok/err/warn. */
 const TONE_CLASSES: Record<OfficeNodeStatus, string> = {
   idle: 'bg-muted text-muted-foreground',
   running: 'bg-primary/10 text-primary',
-  review: 'bg-navy/10 text-navy dark:bg-blue-400/10 dark:text-blue-200',
-  done: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  failed: 'bg-red-500/10 text-red-700 dark:text-red-300',
-  blocked: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  review: 'bg-navy/10 text-navy',
+  done: 'bg-ok/10 text-ok',
+  failed: 'bg-err/10 text-err',
+  blocked: 'bg-warn/10 text-warn',
 };
 
-const DOT_CLASSES: Record<OfficeNodeStatus, string> = {
-  idle: 'bg-muted-foreground/50',
-  running: 'bg-primary',
-  review: 'bg-navy dark:bg-blue-300',
-  done: 'bg-emerald-500',
-  failed: 'bg-red-500',
-  blocked: 'bg-amber-500',
+/** Status is never told by colour alone (DESIGN.md §2): each tone has a shape. */
+const MARK_KINDS: Record<OfficeNodeStatus, StatusMarkKind> = {
+  idle: 'idle',
+  running: 'running',
+  review: 'running',
+  done: 'done',
+  failed: 'error',
+  blocked: 'warning',
 };
 
 type OfficeStatusBadgeProps = {
@@ -32,12 +35,12 @@ export default function OfficeStatusBadge({ tone, label, className }: OfficeStat
     <span
       data-tone={tone}
       className={cn(
-        'inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none',
+        'inline-flex max-w-full items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none',
         TONE_CLASSES[tone],
         className,
       )}
     >
-      <span aria-hidden className={cn('h-1.5 w-1.5 shrink-0 rounded-full', DOT_CLASSES[tone])} />
+      <StatusMark kind={MARK_KINDS[tone]} className="shrink-0" />
       <span className="truncate">{label}</span>
     </span>
   );

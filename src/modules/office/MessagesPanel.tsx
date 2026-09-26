@@ -12,10 +12,10 @@ type MessagesPanelProps = {
 
 const KIND_CLASSES: Record<OfficeMessage['kind'], string> = {
   assign: 'bg-primary/10 text-primary',
-  result: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  question: 'bg-navy/10 text-navy dark:text-blue-200',
-  audit_pass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  audit_fail: 'bg-red-500/10 text-red-700 dark:text-red-300',
+  result: 'bg-ok/10 text-ok',
+  question: 'bg-navy/10 text-navy',
+  audit_pass: 'bg-ok/10 text-ok',
+  audit_fail: 'bg-err/10 text-err',
   note: 'bg-muted text-muted-foreground',
 };
 
@@ -52,7 +52,7 @@ export default function MessagesPanel({ division, divisions, messages }: Message
         {related.map((message) => (
           <li key={message.id} className="rounded-[10px] border border-border bg-card/60 p-2.5 text-xs">
             <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10.5px] text-muted-foreground">
-              <span className={cn('rounded-full px-1.5 py-0.5 font-medium', KIND_CLASSES[message.kind])}>
+              <span className={cn('rounded px-1.5 py-0.5 font-medium', KIND_CLASSES[message.kind])}>
                 {t(`kinds.${message.kind}`)}
               </span>
               <span className="inline-flex items-center gap-1">

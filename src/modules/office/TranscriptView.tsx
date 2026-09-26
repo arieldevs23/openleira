@@ -47,10 +47,10 @@ export default function TranscriptView({ sessionId, onOpenSession }: TranscriptV
         )}
         <ul className="space-y-1.5">
           {entries.map((entry) => (
-            <li key={entry.id} className={cn('flex gap-1.5', entry.type === 'error' && 'text-red-600 dark:text-red-300')}>
+            <li key={entry.id} className={cn('flex gap-1.5', entry.type === 'error' && 'text-err')}>
               {entry.type === 'tool' && <Wrench className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />}
               {entry.type === 'error' && <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />}
-              {entry.type === 'done' && <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />}
+              {entry.type === 'done' && <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-ok" />}
               <span className={cn('min-w-0 whitespace-pre-wrap break-words', entry.type === 'tool' && 'text-muted-foreground')}>
                 {entry.type === 'tool' && <span className="font-medium text-foreground">{entry.toolName} </span>}
                 {entry.type === 'done' ? t(entry.text === 'aborted' ? 'transcript.aborted' : 'transcript.done') : entry.text}

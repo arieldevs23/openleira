@@ -37,7 +37,7 @@ export default function ConfirmModal({ title, body, confirmLabel, onCancel, onCo
         <div className="flex flex-col gap-3">
           <DialogTitle className="not-sr-only text-base font-semibold text-foreground">{title}</DialogTitle>
           <p className="text-sm text-foreground">{body}</p>
-          {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+          {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={onCancel}>{t('common.cancel')}</Button>
             <Button type="button" variant="destructive" size="sm" className="h-8 px-3 text-xs" disabled={isBusy} onClick={() => void confirm()}>
