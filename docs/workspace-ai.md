@@ -12,8 +12,8 @@ Workspace adalah tim agent AI yang bekerja di **satu folder aplikasi**. Tiap tim
 | Flow | Panah antar tim (`office_flow_edges`) yang kamu gambar di canvas: kerjaan tim tujuan menunggu kerjaan tim asal. |
 | Tim | Kelompok kerja di workspace (di kode: `division`). Default: orchestrator, Planner, Desain UI/UX, Backend, Frontend, Security, Docs, dan QA/Audit. |
 | Agent | Tepat satu per tim: nama, peran (`role_prompt`), provider + model, tools yang boleh, skills, aktif/tidak. |
-| Task | Permintaan utama kamu (judul + deskripsi; di kode: `case`). Status: `draft`, `running`, `waiting_user`, `done`, `failed`. |
-| Subtask | Pecahan task dari orchestrator untuk satu tim (di kode: `task`). Status: `queued`, `running`, `review`, `done`, `failed`, `blocked`. |
+| Kerjaan | Satu prompt yang kamu kirim dari chat di bawah canvas, ke orchestrator atau langsung ke satu agent (di kode: `case`). Ga ada satu task global: kirim kerjaan baru kapan aja, satu-satu atau sebagai list. Status: `draft`, `running`, `waiting_user`, `done`, `failed`. |
+| Subtask | Pecahan kerjaan dari orchestrator untuk satu tim (di kode: `task`). Status: `queued`, `running`, `review`, `done`, `failed`, `blocked`. |
 | Message bus | Semua komunikasi (`assign`, `result`, `question`, `audit_pass`, `audit_fail`, `note`). Tim tidak pernah bicara langsung satu sama lain. |
 
 Tabel di database: `offices`, `office_divisions` (termasuk posisi node `pos_x`/`pos_y`), `office_agents`, `office_cases`, `office_tasks` (termasuk `changed_files`), `office_messages`, `office_flow_edges`. Kolom yang ditambahkan setelah rilis pertama dibuat lewat migrasi `ALTER TABLE` saat server start. Diberi awalan `office_` karena `case` adalah kata kunci SQL.
@@ -45,7 +45,17 @@ semua subtask selesai ──▶ orchestrator menulis ringkasan akhir ──▶ t
 
 Orchestrator memakai **satu sesi yang sama** untuk semua gilirannya, jadi dia ingat rencananya sendiri.
 
-Setiap task baru dimulai dengan sesi orchestrator yang baru. Supaya dia tetap nyambung, prompt rencananya menyebutkan nama dan folder workspace, plus **5 task terakhir yang sudah selesai atau gagal**: judul, status, ringkasan hasil, dan file yang diubah. Permintaan pendek seperti "tambahin fitur" dianggap lanjutan dari kerjaan itu, dan orchestrator diminta tidak menanyakan proyek mana kalau riwayatnya sudah jelas.
+### Banyak kerjaan sekaligus
+
+Kerjaan ga dibikin di daftar task, tapi dikirim dari **chat kerjaan** di bawah canvas (`POST /:officeId/work`):
+
+- **Prompt atau list.** Satu pesan = satu kerjaan. Kalau pesannya punya dua baris list atau lebih (`- …`, `* …`, `1. …`), tiap baris list jadi kerjaan sendiri (maks. 20). Teks sebelum baris list pertama jadi konteks bersama yang ditempel ke tiap item. Centang **kirim jadi N kerjaan terpisah** bisa dimatiin kalau list-nya mau dikirim utuh sebagai satu prompt.
+- **Ke siapa.** Pilihan **ke** di atas kotak pesan: orchestrator (direncanain dan dibagi ke tim, pakai flow, audit, dan ringkasan), langsung ke **satu agent** (tanpa plan, audit, atau ringkasan; dulu namanya task cepat), atau **catatan buat kerjaan yang lagi jalan** (termasuk **jawab** kalau orchestrator lagi nanya). Klik kanan tim → **kasih kerjaan ke agent ini** dan klik kanan orchestrator → **kirim pesan** cuma milih tujuan ini dan naruh kursor di kotaknya.
+- **Item list jalan gantian.** Item kedua nunggu item pertama kelar (`follows_case_id`), terus jalan sendiri; item yang gagal ga ngeberhentiin sisanya. Selama nunggu, item-nya kelihatan **nunggu kerjaan sebelumnya** dan ga punya tombol jalanin.
+- **Ga bentrok.** Kerjaan yang terpisah boleh jalan barengan, tapi **satu tim cuma ngerjain satu subtask dalam satu waktu** di seluruh workspace; subtask lain buat tim itu tetap di antrian sampai timnya bebas. Kalau ada kerjaan lain yang lagi jalan, prompt rencana orchestrator dan prompt tiap subtask dapet bagian **kerjaan lain yang lagi jalan di workspace ini** (judul kerjaan, tim, subtask-nya) plus aturan buat ga ngedit file yang lagi dipegang tim lain dan ga nge-undo perubahannya.
+- **Kasih lagi kapan aja.** Kerjaan baru bisa dikirim pas yang lain masih jalan atau abis kelar; orchestrator kerjaan baru tahu 5 kerjaan terakhir yang udah kelar (lihat di bawah).
+
+Setiap kerjaan baru dimulai dengan sesi orchestrator yang baru. Supaya dia tetap nyambung, prompt rencananya menyebutkan nama dan folder workspace, plus **5 task terakhir yang sudah selesai atau gagal**: judul, status, ringkasan hasil, dan file yang diubah. Permintaan pendek seperti "tambahin fitur" dianggap lanjutan dari kerjaan itu, dan orchestrator diminta tidak menanyakan proyek mana kalau riwayatnya sudah jelas.
 
 ### Sesi, permission, dan realtime
 
@@ -73,16 +83,15 @@ Supaya agent di workspace ga bentrok sama chat manual di folder yang sama, semua
 - **Shell dan file tetap ada** di mode normal buat proyek yang lagi kebuka di canvas (ganti workspace di canvas, proyek di mode normal ikut ganti). Terminal di proyek selalu shell biasa, bukan CLI agent. Selama ada task yang `running` di proyek itu, simpan/buat/rename/hapus/upload file ditolak (`423 PROJECT_BUSY`) dan terminal ngasih peringatan.
 - **Dijaga di server juga:** `chat.send` / `chat.edit-send` dan `POST /api/providers/sessions` ditolak dengan `PROJECT_CANVAS_ONLY` kalau foldernya bukan workspace obrolan (termasuk `cwd` yang dikirim klien). Runner canvas tetap jalan karena lewat `runDetachedChatTurn`, bukan jalur chat. Folder obrolan dibaca dari `VITE_OBROLAN_DIR`, atau `<VITE_HOME_DIR>/obrolan`, default `/home/hermes/obrolan`, sama kayak frontend.
 
-### Task cepat
+### Kerjaan langsung ke agent
 
-Klik kanan tim kerja → **kasih task cepat**: isi judul (dan detail kalau perlu), langsung jalan di tim itu. Ga ada rencana orchestrator, audit, atau ringkasan; hasilnya jawaban tim itu sendiri. Cocok buat kerjaan kecil. Cuma provider tim itu yang harus sudah login. Task cepat ditandai label **cepat** di daftar task dan ga punya kotak pesan ke orchestrator.
+Pilih agent di **ke** pada chat kerjaan (atau klik kanan tim → **kasih kerjaan ke agent ini**): kerjaannya langsung jalan di tim itu. Ga ada rencana orchestrator, audit, atau ringkasan; hasilnya jawaban tim itu sendiri. Cocok buat kerjaan kecil. Cuma provider tim itu yang harus sudah login. Kerjaan kayak gini ga bisa dikasih catatan (ga ada orchestrator yang baca).
 
 ### Sidebar workspace
 
-Tiga grup yang bisa dilipat (diingat per browser):
+Dua grup yang bisa dilipat (diingat per browser):
 
-- **Workspace:** semua workspace dengan path foldernya dan jumlah task yang sedang jalan. Klik kanan untuk buka, pengaturan, atau hapus (folder dan isinya tidak ikut terhapus). Tombol **tambah workspace** ada di sini.
-- **Task:** task workspace yang dipilih, plus **task baru**.
+- **Workspace:** semua workspace dengan path foldernya dan jumlah kerjaan yang sedang jalan. Klik kanan untuk buka, pengaturan, atau hapus (folder dan isinya tidak ikut terhapus). Tombol **tambah workspace** ada di sini.
 - **Agent:** tiap agent bisa dibuka (panah) untuk melihat model dan **peran markdown**-nya; klik namanya untuk membuka panel agent.
 
 Sidebar kiri dan panel kanan bisa **disembunyikan ke samping** (tombol panel di pojoknya) supaya canvas lebih luas; yang tersisa hanya rail tipis dengan tombol untuk membukanya lagi. Pilihan ini diingat per browser. Mengklik node saat panel kanan tersembunyi membukanya lagi.
@@ -169,17 +178,17 @@ Skill tidak lagi diatur di sidebar atau panel agent, tapi di bagan:
 ### Pertanyaan orchestrator dan chat
 
 - Kalau orchestrator bertanya (task `waiting_user`, alasan `question`), pertanyaannya muncul sebagai **gelembung di sebelah node orchestrator**, lengkap dengan kotak jawab. Jawaban dikirim sebagai pesan ke orchestrator, dan itu yang melanjutkan task-nya. Gelembung bisa dikecilkan jadi chip supaya tidak menutupi node.
-- **Chat sama orchestrator ada di dock bawah canvas**, bukan di sidebar lagi:
-  - **kecil:** kotak pesan plus baris pesan terakhir;
-  - **lebar:** latar gelap nutupin bagian bawah bagan dan nampilin seluruh obrolan (balasan orchestrator di-render markdown);
+- **Chat kerjaan ada di dock bawah canvas** dan selalu ada, bukan terikat ke satu task:
+  - **kecil:** kotak pesan plus satu baris: jumlah kerjaan yang jalan dan kerjaan terbaru;
+  - **lebar:** latar gelap nutupin bagian bawah bagan dan nampilin **feed kerjaan** dari yang paling lama: tiap prompt (ke siapa, jam), status dengan tanda bentuk, dan hasil atau error-nya (markdown, dipotong). Klik kartunya buat buka hasil lengkap di panel kanan; obrolan orchestrator kerjaan yang dipilih muncul di bawahnya;
   - **disembunyiin:** cuma tombol kecil.
 
-  Pilihannya diinget per browser dan bisa diatur di Pengaturan → Node Design. Klik kanan → **kirim pesan ke orchestrator** munculin dock dan naruh kursor di kotaknya. Task cepat ga punya dock (ga ada orchestrator).
+  Pilihannya diinget per browser dan bisa diatur di Pengaturan → Node Design. Kalau kerjaan yang dipilih lagi nanya, tujuan kotak pesan otomatis jadi **jawab** kerjaan itu.
 
 ### Kalau ada yang gagal
 
 - **Limit provider (kuota abis).** Kalau agent cuma bales pesan limit (misalnya Claude: `You've hit your session limit · resets 6pm (UTC)`), task-nya ga dihitung gagal. Task diparkir dengan status **nunggu (limit provider)**, pesannya ditampilin, dan jatah audit ga kepake. Kerjaan yang kepotong balik ke tempatnya: subtask balik ke antrian, audit diulang, langkah orchestrator diulang. Tunggu reset, terus klik **lanjut**. Deteksinya cuma buat jawaban pendek (maks. 400 karakter), jadi laporan agent yang kebetulan ngebahas "rate limit" ga ikut kena.
-- **Task yang udah `gagal`** punya tombol **ulangi yang gagal**. Subtask yang gagal atau ke-block balik ke antrian dengan jatah audit baru, dan sesinya tetap sama jadi agent nerusin dari situ. Subtask yang udah selesai ga diulang. Terus orchestrator bikin ringkasan baru. Kalau yang gagal rencananya (belum ada subtask), orchestrator bikin rencana ulang.
+- **Kerjaan yang udah `gagal`** punya tombol **ulangi yang gagal**. Subtask yang gagal atau ke-block balik ke antrian dengan jatah audit baru, dan sesinya tetap sama jadi agent nerusin dari situ. Subtask yang udah selesai ga diulang. Terus orchestrator bikin ringkasan baru. Kalau yang gagal rencananya (belum ada subtask), orchestrator bikin rencana ulang.
 
 ### Flow sebagai aturan
 
@@ -212,7 +221,7 @@ Klik node atau agent di sidebar membuka panel agent. Setiap bagiannya bisa dilip
 
 ## Pengaturan → Node Design
 
-Tab baru di Pengaturan yang ngumpulin fitur workspace: aturan proyek vs chat bebas (plus folder chat bebas dan kunci file), cara dock chat kebuka, tombol buat munculin lagi panel samping yang dilipet, flow bawaan, akses git (link ke token di tab Git, penjelasan SSH), penanganan gagal (limit provider, ulangi yang gagal, task cepat), dan daftar pintasan canvas.
+Tab baru di Pengaturan yang ngumpulin fitur workspace: aturan proyek vs chat bebas (plus folder chat bebas dan kunci file), cara dock chat kebuka, tombol buat munculin lagi panel samping yang dilipet, flow bawaan, akses git (link ke token di tab Git, penjelasan SSH), penanganan gagal (limit provider, ulangi yang gagal, kerjaan langsung ke agent), dan daftar pintasan canvas.
 
 ## API
 
@@ -237,7 +246,8 @@ Semua di bawah `/api/office` (butuh login):
 | POST/PATCH/DELETE | `/:officeId/divisions[/:divisionId]` | Kelola tim (termasuk `agentName`, `rolePrompt`, `position`) |
 | PATCH | `/:officeId/agents/:agentId` | Edit agent (`model: null` menghapus model) |
 | PUT | `/:officeId/agents/models` | Wizard: `{ assignments: [{ agentId, provider, model }] }` |
-| POST/GET/PATCH/DELETE | `/:officeId/cases[/:caseId]` | Kelola task (`quickDivisionId` di POST bikin task cepat untuk satu tim) |
+| POST | `/:officeId/work` | Kerjaan baru `{ items: string[], divisionId: string \| null }`: satu kerjaan per item, ke orchestrator (`null`) atau satu tim; item list saling nunggu, yang pertama langsung jalan |
+| POST/GET/PATCH/DELETE | `/:officeId/cases[/:caseId]` | Kelola kerjaan satu-satu (`quickDivisionId` di POST bikin kerjaan langsung untuk satu tim) |
 | POST | `/:officeId/cases/:caseId/{start,pause,resume,retry,cancel}` | Kontrol task (`start`/`resume` ditolak 409 `OFFICE_PROVIDERS_NOT_CONNECTED` kalau provider agent aktif belum login) |
 | POST | `/:officeId/cases/:caseId/notes` | Pesan ke orchestrator `{ text }` |
 
@@ -245,7 +255,8 @@ Kode backend ada di `server/modules/office` (orchestrator, parser rencana, sched
 
 ## Keterbatasan
 
-- **Satu working tree bersama.** Semua tim bekerja di folder proyek yang sama. Subtask paralel yang menyentuh file yang sama bisa bentrok; belum ada worktree per tim. Turunkan `max_parallel` ke 1 kalau itu jadi masalah.
+- **Satu working tree bersama.** Semua tim bekerja di folder proyek yang sama. Satu tim ga pernah ngerjain dua hal sekaligus, dan tiap agent dikasih tahu kerjaan lain yang lagi jalan, tapi tim yang *beda* tetap bisa nyentuh file yang sama barengan; belum ada worktree per tim. Turunkan `max_parallel` ke 1 atau kirim sebagai list (jalan gantian) kalau itu jadi masalah.
+- **Canvas nampilin status kerjaan yang dipilih.** Kalau beberapa kerjaan jalan barengan, status node di bagan ikut kerjaan yang lagi dipilih di feed, bukan gabungan semuanya.
 - **Bypass permission ditolak kalau server jalan sebagai root.** Claude Code menolak `--dangerously-skip-permissions` untuk root/sudo, jadi di mode default task langsung gagal dengan pesan itu. Jalankan server sebagai user biasa, atau pakai mode `acceptEdits`.
 - **Mode permission yang lebih ketat tidak ditampilkan di halaman workspace.** Permintaan izin tool muncul di sesi chat yang bersangkutan; sampai disetujui, subtask terlihat masih `running`.
 - **Jeda tidak menghentikan sesi yang sedang jalan.** Jeda hanya menahan subtask baru; sesi yang sedang jalan dibiarkan selesai dan hasilnya dicatat. Untuk menghentikan paksa, pakai **batal**.
