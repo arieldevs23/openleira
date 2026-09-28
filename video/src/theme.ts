@@ -1,4 +1,5 @@
-import { continueRender, delayRender, Easing, staticFile } from 'remotion';
+import { loadFont } from '@remotion/fonts';
+import { Easing, staticFile } from 'remotion';
 
 /** Dark-mode tokens from docs/DESIGN.md §2, the app's default look. */
 export const C = {
@@ -14,21 +15,23 @@ export const C = {
   accent: '#C9CCD4',
   ok: '#7FB08A',
   warn: '#C9A96A',
-  err: '#C07C7C',
 } as const;
 
-/** The one easing of the design system (§6). */
-export const EASE = Easing.bezier(0.22, 1, 0.36, 1);
-
-export const FPS = 30;
+/** Soft deceleration: things arrive quickly and settle gently. */
+export const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
+/** Gentle acceleration and deceleration for continuous camera moves. */
+export const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
+/** Leaving: slow start, fast exit. */
+export const EASE_IN = Easing.bezier(0.7, 0, 0.84, 0);
 
 export const FONT = {
-  ui: 'Inter, sans-serif',
-  title: '"Playfair Display", serif',
-  display: 'Cinzel, serif',
-};
+  ui: 'Inter',
+  title: 'Playfair Display',
+  display: 'Cinzel',
+} as const;
 
-const FACES: Array<[family: string, file: string, weight: string]> = [
+// The app's own self-hosted fonts (src/assets/fonts in the app).
+const faces: Array<[string, string, string]> = [
   ['Inter', 'inter-latin-400-normal.woff2', '400'],
   ['Inter', 'inter-latin-500-normal.woff2', '500'],
   ['Inter', 'inter-latin-600-normal.woff2', '600'],
@@ -37,16 +40,6 @@ const FACES: Array<[family: string, file: string, weight: string]> = [
   ['Cinzel', 'cinzel-latin-600-normal.woff2', '600'],
   ['Cinzel', 'cinzel-latin-700-normal.woff2', '700'],
 ];
-
-// The app's self-hosted fonts; frames wait until they are loaded.
-const fontHandle = delayRender('Loading fonts');
-Promise.all(FACES.map(async ([family, file, weight]) => {
-  const face = new FontFace(family, `url(${staticFile(`fonts/${file}`)}) format('woff2')`, { weight });
-  await face.load();
-  document.fonts.add(face);
-}))
-  .then(() => continueRender(fontHandle))
-  .catch((error) => {
-    console.error(error);
-    continueRender(fontHandle);
-  });
+for (const [family, file, weight] of faces) {
+  loadFont({ family, url: staticFile(`fonts/${file}`), weight });
+}

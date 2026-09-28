@@ -1,51 +1,58 @@
-import type { ReactNode } from 'react';
-import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from 'remotion';
+import { Audio } from '@remotion/media';
+import { springTiming, TransitionSeries } from '@remotion/transitions';
+import { fade } from '@remotion/transitions/fade';
+import { AbsoluteFill, staticFile } from 'remotion';
 
-import { CANVAS_DURATION, CanvasScene } from './scenes/CanvasScene';
-import { Features } from './scenes/Features';
-import { Intro } from './scenes/Intro';
-import { Tagline } from './scenes/Tagline';
+import { FlowRun } from './scenes/FlowRun';
+import { HandOut } from './scenes/HandOut';
+import { Pause } from './scenes/Pause';
+import { RoseHit } from './scenes/RoseHit';
+import { RoseOpen } from './scenes/RoseOpen';
+import { Statement } from './scenes/Statement';
+import { TeamBuild } from './scenes/TeamBuild';
+import { Words } from './scenes/Words';
 import { C } from './theme';
 
-const INTRO = 120;
-const TAGLINE = 120;
-const FEATURES = 180;
-const OUTRO = 150;
-
-/** Cross-fade in and out around a scene of `length` frames. */
-function Fade({ length, children, fadeIn = 12, fadeOut = 12 }: { length: number; children: ReactNode; fadeIn?: number; fadeOut?: number }) {
-  const frame = useCurrentFrame();
-  const opacity = Math.min(
-    fadeIn ? interpolate(frame, [0, fadeIn], [0, 1], { extrapolateRight: 'clamp' }) : 1,
-    fadeOut ? interpolate(frame, [length - fadeOut, length], [1, 0], { extrapolateLeft: 'clamp' }) : 1,
-  );
-  return <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>;
-}
-
-const SCENES: Array<{ length: number; node: ReactNode; fadeIn?: number; fadeOut?: number }> = [
-  { length: INTRO, node: <Intro />, fadeIn: 0 },
-  { length: TAGLINE, node: <Tagline /> },
-  { length: CANVAS_DURATION, node: <CanvasScene />, fadeOut: 0 },
-  { length: FEATURES, node: <Features /> },
-  { length: OUTRO, node: <Intro outro />, fadeOut: 20 },
-];
-
-export const LAUNCH_DURATION = SCENES.reduce((total, scene) => total + scene.length, 0);
-
-/** OpenLeira launch film: rose → tagline → the Node Design canvas at work → features → rose. */
-export function Launch() {
-  let start = 0;
-  return (
-    <AbsoluteFill style={{ background: C.bg }}>
-      {SCENES.map((scene, index) => {
-        const from = start;
-        start += scene.length;
-        return (
-          <Sequence key={index} from={from} durationInFrames={scene.length}>
-            <Fade length={scene.length} fadeIn={scene.fadeIn} fadeOut={scene.fadeOut}>{scene.node}</Fade>
-          </Sequence>
-        );
-      })}
-    </AbsoluteFill>
-  );
-}
+/**
+ * OpenLeira launch film, cut to public/music.mp3. Every scene starts on a beat
+ * (see beats.ts): each sequence lasts until the next scene's beat plus the
+ * cross-fade, so the incoming scene's frame 0 lands exactly on its beat. The
+ * silence cuts hard to the hit.
+ */
+export const Launch = () => (
+  <AbsoluteFill style={{ backgroundColor: C.bg }}>
+    <TransitionSeries>
+      <TransitionSeries.Sequence name="Rose open" durationInFrames={146}>
+        <RoseOpen />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 10 })} />
+      <TransitionSeries.Sequence name="Statement" durationInFrames={144}>
+        <Statement />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 10 })} />
+      <TransitionSeries.Sequence name="Team build" durationInFrames={145}>
+        <TeamBuild />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 10 })} />
+      <TransitionSeries.Sequence name="Hand out work" durationInFrames={141}>
+        <HandOut />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 10 })} />
+      <TransitionSeries.Sequence name="Flow run" durationInFrames={141}>
+        <FlowRun />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 10 })} />
+      <TransitionSeries.Sequence name="Words" durationInFrames={99}>
+        <Words />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 16 })} />
+      <TransitionSeries.Sequence name="Pause" durationInFrames={40}>
+        <Pause />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Sequence name="Rose hit" durationInFrames={122}>
+        <RoseHit />
+      </TransitionSeries.Sequence>
+    </TransitionSeries>
+    <Audio src={staticFile('music.mp3')} />
+  </AbsoluteFill>
+);
