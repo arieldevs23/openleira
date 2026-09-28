@@ -1,24 +1,26 @@
 import { Composition, Folder } from 'remotion';
 
-import { Brag } from './brag/Brag';
-import { Agents } from './brag/scenes/Agents';
-import { AuditList } from './brag/scenes/AuditList';
-import { Hook } from './brag/scenes/Hook';
-import { Outro } from './brag/scenes/Outro';
-import { PromptRun } from './brag/scenes/PromptRun';
-import { Reveal } from './brag/scenes/Reveal';
+import { Ask } from './trailer/scenes/Ask';
+import { Drop } from './trailer/scenes/Drop';
+import { Finale } from './trailer/scenes/Finale';
+import { Flow } from './trailer/scenes/Flow';
+import { Intro } from './trailer/scenes/Intro';
+import { RoseReveal } from './trailer/scenes/RoseReveal';
+import { Tension } from './trailer/scenes/Tension';
+import { Trailer } from './trailer/Trailer';
 import './theme';
 
 export const Root = () => (
   <>
-    <Folder name="Brag-Scenes">
-      <Composition id="Hook" component={Hook} width={1920} height={1080} fps={30} durationInFrames={90} />
-      <Composition id="Reveal" component={Reveal} width={1920} height={1080} fps={30} durationInFrames={70} />
-      <Composition id="PromptRun" component={PromptRun} width={1920} height={1080} fps={30} durationInFrames={142} />
-      <Composition id="AuditList" component={AuditList} width={1920} height={1080} fps={30} durationInFrames={140} />
-      <Composition id="Agents" component={Agents} width={1920} height={1080} fps={30} durationInFrames={142} />
-      <Composition id="Outro" component={Outro} width={1920} height={1080} fps={30} durationInFrames={148} />
+    <Folder name="Trailer-Parts">
+      <Composition id="Intro" component={Intro} width={1920} height={1080} fps={30} durationInFrames={162} />
+      <Composition id="RoseReveal" component={RoseReveal} width={1920} height={1080} fps={30} durationInFrames={158} />
+      <Composition id="Ask" component={Ask} width={1920} height={1080} fps={30} durationInFrames={80} />
+      <Composition id="Flow" component={Flow} width={1920} height={1080} fps={30} durationInFrames={294} />
+      <Composition id="Tension" component={Tension} width={1920} height={1080} fps={30} durationInFrames={92} />
+      <Composition id="Drop" component={Drop} width={1920} height={1080} fps={30} durationInFrames={362} />
+      <Composition id="Finale" component={Finale} width={1920} height={1080} fps={30} durationInFrames={219} />
     </Folder>
-    <Composition id="OpenLeiraBrag" component={Brag} width={1920} height={1080} fps={30} durationInFrames={732} />
+    <Composition id="OpenLeiraTrailer" component={Trailer} width={1920} height={1080} fps={30} durationInFrames={1297} />
   </>
 );

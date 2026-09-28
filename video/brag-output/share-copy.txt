@@ -1,1 +1,1 @@
-Prompt once, and a whole AI team ships it: OpenLeira puts Claude Code, Codex, Cursor and OpenCode to work as one team on your own server — the orchestrator plans, teams build along the flow you draw, and nothing counts until QA audits it. openleira.online
+Satu prompt, satu tim AI yang beneran kerja bareng — Claude Code, Codex, Cursor, OpenCode — di server lo sendiri. Orchestrator bagi tugas, tiap tim jalan barengan, semua dicek QA dulu. openleira.online

@@ -11,12 +11,6 @@
       "DOM",
       "ES2022"
     ],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "../src/*"
-      ]
-    },
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
