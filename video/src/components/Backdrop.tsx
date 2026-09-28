@@ -1,6 +1,6 @@
 import { AbsoluteFill, random, useCurrentFrame } from 'remotion';
 
-import { beatPulse } from '../beats';
+import { beatPulse } from '../brag/beats';
 import { C } from '../theme';
 
 type BackdropProps = {
