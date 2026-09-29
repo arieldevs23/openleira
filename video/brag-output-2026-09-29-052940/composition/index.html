@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>OpenLeira — brag</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <script src="assets/audio-data.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Playfair Display"; src: url("assets/fonts/playfair-display-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Playfair Display"; src: url("assets/fonts/playfair-display-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Cinzel"; src: url("assets/fonts/cinzel-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Cinzel"; src: url("assets/fonts/cinzel-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+
+      :root {
+        --bg: #0a0a0b;
+        --surface: #141416;
+        --surface2: #1b1b1e;
+        --border: #2a2a2e;
+        --border-strong: #3a3a40;
+        --text: #f2f2f0;
+        --muted: #8a8a90;
+        --accent: #c9ccd4;
+        --ok: #7fb08a;
+      }
+      html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Inter", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+
+      /* ---------- continuous background ---------- */
+      .layer { position: absolute; inset: 0; pointer-events: none; }
+      #vignette { background: radial-gradient(ellipse at 50% 45%, transparent 30%, #000000 95%); }
+      #glow { background: radial-gradient(circle at 50% 46%, #c9ccd430 0%, transparent 42%); opacity: 0.3; }
+      #field { display: flex; align-items: center; justify-content: center; opacity: 0.3; }
+      #field-breath { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #rays {
+        background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, #c9ccd412 20deg, transparent 45deg, transparent 90deg, #c9ccd40e 115deg, transparent 140deg, transparent 180deg, #c9ccd412 205deg, transparent 230deg, transparent 270deg, #c9ccd40e 295deg, transparent 320deg);
+        -webkit-mask-image: radial-gradient(circle at 50% 50%, black 0%, transparent 55%);
+        mask-image: radial-gradient(circle at 50% 50%, black 0%, transparent 55%);
+      }
+      .ring { position: absolute; display: block; filter: drop-shadow(0 0 8px #c9ccd466); }
+      #ring-a { width: 1500px; height: 1500px; left: 210px; top: -210px; opacity: 0.16; }
+      #ring-b { width: 1000px; height: 1000px; left: 460px; top: 40px; opacity: 0.22; }
+      #ring-c { width: 620px; height: 620px; left: 650px; top: 230px; opacity: 0.3; }
+
+      /* ---------- the rose ---------- */
+      #rose-wrap { filter: brightness(0.82) contrast(1.12); display: flex; justify-content: center; align-items: flex-start; padding-top: 60px; box-sizing: border-box; }
+      #rose {
+        display: block; width: 640px; height: 640px; opacity: 0;
+        -webkit-mask-image: radial-gradient(circle at 50% 48%, black 30%, transparent 64%);
+        mask-image: radial-gradient(circle at 50% 48%, black 30%, transparent 64%);
+      }
+
+      /* ---------- scenes ---------- */
+      .scene { position: absolute; inset: 0; }
+      .center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; }
+      .line { display: block; white-space: nowrap; line-height: 1.12; text-align: center; }
+      .title { font-family: "Playfair Display", serif; font-weight: 700; color: var(--text); }
+      .display { font-family: "Cinzel", serif; font-weight: 700; color: var(--text); }
+      .ch { display: inline-block; white-space: pre; }
+      .mask { display: inline-block; overflow: hidden; padding: 0 0.05em 0.16em; margin: 0 -0.05em -0.16em; }
+      .mask > span { display: inline-block; }
+      .words { display: flex; justify-content: center; gap: 0.26em; }
+
+      #hook-1 { font-size: 150px; }
+      #hook-2 { font-size: 132px; font-family: "Cinzel", serif; }
+      #rose-line { position: absolute; left: 0; right: 0; top: 760px; font-size: 104px; }
+
+      /* chat */
+      #chat-scene { display: flex; flex-direction: column; align-items: center; padding-top: 170px; box-sizing: border-box; gap: 70px; }
+      #chat-head { font-size: 104px; }
+      #chat-card {
+        width: 1180px; box-sizing: border-box; padding: 30px 34px; border-radius: 20px;
+        background: #141416ee; border: 2px solid var(--border-strong);
+        box-shadow: 0 40px 120px #000000cc;
+      }
+      #chat-to { display: flex; align-items: center; gap: 16px; font-size: 32px; color: var(--muted); }
+      .pill { color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 4px 16px; }
+      #chat-row { display: flex; align-items: center; gap: 22px; margin-top: 22px; }
+      #chat-input { flex: 1; height: 84px; display: flex; align-items: center; font-size: 50px; color: var(--text); overflow: hidden; }
+      #chat-typed { display: block; white-space: pre; }
+      #caret { display: block; width: 4px; height: 54px; background: var(--accent); margin-left: 4px; }
+      #send { width: 96px; height: 96px; border-radius: 16px; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+      #reply {
+        display: flex; align-items: center; gap: 18px; font-size: 40px; color: var(--muted);
+        background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 28px;
+      }
+      #reply b { color: var(--text); font-weight: 600; }
+      .dot { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 16px #7fb08aaa; }
+
+      /* graph */
+      #graph { position: absolute; inset: 0; }
+      #graph-cap { position: absolute; left: 0; right: 0; top: 118px; height: 130px; }
+      .cap { position: absolute; left: 0; right: 0; top: 0; font-size: 96px; }
+      #edges { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+      .node {
+        position: absolute; width: 380px; height: 124px; box-sizing: border-box; padding: 20px 26px;
+        border-radius: 16px; background: var(--surface); border: 2px solid var(--border-strong);
+        box-shadow: 0 24px 60px #000000aa; display: flex; align-items: center; justify-content: space-between;
+      }
+      .node .team { font-size: 40px; font-weight: 600; color: var(--text); }
+      .node .meta { position: relative; font-size: 26px; color: var(--muted); margin-top: 4px; height: 34px; width: 230px; }
+      .node .st { position: absolute; left: 0; top: 0; white-space: nowrap; }
+      .node .st.on { color: var(--text); }
+      .node .st.ok { color: var(--ok); }
+      .mark { position: relative; width: 52px; height: 52px; }
+      .mark svg { position: absolute; inset: 0; display: block; width: 52px; height: 52px; overflow: visible; }
+      .spark {
+        position: absolute; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+        background: var(--text); box-shadow: 0 0 20px 8px #c9ccd4aa, 0 0 60px 20px #c9ccd444; opacity: 0;
+        offset-rotate: 0deg;
+      }
+
+      /* finale */
+      #finale { display: flex; flex-direction: column; align-items: center; padding-top: 650px; box-sizing: border-box; }
+      #brand { font-size: 150px; letter-spacing: 0.12em; }
+      #tagline { font-family: "Playfair Display", serif; font-style: italic; font-weight: 500; font-size: 72px; color: var(--accent); margin-top: 18px; }
+      #url { font-family: "Inter", sans-serif; font-weight: 500; font-size: 34px; color: var(--muted); letter-spacing: 0.16em; margin-top: 34px; }
+
+      #black { background: #000000; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="23.5">
+      <!-- background: never cuts -->
+      <div id="rays" class="layer"></div>
+      <div id="glow" class="layer"></div>
+      <div id="field" class="layer">
+        <div id="field-breath">
+          <svg id="ring-a" class="ring" viewBox="-110 -110 220 220"><path class="ring-p" fill="none" stroke="#c9ccd4" stroke-width="0.5"></path><path class="ring-q" transform="scale(0.93)" fill="none" stroke="#c9ccd4" stroke-width="0.25" opacity="0.6"></path></svg>
+          <svg id="ring-b" class="ring" viewBox="-110 -110 220 220"><path class="ring-p" fill="none" stroke="#c9ccd4" stroke-width="0.6"></path><path class="ring-q" transform="scale(0.93)" fill="none" stroke="#c9ccd4" stroke-width="0.3" opacity="0.6"></path></svg>
+          <svg id="ring-c" class="ring" viewBox="-110 -110 220 220"><path class="ring-p" fill="none" stroke="#c9ccd4" stroke-width="0.8"></path><path class="ring-q" transform="scale(0.93)" fill="none" stroke="#c9ccd4" stroke-width="0.4" opacity="0.6"></path></svg>
+        </div>
+      </div>
+      <div id="vignette" class="layer"></div>
+      <div id="rose-wrap" class="layer"><img id="rose" src="assets/img/rose.webp" alt="" /></div>
+
+      <!-- 1. hook -->
+      <section id="s-hook" class="scene center clip" data-start="0" data-duration="3.9" data-track-index="1">
+        <div id="hook-1" class="line title" data-split="pop">Satu prompt.</div>
+      </section>
+      <section id="s-hook2" class="scene center clip" data-start="1.9" data-duration="2.0" data-track-index="2">
+        <div id="hook-2" class="line display">Satu tim AI.</div>
+      </section>
+
+      <!-- 2. rose -->
+      <section id="s-rose" class="scene clip" data-start="3.7" data-duration="3.6" data-track-index="1">
+        <div id="rose-line" class="line title words">
+          <span class="mask"><span>Di</span></span><span class="mask"><span>server</span></span><span class="mask"><span>lo</span></span><span class="mask"><span>sendiri.</span></span>
+        </div>
+      </section>
+
+      <!-- 3. give it work -->
+      <section id="s-chat" class="scene clip" data-start="6.9" data-duration="4.6" data-track-index="2">
+        <div id="chat-scene" class="scene">
+          <div id="chat-head" class="line title words">
+            <span class="mask"><span>Lo</span></span><span class="mask"><span>kasih</span></span><span class="mask"><span>kerjaan.</span></span>
+          </div>
+          <div id="chat-card">
+            <div id="chat-to">ke <span class="pill">Orchestrator</span></div>
+            <div id="chat-row">
+              <div id="chat-input"><span id="chat-typed" data-split="type">bikin halaman checkout + email order</span><span id="caret"></span></div>
+              <div id="send">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#0a0a0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9Z"></path></svg>
+              </div>
+            </div>
+          </div>
+          <div id="reply"><span class="dot"></span><b>Orchestrator</b> oke, gue bagi ke tim.</div>
+        </div>
+      </section>
+
+      <!-- 4. the team -->
+      <section id="s-graph" class="scene clip" data-start="11.1" data-duration="6.3" data-track-index="1">
+        <div id="graph">
+          <div id="graph-cap">
+            <div id="cap-1" class="cap line title">Dibagi.</div>
+            <div id="cap-2" class="cap line title words"><span class="mask"><span>Jalan</span></span><span class="mask"><span>barengan.</span></span></div>
+            <div id="cap-3" class="cap line title words"><span class="mask"><span>Dicek</span></span><span class="mask"><span>QA.</span></span></div>
+            <div id="cap-4" class="cap line title" data-split="pop">Beres.</div>
+          </div>
+          <svg id="edges" viewBox="0 0 1920 1080"></svg>
+          <div id="nodes"></div>
+        </div>
+      </section>
+
+      <!-- 5. finale -->
+      <section id="s-finale" class="scene clip" data-start="16.9" data-duration="6.6" data-track-index="2">
+        <div id="finale" class="scene">
+          <div id="brand" class="line display">OPENLEIRA</div>
+          <div id="tagline" class="line" data-split="pop">tim AI lo sendiri.</div>
+          <div id="url" class="line">openleira.online</div>
+        </div>
+      </section>
+
+      <div id="black" class="layer"></div>
+
+      <!-- audio -->
+      <audio id="music" data-start="0" data-duration="23.5" data-track-index="10" data-volume="1"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.3,"v":0.36},{"t":22.4,"v":0.36},{"t":23.5,"v":0}]}]}'
+        src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+      <audio id="sfx-hook" data-start="0.56" data-duration="0.4" data-track-index="11" data-volume="0.6" src="assets/sfx/impactSoft_medium_001.ogg"></audio>
+      <audio id="sfx-rose" data-start="3.82" data-duration="0.8" data-track-index="12" data-volume="0.55" src="assets/sfx/impactSoft_heavy_003.ogg"></audio>
+      <audio id="sfx-click" data-start="8.68" data-duration="0.06" data-track-index="11" data-volume="0.7" src="assets/sfx/click2.ogg"></audio>
+      <audio id="sfx-send" data-start="8.74" data-duration="0.15" data-track-index="12" data-volume="0.65" src="assets/sfx/impactSoft_medium_004.ogg"></audio>
+      <audio id="sfx-qa" data-start="15.84" data-duration="0.18" data-track-index="11" data-volume="0.6" src="assets/sfx/impactSoft_medium_001.ogg"></audio>
+      <audio id="sfx-logo" data-start="17.47" data-duration="0.3" data-track-index="12" data-volume="0.75" src="assets/sfx/impactBell_heavy_004.ogg"></audio>
+    </div>
+
+    <script>
+      (function () {
+        const NS = "http://www.w3.org/2000/svg";
+        const DUR = 23.5;
+        const tl = gsap.timeline({ paused: true });
+
+        // ---------- helpers ----------
+        const splitChars = (el) => {
+          const text = el.textContent;
+          el.textContent = "";
+          return text.split("").map((c) => {
+            const s = document.createElement("span");
+            s.className = "ch";
+            s.textContent = c;
+            el.appendChild(s);
+            return s;
+          });
+        };
+        const inner = (sel) => Array.from(document.querySelectorAll(sel + " .mask > span"));
+
+        // letters pop up with a spring
+        const pop = (chars, at, stagger) => {
+          tl.fromTo(chars, { opacity: 0, scale: 0.2, y: 60 }, { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.4)", stagger: stagger || 0.045 }, at);
+        };
+        // wide + blurred, closing to natural spacing
+        // (glyphs are split and spread with x, so the motion stays sub-pixel smooth)
+        const spacing = (sel, at, tight) => {
+          const el = document.querySelector(sel);
+          el.style.letterSpacing = tight || "0.02em";
+          const size = parseFloat(getComputedStyle(el).fontSize);
+          const chars = splitChars(el);
+          const mid = (chars.length - 1) / 2;
+          tl.fromTo(el, { opacity: 0, filter: "blur(18px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.85, ease: "expo.out" }, at);
+          chars.forEach((c, i) => tl.fromTo(c, { x: (i - mid) * size * 0.9 }, { x: 0, duration: 0.85, ease: "expo.out" }, at));
+        };
+        // words slide up out of a mask, each on its beat
+        const slide = (words, times) => {
+          words.forEach((w, i) => tl.fromTo(w, { yPercent: 108, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.36, ease: "expo.out" }, times[i]));
+        };
+        // leaving: softens, grows a little and fades — a dissolve, never a hard cut
+        const leave = (el, at, d) => {
+          tl.to(el, { opacity: 0, filter: "blur(14px)", scale: 1.07, duration: d || 0.3, ease: "power2.in" }, at);
+        };
+
+        // ---------- background: gothic tracery that morphs ----------
+        const POINTS = 180;
+        const polar = (fn) => {
+          let d = "";
+          for (let i = 0; i < POINTS; i++) {
+            const t = (i / POINTS) * Math.PI * 2 - Math.PI / 2;
+            const r = 100 * fn(t);
+            d += (i === 0 ? "M" : " L") + (Math.cos(t) * r).toFixed(2) + " " + (Math.sin(t) * r).toFixed(2);
+          }
+          return d + " Z";
+        };
+        const SH = {
+          circle: polar(() => 0.92),
+          rose: polar((t) => 0.78 + 0.2 * Math.abs(Math.cos(6 * t))),
+          quatrefoil: polar((t) => 0.58 + 0.4 * Math.abs(Math.cos(2 * t))),
+          star: polar((t) => 0.5 + 0.46 * Math.pow(Math.abs(Math.cos(4 * t)), 3)),
+          trefoil: polar((t) => 0.6 + 0.36 * Math.abs(Math.cos(1.5 * t))),
+          sun: polar((t) => 0.84 + 0.12 * Math.pow(Math.abs(Math.cos(12 * t)), 6)),
+        };
+        // shape per ring at each story beat: start, rose, chat, team, finale
+        const KEYS = [3.3, 7.0, 11.0, 16.9];
+        const RINGS = [
+          { id: "#ring-a", shapes: ["circle", "rose", "circle", "sun", "rose"], spin: 12 },
+          { id: "#ring-b", shapes: ["star", "quatrefoil", "trefoil", "star", "quatrefoil"], spin: -24 },
+          { id: "#ring-c", shapes: ["quatrefoil", "sun", "star", "circle", "star"], spin: 40 },
+        ];
+        RINGS.forEach((ring, i) => {
+          const paths = document.querySelectorAll(ring.id + " path");
+          paths.forEach((p) => p.setAttribute("d", SH[ring.shapes[0]]));
+          KEYS.forEach((k, j) => {
+            tl.to(paths, { attr: { d: SH[ring.shapes[j + 1]] }, duration: 1.4, ease: "power2.inOut" }, k);
+          });
+          tl.fromTo(ring.id, { rotation: i * 15 }, { rotation: i * 15 + ring.spin, duration: DUR, ease: "none" }, 0);
+        });
+        tl.fromTo("#rays", { rotation: 0 }, { rotation: 10, duration: DUR, ease: "none" }, 0);
+        // how strongly the field shows: full behind the rose, quieter behind text
+        tl.to("#field", { opacity: 0.55, duration: 1.2, ease: "power2.out" }, 0.4)
+          .to("#field", { opacity: 1, duration: 1.2, ease: "power2.inOut" }, 3.7)
+          .to("#field", { opacity: 0.4, duration: 1.0, ease: "power2.inOut" }, 7.0)
+          .to("#field", { opacity: 0.65, duration: 1.0, ease: "power2.inOut" }, 11.2)
+          .to("#field", { opacity: 1, duration: 0.6, ease: "power2.out" }, 17.2);
+
+        // audio-reactive: bass lets the tracery breathe and its glow swell (text never moves with audio)
+        const BASS = window.AUDIO_BASS || [];
+        const breath = document.getElementById("field-breath");
+        const glow = document.getElementById("glow");
+        const frames = Math.min(BASS.length, Math.floor(DUR * 30));
+        for (let f = 0; f < frames; f++) {
+          tl.call(((b) => () => {
+            breath.style.transform = "scale(" + (1 + b * 0.035).toFixed(4) + ")";
+            glow.style.opacity = (0.25 + b * 0.6).toFixed(3);
+          })(BASS[f]), [], f / 30);
+        }
+
+        // ---------- 1. hook ----------
+        const h1 = splitChars(document.getElementById("hook-1"));
+        pop(h1, 0.56, 0.05);
+        leave("#hook-1", 1.9);
+        spacing("#hook-2", 2.19, "0.04em");
+        leave("#hook-2", 3.55);
+
+        // ---------- 2. rose ----------
+        tl.fromTo("#rose", { opacity: 0, scale: 0.9, filter: "blur(22px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 1.3, ease: "expo.out" }, 3.82);
+        slide(inner("#rose-line"), [4.39, 4.91, 5.34, 6.0]);
+        leave("#rose-line", 7.0, 0.32);
+        tl.to("#rose", { opacity: 0, scale: 1.12, filter: "blur(18px)", duration: 0.6, ease: "power2.in" }, 6.85);
+
+        // ---------- 3. give it work ----------
+        slide(inner("#chat-head"), [7.09, 7.3, 7.52]);
+        tl.fromTo("#chat-card", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 0.55, ease: "expo.out" }, 7.2);
+        const typed = splitChars(document.getElementById("chat-typed"));
+        typed.forEach((c) => (c.style.opacity = 0));
+        tl.to(typed, { opacity: 1, duration: 0.01, stagger: 0.026 }, 7.62);
+        tl.fromTo("#caret", { opacity: 0 }, { opacity: 1, duration: 0.01 }, 7.6);
+        tl.to("#caret", { opacity: 0, duration: 0.01 }, 8.74);
+        // sent on the strong cue
+        tl.to("#send", { scale: 0.84, duration: 0.08, ease: "power2.in" }, 8.66)
+          .to("#send", { scale: 1, duration: 0.3, ease: "back.out(3)" }, 8.74)
+          .to("#chat-typed", { y: -60, opacity: 0, duration: 0.32, ease: "power2.in" }, 8.74)
+          .fromTo("#chat-card", { boxShadow: "0 40px 120px #000000cc, 0 0 0px #c9ccd400" }, { boxShadow: "0 40px 120px #000000cc, 0 0 70px #c9ccd488", duration: 0.12, immediateRender: false }, 8.74)
+          .to("#chat-card", { boxShadow: "0 40px 120px #000000cc, 0 0 0px #c9ccd400", duration: 0.7, ease: "power2.out" }, 8.86);
+        tl.fromTo("#reply", { opacity: 0, y: 40, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(2)" }, 9.29);
+        leave("#chat-scene", 10.9, 0.4);
+
+        // ---------- 4. the team (small, clear simulation) ----------
+        const NW = 380, NH = 124;
+        const NODES = {
+          orch: { team: "Orchestrator", agent: "Sekar", x: 960, y: 330, at: 11.46 },
+          fe: { team: "Frontend", agent: "Nadia", x: 620, y: 560, at: 12.02 },
+          be: { team: "Backend", agent: "Arya", x: 1300, y: 560, at: 12.02 },
+          qa: { team: "QA", agent: "Wira", x: 960, y: 790, at: 12.55 },
+        };
+        const STATES = ["nunggu", "jalan", "dicek", "beres"];
+        const nodesEl = document.getElementById("nodes");
+        Object.entries(NODES).forEach(([id, n]) => {
+          const el = document.createElement("div");
+          el.className = "node";
+          el.id = "n-" + id;
+          el.style.left = n.x - NW / 2 + "px";
+          el.style.top = n.y + "px";
+          el.innerHTML =
+            '<div><div class="team">' + n.team + '</div><div class="meta">' +
+            STATES.map((s, i) => '<span class="st' + (i === 1 || i === 2 ? " on" : i === 3 ? " ok" : "") + '" id="st-' + id + "-" + s + '">' + n.agent + " · " + s + "</span>").join("") +
+            '</div></div><div class="mark" id="mk-' + id + '">' +
+            '<svg viewBox="0 0 24 24" class="ring-mark"><circle cx="12" cy="12" r="9" fill="none" stroke="#3a3a40" stroke-width="2.4" stroke-dasharray="4 3"></circle></svg>' +
+            '<svg viewBox="0 0 24 24"><path class="check" d="M5 12.5 L10 17.5 L19.5 6.5" fill="none" stroke="#7fb08a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"></path></svg></div>';
+          nodesEl.appendChild(el);
+          STATES.slice(1).forEach((s) => (document.getElementById("st-" + id + "-" + s).style.opacity = 0));
+          tl.fromTo(el, { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.9)" }, n.at);
+        });
+        const setState = (id, from, to, at) => {
+          tl.to("#st-" + id + "-" + from, { opacity: 0, duration: 0.12 }, at).fromTo("#st-" + id + "-" + to, { opacity: 0 }, { opacity: 1, duration: 0.18 }, at + 0.06);
+        };
+        const work = (id, from, to) => {
+          const mk = "#mk-" + id + " .ring-mark";
+          tl.to("#n-" + id, { borderColor: "#c9ccd4", boxShadow: "0 0 50px #c9ccd455, 0 24px 60px #000000aa", duration: 0.25 }, from);
+          tl.to(mk + " circle", { attr: { stroke: "#c9ccd4" }, duration: 0.2 }, from);
+          tl.fromTo(mk, { rotation: 0, transformOrigin: "50% 50%" }, { rotation: (to - from) * 220, duration: to - from, ease: "none" }, from);
+        };
+        const done = (id, at) => {
+          tl.to("#n-" + id, { borderColor: "#7fb08acc", boxShadow: "0 24px 60px #000000aa", duration: 0.3 }, at);
+          tl.to("#mk-" + id + " .ring-mark", { scale: 0.3, opacity: 0, duration: 0.2, ease: "power2.in" }, at);
+          tl.to("#mk-" + id + " .check", { attr: { "stroke-dashoffset": 0 }, duration: 0.35, ease: "power3.out" }, at + 0.12);
+        };
+
+        // edges
+        const edgesEl = document.getElementById("edges");
+        const geo = (a, b) => {
+          const x1 = a.x, y1 = a.y + NH, x2 = b.x, y2 = b.y - 12, m = (y1 + y2) / 2;
+          return { d: "M " + x1 + " " + y1 + " C " + x1 + " " + m + ", " + x2 + " " + m + ", " + x2 + " " + y2, x2, y2 };
+        };
+        const EDGES = [["orch", "fe", 12.3], ["orch", "be", 12.3], ["fe", "qa", 12.8], ["be", "qa", 12.8]];
+        EDGES.forEach(([a, b, at]) => {
+          const g = geo(NODES[a], NODES[b]);
+          const base = document.createElementNS(NS, "path");
+          base.setAttribute("d", g.d);
+          base.setAttribute("fill", "none");
+          base.setAttribute("stroke", "#3a3a40");
+          base.setAttribute("stroke-width", "3");
+          base.setAttribute("pathLength", "1");
+          base.setAttribute("stroke-dasharray", "1 1");
+          base.setAttribute("stroke-dashoffset", "1");
+          base.id = "e-" + a + "-" + b;
+          const flow = document.createElementNS(NS, "path");
+          flow.setAttribute("d", g.d);
+          flow.setAttribute("fill", "none");
+          flow.setAttribute("stroke", "#f2f2f0");
+          flow.setAttribute("stroke-width", "4");
+          flow.setAttribute("stroke-dasharray", "14 20");
+          flow.setAttribute("opacity", "0");
+          flow.id = "f-" + a + "-" + b;
+          const head = document.createElementNS(NS, "path");
+          head.setAttribute("d", "M " + (g.x2 - 11) + " " + (g.y2 - 14) + " L " + g.x2 + " " + (g.y2 + 2) + " L " + (g.x2 + 11) + " " + (g.y2 - 14) + " Z");
+          head.setAttribute("fill", "#3a3a40");
+          head.setAttribute("opacity", "0");
+          head.id = "h-" + a + "-" + b;
+          edgesEl.append(base, flow, head);
+          tl.to(base, { attr: { "stroke-dashoffset": 0 }, duration: 0.5, ease: "power2.inOut" }, at);
+          tl.to(head, { opacity: 1, duration: 0.15 }, at + 0.4);
+          // sparks with a light trail, riding the same curve
+          const sparks = [];
+          for (let k = 0; k < 4; k++) {
+            const s = document.createElement("div");
+            s.className = "spark";
+            s.style.offsetPath = "path('" + g.d + "')";
+            s.style.transform = "scale(" + (1 - k * 0.18) + ")";
+            document.getElementById("graph").appendChild(s);
+            sparks.push(s);
+          }
+          NODES[a + b] = sparks;
+        });
+        const travel = (a, b, from, to) => {
+          const sparks = NODES[a + b];
+          tl.to("#e-" + a + "-" + b, { attr: { stroke: "#c9ccd4", "stroke-width": 4 }, duration: 0.15 }, from);
+          tl.to("#h-" + a + "-" + b, { attr: { fill: "#c9ccd4" }, duration: 0.15 }, from);
+          tl.fromTo("#f-" + a + "-" + b, { opacity: 0, attr: { "stroke-dashoffset": 0 } }, { opacity: 0.6, attr: { "stroke-dashoffset": -(to - from) * 72 }, duration: to - from, ease: "none" }, from);
+          tl.to("#f-" + a + "-" + b, { opacity: 0, duration: 0.2 }, to);
+          sparks.forEach((s, k) => {
+            const lag = k * 0.035;
+            tl.fromTo(s, { offsetDistance: "0%", opacity: 0 }, { offsetDistance: "100%", opacity: 1 - k * 0.22, duration: to - from, ease: "power1.inOut" }, from + lag);
+            tl.to(s, { opacity: 0, duration: 0.12 }, to + lag);
+          });
+          tl.to("#e-" + a + "-" + b, { attr: { stroke: "#3a3a40", "stroke-width": 3 }, duration: 0.3 }, to + 0.1);
+          tl.to("#h-" + a + "-" + b, { attr: { fill: "#3a3a40" }, duration: 0.3 }, to + 0.1);
+        };
+
+        // captions
+        spacing("#cap-1", 11.46);
+        leave("#cap-1", 12.8);
+        slide(inner("#cap-2"), [13.11, 13.3]);
+        leave("#cap-2", 14.45);
+        slide(inner("#cap-3"), [14.73, 14.92]);
+        leave("#cap-3", 15.6, 0.22);
+        pop(splitChars(document.getElementById("cap-4")), 15.84, 0.04);
+
+        // the work moves
+        setState("orch", "nunggu", "jalan", 11.7);
+        work("orch", 11.7, 13.11);
+        travel("orch", "fe", 13.11, 13.75);
+        travel("orch", "be", 13.11, 13.75);
+        setState("fe", "nunggu", "jalan", 13.75);
+        setState("be", "nunggu", "jalan", 13.75);
+        work("fe", 13.75, 14.73);
+        work("be", 13.75, 14.73);
+        travel("fe", "qa", 14.73, 15.29);
+        travel("be", "qa", 14.73, 15.29);
+        setState("fe", "jalan", "beres", 14.8);
+        setState("be", "jalan", "beres", 14.8);
+        done("fe", 14.8);
+        done("be", 14.8);
+        setState("qa", "nunggu", "dicek", 15.29);
+        work("qa", 15.29, 15.84);
+        setState("qa", "dicek", "beres", 15.84);
+        done("qa", 15.84);
+        setState("orch", "jalan", "beres", 15.84);
+        done("orch", 15.84);
+        // the team dissolves into the finale
+        tl.to("#graph", { opacity: 0, scale: 1.04, filter: "blur(12px)", duration: 0.5, ease: "power2.in" }, 16.8);
+
+        // ---------- 5. finale ----------
+        tl.fromTo("#rose", { opacity: 0, scale: 1.3, filter: "blur(24px)" }, { opacity: 1, scale: 0.86, filter: "blur(0px)", duration: 0.5, ease: "power3.out", immediateRender: false }, 16.97);
+        tl.to("#rose", { scale: 0.82, duration: 6, ease: "none" }, 17.47);
+        spacing("#brand", 17.3, "0.12em");
+        pop(splitChars(document.getElementById("tagline")), 18.56, 0.035);
+        tl.fromTo("#url", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 19.66);
+        tl.to("#black", { opacity: 1, duration: 0.57, ease: "power1.in" }, 22.93);
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

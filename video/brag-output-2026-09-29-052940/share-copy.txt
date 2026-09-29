@@ -1,0 +1,6 @@
+Satu prompt. Satu tim AI. Di server lo sendiri.
+
+OpenLeira: lo kasih kerjaan ke Orchestrator, dia bagi ke tim (Frontend, Backend, QA), semua jalan barengan tanpa tabrakan, dan dicek QA dulu sebelum dianggap beres.
+
+Claude Code · Codex · Cursor · OpenCode, satu kanvas, di server lo sendiri.
+openleira.online
