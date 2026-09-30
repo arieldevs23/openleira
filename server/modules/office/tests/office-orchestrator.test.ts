@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -19,7 +19,7 @@ import type {
 import { createOfficeOrchestrator } from '@/modules/office/services/office-orchestrator.service.js';
 import { officeService } from '@/modules/office/services/office.service.js';
 import { connectedClients } from '@/modules/websocket/index.js';
-import type { OfficeCase, OfficeSnapshot } from '@/shared/types.js';
+import type { OfficeCase, OfficeSnapshot, OfficeWorkspaceKind } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
 type TurnKind = 'plan' | 'checkpoint' | 'final' | 'task' | 'revision' | 'audit' | 'retry';
@@ -108,7 +108,7 @@ const PLAN = json({
 const PASS = json({ pass: true, notes: 'checked', fixes: [] });
 const FAIL = json({ pass: false, notes: 'missing test', fixes: ['add a test'] });
 
-async function withOffice(run: (snapshot: OfficeSnapshot) => Promise<void>): Promise<void> {
+async function withOffice(run: (snapshot: OfficeSnapshot) => Promise<void>, kind?: OfficeWorkspaceKind): Promise<void> {
   const previousDatabasePath = process.env.DATABASE_PATH;
   const directory = await mkdtemp(path.join(tmpdir(), 'office-orchestrator-'));
   closeConnection();
@@ -118,7 +118,8 @@ async function withOffice(run: (snapshot: OfficeSnapshot) => Promise<void>): Pro
   try {
     const { project } = projectsDb.createProjectPath(path.join(directory, 'project'));
     assert.ok(project);
-    const snapshot = officeService.createOffice({ projectId: project.project_id, locale: 'en' });
+    await mkdir(path.join(directory, 'project'), { recursive: true });
+    const snapshot = officeService.createOffice({ projectId: project.project_id, locale: 'en', kind });
     for (const division of snapshot.divisions) {
       officesDb.updateAgent(division.agent.id, { provider: 'claude', model: 'sonnet' });
     }
@@ -782,3 +783,34 @@ test('a restart parks running cases and re-queues their running tasks', async ()
     assert.equal(task?.sessionId, 'kept-session');
   });
 });
+
+test('a finance workspace records the files a task wrote by script, and audits by recomputing', async () => {
+  await withOffice(async ({ office }) => {
+    const { runner, turns } = createScriptedRunner(async (turn) => {
+      if (turn.kind === 'plan') {
+        return { text: json({ summary: 'one report', tasks: [{ id: 'T1', division_slug: 'data', title: 'Clean', instruction: 'Clean the data', depends_on: [] }] }) };
+      }
+      if (turn.kind === 'task') {
+        // What a Python script would do: no write tool call, just a file on disk.
+        await mkdir(path.join(turn.request.projectPath, 'hasil'), { recursive: true });
+        await writeFile(path.join(turn.request.projectPath, 'hasil', 'data-bersih.xlsx'), 'bytes');
+        return { text: 'done\n\n## Summary\ncleaned' };
+      }
+      if (turn.kind === 'audit') return { text: PASS };
+      if (turn.kind === 'final') return { text: 'Report ready.' };
+      throw new Error(`unexpected turn ${turn.kind}`);
+    });
+    const orchestrator = createOfficeOrchestrator({ runner, listSkills: async () => [] });
+    const created = officeService.createCase(office.id, { title: 'Sales report', description: '', createdBy: '7' });
+    orchestrator.startCase(office.id, created.id);
+    const finished = await waitFor(created.id, isFinished);
+
+    assert.equal(finished.status, 'done');
+    const [task] = officeCasesDb.listTasks(created.id);
+    assert.deepEqual(task.changedFiles, ['hasil/data-bersih.xlsx']);
+    const auditPrompt = turns.find((turn) => turn.kind === 'audit')?.request.prompt ?? '';
+    assert.match(auditPrompt, /recompute the key figures/);
+    assert.doesNotMatch(auditPrompt, /git diff/);
+  }, 'finance');
+});
+

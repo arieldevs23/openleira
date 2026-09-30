@@ -269,6 +269,8 @@ CREATE TABLE IF NOT EXISTS offices (
     name TEXT NOT NULL,
     -- Language the seeded divisions were written in and agents answer in.
     locale TEXT NOT NULL DEFAULT 'id',
+    -- What kind of work the workspace does: coding, content, finance or admin.
+    kind TEXT NOT NULL DEFAULT 'coding',
     -- How many task/audit sessions may run at the same time for one case.
     max_parallel INTEGER NOT NULL DEFAULT 2,
     -- Permission mode every office session runs with.

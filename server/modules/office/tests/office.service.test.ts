@@ -58,6 +58,44 @@ test('creating an office seeds the coordinator, six divisions and the audit laye
   });
 });
 
+test('each workspace kind seeds its own teams and flow; coding stays the default', async () => {
+  await withProject(async (projectId) => {
+    const expected = {
+      content: ['coordinator', 'research', 'copywriter', 'social', 'visual', 'audit'],
+      finance: ['coordinator', 'data', 'analyst', 'report', 'audit'],
+      admin: ['coordinator', 'sorter', 'forms', 'archive', 'audit'],
+    } as const;
+    for (const [kind, slugs] of Object.entries(expected)) {
+      const snapshot = officeService.createOffice({ projectId, locale: 'en', kind });
+      assert.equal(snapshot.office.kind, kind);
+      assert.deepEqual(snapshot.divisions.map((division) => division.slug), slugs);
+      assert.ok(snapshot.flow.length > 0);
+      const audit = snapshot.divisions.find((division) => division.isAudit);
+      assert.doesNotMatch(audit?.agent.rolePrompt ?? '', /git diff/);
+      officeService.deleteOffice(snapshot.office.id);
+    }
+
+    // Finance: data → analyst → report.
+    const finance = officeService.createOffice({ projectId, locale: 'id', kind: 'finance' });
+    const slugOf = new Map(finance.divisions.map((division) => [division.id, division.slug]));
+    assert.deepEqual(finance.flow.map((edge) => `${slugOf.get(edge.fromDivisionId)}>${slugOf.get(edge.toDivisionId)}`).sort(), ['analyst>report', 'data>analyst']);
+    officeService.deleteOffice(finance.office.id);
+
+    assert.throws(() => officeService.createOffice({ projectId, locale: 'en', kind: 'poetry' }), rejectsWith('INVALID_OFFICE_INPUT'));
+    // Teams proposed by an app analysis always make a coding workspace.
+    const analysed = officeService.createOffice({
+      projectId,
+      locale: 'en',
+      kind: 'content',
+      divisions: [{ name: 'API', slug: 'api', description: '', color: '#123456', agentName: 'Ana', rolePrompt: 'owns /api' }],
+    });
+    assert.equal(analysed.office.kind, 'coding');
+    officeService.deleteOffice(analysed.office.id);
+
+    assert.equal(officeService.createOffice({ projectId, locale: 'en' }).office.kind, 'coding');
+  });
+});
+
 test('divisions get unique slugs, and the coordinator and audit layer cannot be deleted', async () => {
   await withProject(async (projectId) => {
     const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });

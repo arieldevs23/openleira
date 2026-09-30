@@ -1,7 +1,8 @@
-import { ChevronRight, Copy, Download, File, FileArchive, Folder, FolderOpen, Loader2 } from 'lucide-react';
-import { useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { ChevronRight, Copy, Download, File, FileArchive, Folder, FolderOpen, Loader2, Upload } from 'lucide-react';
+import { useMemo, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ResultFilePreview from '@/modules/office/ResultFilePreview';
 import { downloadResultFile, downloadResultFilesZip, downloadResultFolderZip } from '@/modules/office/utils/resultDownloads';
 import { api, readApiJson } from '@/shared/api';
 import { ContextMenu } from '@/shared/ui';
@@ -41,7 +42,9 @@ type ResultFilesPanelProps = {
 /**
  * "Where did the result go": the workspace folder the agents worked in, and
  * a file-explorer tree of every file the case's tasks wrote or edited, with a
- * preview of the picked file. Shown in the office page's right panel.
+ * preview of the picked file (text, spreadsheets, Word, PDF, images). The
+ * user can also upload material (sales data, invoices, documents) into the
+ * folder for the agents to work from. Shown in the office page's right panel.
  */
 export default function ResultFilesPanel({ projectId, projectPath, tasks, divisions }: ResultFilesPanelProps) {
   const { t } = useTranslation('office');
@@ -49,10 +52,9 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   // The file shown in the preview.
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  // Preview of the selected file: its text, or why it could not be read.
-  const [preview, setPreview] = useState<{ path: string; content: string | null; error: string | null } | null>(null);
-  // Preview request in flight.
-  const [isLoading, setIsLoading] = useState(false);
+  // Material the user uploaded in this panel (the uploaded paths), or why the upload failed.
+  const [upload, setUpload] = useState<{ busy: boolean; files: string[]; error: string | null }>({ busy: false, files: [], error: null });
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   // Brief "copied" confirmation next to the folder path.
   const [copied, setCopied] = useState(false);
   // The right-click menu and the file, folder or workspace root it was opened on.
@@ -77,16 +79,25 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
   const outsideFiles = files.filter((file) => file.path.startsWith('/'));
   const tree = useMemo(() => buildTree(insideFiles), [insideFiles]);
 
-  const openFile = async (filePath: string) => {
-    setSelectedPath(filePath);
-    setIsLoading(true);
+  const openFile = (filePath: string) => setSelectedPath(filePath);
+
+  /** Uploads the picked files into the material folder, next to where the agents work. */
+  const uploadMaterial = async (event: ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (picked.length === 0) return;
+    const folder = t('files.materialsFolder');
+    const formData = new FormData();
+    formData.append('targetPath', folder);
+    formData.append('requestedFileCount', String(picked.length));
+    formData.append('relativePaths', JSON.stringify(picked.map((file) => file.name)));
+    picked.forEach((file) => formData.append('files', file));
+    setUpload({ busy: true, files: [], error: null });
     try {
-      const body = await readApiJson<{ content: string }>(await api.readFile(projectId, filePath));
-      setPreview({ path: filePath, content: body.content, error: null });
+      await readApiJson(await api.uploadFiles(projectId, formData));
+      setUpload({ busy: false, files: picked.map((file) => `${folder}/${file.name}`), error: null });
     } catch (error) {
-      setPreview({ path: filePath, content: null, error: error instanceof Error ? error.message : String(error) });
-    } finally {
-      setIsLoading(false);
+      setUpload({ busy: false, files: [], error: error instanceof Error ? error.message : String(error) });
     }
   };
 
@@ -149,7 +160,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
     <li key={file.path}>
       <button
         type="button"
-        onClick={() => void openFile(file.path)}
+        onClick={() => openFile(file.path)}
         onContextMenu={(event) => openMenu(event, { kind: 'file', path: file.path })}
         className={cn(
           'flex w-full items-center gap-1.5 rounded-md py-1 pr-2 text-left text-xs hover:bg-muted/60',
@@ -227,6 +238,32 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
         {copied && <span className="text-[10px] text-ok">{t('files.copied')}</span>}
         <span className="mt-1 block text-[10px] text-muted-foreground">{t('files.rightClickHint')}</span>
       </div>
+      <div className="rounded-[10px] border border-dashed border-border p-2.5" data-testid="office-materials">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 text-[11px] text-muted-foreground">{t('files.materialsHint', { folder: t('files.materialsFolder') })}</span>
+          <button
+            type="button"
+            onClick={() => uploadInputRef.current?.click()}
+            disabled={upload.busy}
+            className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-foreground hover:bg-muted disabled:opacity-60"
+          >
+            {upload.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+            {t('files.uploadMaterial')}
+          </button>
+          <input ref={uploadInputRef} type="file" multiple className="hidden" onChange={(event) => void uploadMaterial(event)} data-testid="office-materials-input" />
+        </div>
+        {upload.files.length > 0 && (
+          <ul className="mt-1.5 space-y-0.5" aria-label={t('files.uploaded')}>
+            {upload.files.map((filePath) => (
+              <li key={filePath}>
+                <button type="button" onClick={() => openFile(filePath)} className="truncate font-mono text-[11px] text-primary hover:underline" title={filePath}>{filePath}</button>
+              </li>
+            ))}
+            <li className="text-[10.5px] text-muted-foreground">{t('files.uploadedHint')}</li>
+          </ul>
+        )}
+        {upload.error && <p className="mt-1 text-[11px] text-err">{upload.error}</p>}
+      </div>
       {download.busy && (
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />{t('files.preparing')}</p>
       )}
@@ -255,15 +292,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
       {selectedPath && (
         <div className="space-y-1">
           <span className="block truncate font-mono text-[11px] text-muted-foreground" title={selectedPath}>{selectedPath}</span>
-          {isLoading ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('loading')}</div>
-          ) : preview?.error ? (
-            <p className="text-xs text-err">{preview.error}</p>
-          ) : (
-            <pre className="max-h-80 overflow-auto rounded-[10px] border border-border bg-muted/40 p-2 text-[11px] leading-relaxed" data-testid="office-file-preview">
-              {preview?.content ?? ''}
-            </pre>
-          )}
+          <ResultFilePreview projectId={projectId} filePath={selectedPath} />
         </div>
       )}
     </div>

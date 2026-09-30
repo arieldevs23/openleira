@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-import type { FileStatusCode, LLMProvider, McpProvider, McpScope, McpTransport, SettingsMainTab } from '@/shared/types';
+import type { FileStatusCode, LLMProvider, McpProvider, McpScope, McpTransport, OfficeWorkspaceKind, SettingsMainTab } from '@/shared/types';
 import type { UserPreferenceKey } from '@/shared/userSettings';
 
 /** The four buckets the git changes view sorts working-tree files into. */
@@ -233,3 +233,12 @@ export const PROVIDER_PERMISSION_PREFERENCE_KEYS: Record<LLMProvider, UserPrefer
   codex: 'codexPermissions',
   opencode: 'opencodePermissions',
 };
+
+// ---------------------------
+//----------------- OFFICE WORKSPACE KINDS ------------
+
+/**
+ * Every workspace kind, in the order the "add workspace" dialog offers them.
+ * The office module uses it for the kind picker and the kind icon/label.
+ */
+export const OFFICE_WORKSPACE_KINDS: OfficeWorkspaceKind[] = ['coding', 'content', 'finance', 'admin'];

@@ -1770,12 +1770,22 @@ export type OfficeMessageKind = 'assign' | 'result' | 'question' | 'audit_pass' 
 /** Permission mode every session of an office runs with. */
 export type OfficePermissionMode = 'bypassPermissions' | 'acceptEdits' | 'default';
 
+/**
+ * What kind of work a workspace does: `coding` (a code repository),
+ * `content` (sales & marketing content), `finance` (business & financial
+ * reports) or `admin` (documents & filing). Picks the starting teams and
+ * how their results are checked; chosen when the workspace is created.
+ */
+export type OfficeWorkspaceKind = 'coding' | 'content' | 'finance' | 'admin';
+
 /** One office (one per project) with its run settings. */
 export type Office = {
   id: string;
   projectPath: string;
   name: string;
   locale: string;
+  /** What kind of work the workspace does; old workspaces are `coding`. */
+  kind: OfficeWorkspaceKind;
   maxParallel: number;
   permissionMode: OfficePermissionMode;
   permissionWarningAcknowledged: boolean;

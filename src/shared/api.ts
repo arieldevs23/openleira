@@ -5,7 +5,7 @@ import {
 } from '@/shared/authToken';
 import { IS_PLATFORM } from '@/shared/utils';
 import { readVoiceConfig, voiceConfigHeaders } from '@/shared/voiceConfig';
-import type { OfficeShape, OfficeShapePatch } from '@/shared/types';
+import type { OfficeShape, OfficeShapePatch, OfficeWorkspaceKind } from '@/shared/types';
 
 // Headers are a plain record rather than the full `HeadersInit` union so the
 // defaults below can be merged with a caller's headers by spreading.
@@ -291,6 +291,14 @@ export const api = {
   // Uploads with a progress bar go through XMLHttpRequest, which needs the URL.
   uploadFilesUrl: (projectId: string) =>
     `/api/file-tree/projects/${encodeURIComponent(projectId)}/files/upload`,
+  // Plain upload (no progress bar) of a form built like the file tree's:
+  // `files`, `targetPath`, `relativePaths` and `requestedFileCount`.
+  uploadFiles: (projectId: string, formData: FormData) =>
+    authenticatedFetch(`/api/file-tree/projects/${encodeURIComponent(projectId)}/files/upload`, {
+      method: 'POST',
+      headers: {}, // Let the browser set the multipart Content-Type.
+      body: formData,
+    }),
 
   // Browse filesystem for project suggestions
   browseFilesystem: (dirPath: string | null = null) =>
@@ -428,8 +436,11 @@ export const api = {
   // Kantor AI: one office per project, its divisions/agents, cases and controls.
   office: {
     forProject: (projectId: string) => get(`/api/office${query({ projectId })}`),
-    create: (projectId: string, locale: string, extra: { divisions?: unknown[]; appSummary?: string | null } = {}) =>
-      post('/api/office', { projectId, locale, ...extra }),
+    create: (
+      projectId: string,
+      locale: string,
+      extra: { divisions?: unknown[]; appSummary?: string | null; kind?: OfficeWorkspaceKind } = {},
+    ) => post('/api/office', { projectId, locale, ...extra }),
     workspaces: () => get('/api/office/workspaces'),
     remove: (officeId: string) => del(`/api/office/${encodeURIComponent(officeId)}`),
     prepareFolder: (path: string, mode: 'new' | 'existing') => post('/api/office/folders', { path, mode }),

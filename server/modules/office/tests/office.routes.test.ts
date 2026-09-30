@@ -63,11 +63,13 @@ test('office lookup needs a projectId and office creation passes the locale thro
     assert.equal((await request('GET', '/api/office')).status, 400);
     assert.equal((await request('GET', '/api/office?projectId=p1')).status, 200);
     assert.equal((await request('POST', '/api/office', { projectId: 'p1', locale: 'en' })).status, 201);
+    assert.equal((await request('POST', '/api/office', { projectId: 'p1', locale: 'en', kind: 'finance' })).status, 201);
     assert.equal((await request('POST', '/api/office', { locale: 'en' })).status, 400);
   });
   assert.deepEqual(calls, [
     { method: 'office.getSnapshotForProject', args: ['p1'] },
-    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null }] },
+    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null, kind: null }] },
+    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null, kind: 'finance' }] },
   ]);
 });
 
@@ -217,5 +219,6 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     locale: null,
     divisions: [{ name: 'API', slug: '', description: '', color: '', agentName: '', rolePrompt: 'owns /api' }],
     appSummary: 'a shop',
+    kind: null,
   });
 });

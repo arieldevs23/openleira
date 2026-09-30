@@ -1,0 +1,1 @@
+Satu prompt, satu tim AI yang beneran kerja bareng — Claude Code, Codex, Cursor, OpenCode — di server lo sendiri. Orchestrator bagi tugas, tiap tim jalan barengan, semua dicek QA dulu. openleira.online

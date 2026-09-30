@@ -39,6 +39,7 @@ import {
   MAX_AUDIT_RETRIES,
   planSchedulerStep,
 } from '@/modules/office/services/office-scheduler.service.js';
+import { diffFolderSnapshots, snapshotFolder } from '@/modules/office/services/office-folder-snapshot.service.js';
 import { officeService } from '@/modules/office/services/office.service.js';
 import type {
   LLMProvider,
@@ -700,6 +701,7 @@ export function createOfficeOrchestrator(dependencies: {
     const skills = await resolvePromptSkills(context.coordinator.agent, context.office.projectPath);
     const prompt = buildCoordinatorPlanPrompt({
       locale: context.office.locale,
+      kind: context.office.kind,
       coordinator: context.coordinator,
       caseItem: context.caseItem,
       workers: context.workers,
@@ -796,6 +798,7 @@ export function createOfficeOrchestrator(dependencies: {
 
     const turn = await coordinatorTurn(context, handle, buildCoordinatorFinalPrompt({
       locale: context.office.locale,
+      kind: context.office.kind,
       tasks,
       divisionsById: context.divisionsById,
       userNotes: notes.filter((note) => !isFailureNote(note)),
@@ -903,6 +906,7 @@ export function createOfficeOrchestrator(dependencies: {
       ? buildTaskRevisionPrompt({ locale: context.office.locale, attempt: task.attempts, feedback: task.auditNotes ?? '' })
       : buildTaskPrompt({
         locale: context.office.locale,
+        kind: context.office.kind,
         division,
         caseItem: context.caseItem,
         task,
@@ -913,6 +917,9 @@ export function createOfficeOrchestrator(dependencies: {
         concurrentWork: describeConcurrentWork(context),
       });
 
+    // Outside coding, results are mostly files that scripts write (reports,
+    // spreadsheets), which tool calls never show; compare the folder instead.
+    const before = context.office.kind === 'coding' ? null : await snapshotFolder(context.office.projectPath);
     const turn = await runAgentTurn(context, handle, {
       division,
       sessionId: task.sessionId,
@@ -924,6 +931,14 @@ export function createOfficeOrchestrator(dependencies: {
         }
       },
     });
+    if (before) {
+      const after = await snapshotFolder(context.office.projectPath);
+      const written = after ? diffFolderSnapshots(before, after) : [];
+      const current = officeCasesDb.getTask(taskId);
+      if (current && written.some((filePath) => !current.changedFiles.includes(filePath))) {
+        saveTask(context.office.id, taskId, { changedFiles: [...new Set([...current.changedFiles, ...written])] });
+      }
+    }
     if (handle.cancelled) {
       return;
     }
@@ -968,6 +983,7 @@ export function createOfficeOrchestrator(dependencies: {
       sessionTitle,
       prompt: buildAuditPrompt({
         locale: context.office.locale,
+        kind: context.office.kind,
         auditDivision,
         workerDivision,
         caseItem: context.caseItem,

@@ -1,4 +1,4 @@
-import type { OfficeCase, OfficeDivision, OfficeMessage, OfficeTask } from '@/shared/types.js';
+import type { OfficeCase, OfficeDivision, OfficeMessage, OfficeTask, OfficeWorkspaceKind } from '@/shared/types.js';
 
 /**
  * Pure prompt builders for every office turn.
@@ -158,8 +158,38 @@ const CHECKPOINT_JSON_SHAPE = `{
   "question": null
 }`;
 
-const withRolePrompt = (division: OfficeDivision): string => [
-  `You are ${division.agent.name}, the agent of the "${division.name}" division in an AI office working on this repository.`,
+/** What the workspace folder holds, in words that fit its kind (defaults to a code repository). */
+const describeFolder = (kind: OfficeWorkspaceKind = 'coding'): string => (
+  kind === 'coding' ? 'this repository' : 'this workspace folder (documents, data and results)'
+);
+
+/** How the audit layer verifies a task in each kind of workspace. */
+const AUDIT_CHECK_BY_KIND: Record<OfficeWorkspaceKind, string> = {
+  coding: 'Verify the work in the repository (read the changed files, check git diff, run relevant tests when possible). Do not fix the work yourself.',
+  content: 'Verify the work in the folder: open the result files, compare product facts (prices, specs, promos) with the source material, and check claims, tone, typos and platform fit. Do not fix the work yourself.',
+  finance: 'Verify the work in the folder: recompute the key figures from the source data with your own script, check that totals add up, periods and units are consistent and the original files are unchanged, and open the result files. Do not fix the work yourself.',
+  admin: 'Verify the work in the folder: check the documents are complete, the data in forms and letters matches the source documents (nothing invented), names and folders are consistent and no original file was lost or overwritten. Do not fix the work yourself.',
+};
+
+/** Extra working rules for teams outside a code repository. */
+const WORK_RULES_BY_KIND: Record<OfficeWorkspaceKind, string[]> = {
+  coding: [],
+  content: [
+    '- Save every deliverable as a file in the folder (for example .md, .docx or .xlsx) and name it in your summary.',
+    '- Never invent prices, discounts, testimonials or product claims that the material does not back up.',
+  ],
+  finance: [
+    '- Compute every figure with a script (Python or Node) from the source data, never by hand; keep the script next to the result.',
+    '- Never change the original data files; write cleaned data and reports as new files and name them in your summary.',
+  ],
+  admin: [
+    '- Never delete, move or overwrite the user\'s original documents; copy them when a new structure is needed.',
+    '- Never invent personal or official data; leave it blank with a clear marker and list it in your summary.',
+  ],
+};
+
+const withRolePrompt = (division: OfficeDivision, kind: OfficeWorkspaceKind = 'coding'): string => [
+  `You are ${division.agent.name}, the agent of the "${division.name}" division in an AI office working on ${describeFolder(kind)}.`,
   '',
   '## Your role',
   division.agent.rolePrompt.trim() || '(no extra role instructions)',
@@ -191,11 +221,14 @@ export function buildCoordinatorPlanPrompt(input: {
   workspace?: { name: string; projectPath: string };
   recentCases?: PromptRecentCase[];
   concurrentWork?: PromptConcurrentWork[];
+  /** What kind of work the workspace does; omitted means `coding`. */
+  kind?: OfficeWorkspaceKind;
 }): string {
   const notes = describeNotes(input.notes);
   const concurrent = describeConcurrentWork(input.concurrentWork ?? []);
+  const kind = input.kind ?? 'coding';
   return [
-    withRolePrompt(input.coordinator),
+    withRolePrompt(input.coordinator, kind),
     describeSkills(input.skills),
     '',
     input.workspace ? `${describeWorkspace(input.workspace, input.recentCases ?? [])}\n` : '',
@@ -209,7 +242,9 @@ export function buildCoordinatorPlanPrompt(input: {
     describeFlow(input.flow ?? []),
     '',
     '## What to do now',
-    'Look at the repository as much as you need, then split the case into sub-tasks for the divisions above.',
+    kind === 'coding'
+      ? 'Look at the repository as much as you need, then split the case into sub-tasks for the divisions above.'
+      : 'Look at the files in the folder (source material, data, earlier results) as much as you need, then split the case into sub-tasks for the divisions above; say in each instruction which files to use and which result file to produce.',
     'Every finished task is checked by the audit division automatically; do not create audit tasks yourself.',
     'A task only sees the results of the tasks it depends on, so list every task whose output it needs in "depends_on".',
     'Independent tasks may run in parallel. Use as few tasks as the case really needs.',
@@ -279,6 +314,8 @@ export function buildCoordinatorFinalPrompt(input: {
   tasks: OfficeTask[];
   divisionsById: Map<string, OfficeDivision>;
   userNotes: OfficeMessage[];
+  /** What kind of work the workspace does; omitted means `coding`. */
+  kind?: OfficeWorkspaceKind;
 }): string {
   const userNotes = describeNotes(input.userNotes);
   const taskReports = input.tasks.map((task) => {
@@ -295,7 +332,9 @@ export function buildCoordinatorFinalPrompt(input: {
     taskReports.join('\n\n'),
     '',
     '## What to do now',
-    'Write the final report for the user in markdown: what was done (with the key files), what failed or is still open, and what the user should check or run next.',
+    (input.kind ?? 'coding') === 'coding'
+      ? 'Write the final report for the user in markdown: what was done (with the key files), what failed or is still open, and what the user should check or run next.'
+      : 'Write the final report for the user in markdown: what was done (with the result files to open), what failed or is still open, and what the user should check or decide next.',
     'Be honest and concrete; do not claim anything the results above do not show. Do not output JSON.',
     languageLine(input.locale),
   ].join('\n');
@@ -317,7 +356,10 @@ export function buildTaskPrompt(input: {
   handsOffTo?: Array<{ name: string }>;
   /** Other work items running in the workspace at the same time. */
   concurrentWork?: PromptConcurrentWork[];
+  /** What kind of work the workspace does; omitted means `coding`. */
+  kind?: OfficeWorkspaceKind;
 }): string {
+  const kind = input.kind ?? 'coding';
   const handsOffTo = input.handsOffTo ?? [];
   const concurrent = describeConcurrentWork(input.concurrentWork ?? []);
   const dependencies = input.dependencyResults.map((result) => [
@@ -325,7 +367,7 @@ export function buildTaskPrompt(input: {
     result.summary.trim() || '(no summary)',
   ].join('\n'));
   return [
-    withRolePrompt(input.division),
+    withRolePrompt(input.division, kind),
     describeSkills(input.skills),
     '',
     '## The overall case (context only)',
@@ -337,7 +379,7 @@ export function buildTaskPrompt(input: {
       ? `\n## Results from other divisions, forwarded by the coordinator\n${dependencies.join('\n\n')}`
       : '',
     input.resumedAfterRestart
-      ? '\nThe server restarted while you worked on this. Check what is already done in the repository and finish the rest.'
+      ? `\nThe server restarted while you worked on this. Check what is already done in ${describeFolder(kind)} and finish the rest.`
       : '',
     concurrent ? `\n${concurrent}` : '',
     '',
@@ -345,6 +387,7 @@ export function buildTaskPrompt(input: {
     '- Work only on your task and stay inside your field; other divisions handle the rest.',
     '- Nobody can answer questions mid-task. Make a sensible assumption and state it.',
     '- Your work is checked by the audit division before it counts as done.',
+    ...WORK_RULES_BY_KIND[kind],
     `- ${languageLine(input.locale)}`,
     `- End your answer with a section headed exactly "${summaryHeading(input.locale)}" containing: what you did, files changed, how to verify, and open issues.`,
     ...(handsOffTo.length > 0
@@ -372,9 +415,12 @@ export function buildAuditPrompt(input: {
   caseItem: Pick<OfficeCase, 'title' | 'description'>;
   task: Pick<OfficeTask, 'ref' | 'title' | 'instruction' | 'resultSummary' | 'attempts'>;
   skills: PromptSkill[];
+  /** What kind of work the workspace does; omitted means `coding`. */
+  kind?: OfficeWorkspaceKind;
 }): string {
+  const kind = input.kind ?? 'coding';
   return [
-    withRolePrompt(input.auditDivision),
+    withRolePrompt(input.auditDivision, kind),
     describeSkills(input.skills),
     '',
     '## The overall case (context only)',
@@ -388,7 +434,7 @@ export function buildAuditPrompt(input: {
     input.task.resultSummary?.trim() || '(no summary)',
     '',
     '## What to do now',
-    'Verify the work in the repository (read the changed files, check git diff, run relevant tests when possible). Do not fix the work yourself.',
+    AUDIT_CHECK_BY_KIND[kind],
     'Pass it if the instruction is met. Fail it only for concrete problems, and list the fixes needed.',
     languageLine(input.locale),
     '',

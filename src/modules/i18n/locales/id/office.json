@@ -63,6 +63,28 @@
     "audit_fail": "gagal audit",
     "note": "catatan"
   },
+  "workspaceKinds": {
+    "coding": {
+      "title": "Coding",
+      "body": "bikin atau rawat aplikasi di sebuah repo kode.",
+      "teams": "Planner · Designer · Backend · Frontend · Security · Docs"
+    },
+    "content": {
+      "title": "Konten & Penjualan",
+      "body": "naskah jualan, caption, kalender konten, dan brief desain dari bahan produk lo.",
+      "teams": "Riset Pasar · Copywriter · Konten Sosmed · Brief Visual"
+    },
+    "finance": {
+      "title": "Laporan & Keuangan",
+      "body": "olah data penjualan/keuangan jadi laporan Word, Excel, atau PDF. angkanya dihitung pakai script dan dicek ulang QA.",
+      "teams": "Pengolah Data · Analis Bisnis · Penulis Laporan"
+    },
+    "admin": {
+      "title": "Administrasi & Pemberkasan",
+      "body": "sortir berkas, isi formulir dan surat, rapikan arsip.",
+      "teams": "Penyortir Dokumen · Form & Surat · Pengarsip"
+    }
+  },
   "tree": {
     "label": "canvas workspace",
     "caseNode": "kerjaan",
@@ -319,7 +341,13 @@
     "tokenNew": "tempel token buat clone ini",
     "githubHint": "token diatur di Pengaturan. URL SSH pakai SSH key server tempat app ini jalan. agent push dan pull pakai akses yang sama.",
     "clone": "clone",
-    "cloneNoPath": "clone-nya kelar tapi ga ngasih tau foldernya di mana."
+    "cloneNoPath": "clone-nya kelar tapi ga ngasih tau foldernya di mana.",
+    "kindIntro": "workspace ini buat kerjaan apa?",
+    "workNewBody": "mulai dari folder baru yang masih kosong. bahan kerja bisa lo upload nanti dari tab file.",
+    "workExistingTitle": "folder yang udah ada",
+    "workExistingBody": "folder yang udah berisi dokumen, data, atau bahan kerja lo. file asli nggak diubah atau dihapus.",
+    "workExistingFolderHint": "folder dokumen/datanya. agent kerja di folder ini dan nyimpen hasil di subfolder hasil/.",
+    "privacyNote": "server-nya punya lo, tapi isi file yang dibaca agent tetap dikirim ke penyedia AI (Anthropic, OpenAI, dll.) waktu kerja. jangan taruh data yang nggak boleh keluar. hasil hitungan dan dokumen tetap perlu lo cek sebelum dipakai."
   },
   "menu": {
     "label": "aksi",
@@ -369,7 +397,17 @@
     "downloadMenu": "download",
     "rightClickHint": "klik kanan file atau folder buat download.",
     "preparing": "lagi nyiapin download…",
-    "menu": "aksi file"
+    "menu": "aksi file",
+    "materialsFolder": "bahan",
+    "materialsHint": "bahan kerja (data penjualan, nota, dokumen) diupload ke folder {{folder}}/ biar bisa dibaca agent.",
+    "uploadMaterial": "upload bahan",
+    "uploaded": "bahan yang barusan diupload",
+    "uploadedHint": "sebut nama file ini waktu ngasih kerjaan ke koordinator.",
+    "previewFailed": "file ini nggak bisa dibuka buat preview.",
+    "noPreview": "belum ada preview buat jenis file ini. klik kanan buat download.",
+    "sheetCount": "{{count}} sheet (yang ditampilin sheet pertama)",
+    "emptySheet": "sheet-nya kosong.",
+    "truncated": "cuma sebagian yang ditampilin. download buat lihat semuanya."
   },
   "usage": {
     "loading": "lagi baca pemakaian token...",

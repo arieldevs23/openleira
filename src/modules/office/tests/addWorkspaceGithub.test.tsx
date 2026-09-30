@@ -58,6 +58,7 @@ test('a workspace can start from a GitHub repository cloned with a stored token'
       analyses={[]}
     />,
   );
+  fireEvent.click(screen.getByTestId('office-kind-coding'));
   fireEvent.click(screen.getByTestId('office-add-github'));
   fireEvent.change(screen.getByRole('textbox', { name: 'Repository URL' }), { target: { value: 'https://github.com/acme/shop' } });
   fireEvent.change(screen.getByRole('textbox', { name: 'Folder' }), { target: { value: '/srv/work' } });

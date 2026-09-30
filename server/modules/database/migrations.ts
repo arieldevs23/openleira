@@ -506,6 +506,8 @@ const createOfficeTables = (db: Database): void => {
   db.exec(OFFICE_SHAPES_TABLE_SCHEMA_SQL);
   db.exec('CREATE INDEX IF NOT EXISTS idx_office_skill_nodes_office ON office_skill_nodes(office_id)');
   // Columns added after the first office release; older databases get them here.
+  const officeColumns = (db.prepare('PRAGMA table_info(offices)').all() as { name: string }[]).map((column) => column.name);
+  addColumnToTableIfNotExists(db, 'offices', officeColumns, 'kind', "TEXT NOT NULL DEFAULT 'coding'");
   const divisionColumns = (db.prepare('PRAGMA table_info(office_divisions)').all() as { name: string }[]).map((column) => column.name);
   addColumnToTableIfNotExists(db, 'office_divisions', divisionColumns, 'pos_x', 'REAL');
   addColumnToTableIfNotExists(db, 'office_divisions', divisionColumns, 'pos_y', 'REAL');
