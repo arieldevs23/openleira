@@ -35,7 +35,7 @@ const division = (slug: string, rolePrompt = ''): OfficeDivision => ({
 
 const workspace = (projectId: string, name: string, activeCases = 0): OfficeWorkspaceSummary => ({
   office: {
-    id: `office-${projectId}`, projectPath: `/srv/${projectId}`, name, locale: 'en', maxParallel: 2,
+    id: `office-${projectId}`, projectPath: `/srv/${projectId}`, name, locale: 'en', kind: 'coding', maxParallel: 2,
     permissionMode: 'bypassPermissions', permissionWarningAcknowledged: true, createdAt: NOW, updatedAt: NOW,
   },
   projectId,

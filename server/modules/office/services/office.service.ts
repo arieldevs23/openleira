@@ -15,6 +15,7 @@ import type {
   OfficeDivisionProposal,
   OfficeFlowEdge,
   OfficePermissionMode,
+  OfficeWorkspaceKind,
   OfficeWorkspaceSummary,
   OfficeSessionUsage,
   OfficeShape,
@@ -24,7 +25,7 @@ import type {
   OfficeSnapshot,
   ProviderAuthStatus,
 } from '@/shared/types.js';
-import { AppError, validateWorkspacePath } from '@/shared/utils.js';
+import { AppError, isOfficeWorkspaceKind, validateWorkspacePath } from '@/shared/utils.js';
 
 const LLM_PROVIDERS: LLMProvider[] = ['claude', 'codex', 'cursor', 'opencode'];
 const PERMISSION_MODES: OfficePermissionMode[] = ['bypassPermissions', 'acceptEdits', 'default'];
@@ -455,6 +456,8 @@ export const officeService = {
     /** Divisions from the "analyse an existing app" step; omitted means the default divisions. */
     divisions?: OfficeDivisionProposal[];
     appSummary?: string | null;
+    /** What kind of work the workspace does; omitted means `coding`. */
+    kind?: string | null;
   }): OfficeSnapshot {
     const project = projectsDb.getProjectById(input.projectId);
     if (!project) {
@@ -465,6 +468,11 @@ export const officeService = {
     }
 
     const locale = resolveSeedLocale(input.locale);
+    if (input.kind != null && !isOfficeWorkspaceKind(input.kind)) {
+      throw badRequest(`Unknown workspace kind "${input.kind}".`);
+    }
+    // Teams proposed by an app analysis always make a coding workspace.
+    const kind: OfficeWorkspaceKind = input.divisions ? 'coding' : (input.kind as OfficeWorkspaceKind | null | undefined) ?? 'coding';
     if (input.divisions && (input.divisions.length === 0 || input.divisions.length > 20)) {
       throw badRequest('A workspace needs between 1 and 20 proposed divisions.');
     }
@@ -475,14 +483,15 @@ export const officeService = {
       projectPath: project.project_path,
       name: locale === 'en' ? `${displayName} office` : `kantor ${displayName}`,
       locale,
+      kind,
       divisions: proposals
         ? buildDivisionsFromProposals(locale, proposals, input.appSummary ?? null)
-        : buildDefaultDivisions(locale),
+        : buildDefaultDivisions(locale, kind),
     });
     // Coordinator → planner → teams, not everyone at once.
     const workers = officesDb.listDivisions(office.id).filter((division) => !division.isCoordinator && !division.isAudit);
     const bySlug = new Map(workers.map((division) => [division.slug, division.id]));
-    for (const [from, to] of buildDefaultFlow(workers.map((division) => division.slug))) {
+    for (const [from, to] of buildDefaultFlow(workers.map((division) => division.slug), kind)) {
       officesDb.addFlowEdge(office.id, bySlug.get(from) as string, bySlug.get(to) as string);
     }
     broadcastOfficeUpdate(office.id, { entity: 'office', office });

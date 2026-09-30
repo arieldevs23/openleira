@@ -13,15 +13,17 @@ import type {
   OfficeShapeKind,
   OfficeShapePatch,
   OfficeSkillNode,
+  OfficeWorkspaceKind,
   OfficeWorkspaceSummary,
 } from '@/shared/types.js';
-import { buildSqlAssignments, readJsonStringArray } from '@/shared/utils.js';
+import { buildSqlAssignments, isOfficeWorkspaceKind, readJsonStringArray } from '@/shared/utils.js';
 
 type OfficeRow = {
   id: string;
   project_path: string;
   name: string;
   locale: string;
+  kind: string;
   max_parallel: number;
   permission_mode: string;
   permission_warning_ack: number;
@@ -55,7 +57,7 @@ type DivisionWithAgentRow = {
 };
 
 const OFFICE_COLUMNS =
-  'id, project_path, name, locale, max_parallel, permission_mode, permission_warning_ack, created_at, updated_at';
+  'id, project_path, name, locale, kind, max_parallel, permission_mode, permission_warning_ack, created_at, updated_at';
 
 const DIVISION_WITH_AGENT_SELECT = `
   SELECT
@@ -76,6 +78,7 @@ const toOffice = (row: OfficeRow): Office => ({
   projectPath: row.project_path,
   name: row.name,
   locale: row.locale,
+  kind: isOfficeWorkspaceKind(row.kind) ? row.kind : 'coding',
   maxParallel: row.max_parallel,
   // An unknown stored value falls back to the office default rather than
   // handing a runtime a mode it does not understand.
@@ -277,7 +280,7 @@ export const officesDb = {
   listWorkspaces(): OfficeWorkspaceSummary[] {
     const rows = getConnection().prepare(`
       SELECT
-        o.id, o.project_path, o.name, o.locale, o.max_parallel, o.permission_mode, o.permission_warning_ack,
+        o.id, o.project_path, o.name, o.locale, o.kind, o.max_parallel, o.permission_mode, o.permission_warning_ack,
         o.created_at, o.updated_at,
         p.project_id, p.custom_project_name,
         (SELECT COUNT(*) FROM office_cases c WHERE c.office_id = o.id AND c.status IN ('running', 'waiting_user')) AS active_cases,
@@ -432,6 +435,7 @@ export const officesDb = {
     projectPath: string;
     name: string;
     locale: string;
+    kind: OfficeWorkspaceKind;
     divisions: OfficeDivisionInput[];
   }): Office {
     const db = getConnection();
@@ -440,9 +444,9 @@ export const officesDb = {
 
     db.transaction(() => {
       db.prepare(`
-        INSERT INTO offices (id, project_path, name, locale, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(officeId, input.projectPath, input.name, input.locale, now, now);
+        INSERT INTO offices (id, project_path, name, locale, kind, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(officeId, input.projectPath, input.name, input.locale, input.kind, now, now);
 
       input.divisions.forEach((division, index) => {
         insertDivision(officeId, division, index, now);

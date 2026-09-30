@@ -98,7 +98,26 @@ Sidebar kiri dan panel kanan bisa **disembunyikan ke samping** (tombol panel di 
 
 ## Menambah workspace
 
-Workspace selalu terikat ke folder, jadi foldernya dipilih dulu:
+### Jenis workspace
+
+Langkah pertama milih **jenis kerjaan**. Jenisnya disimpan di workspace (`offices.kind`, workspace lama otomatis `coding`) dan menentukan tim awal, flow bawaan, cara agent diberi tahu soal foldernya, dan cara QA ngecek hasil:
+
+| Jenis | Tim awal | Flow bawaan | Cara QA ngecek |
+|---|---|---|---|
+| **Coding** | Planner, Designer UI/UX, Backend, Frontend, Security, Docs | planner → tim lain | baca file yang berubah, `git diff`, jalanin test |
+| **Konten & Penjualan** | Riset Pasar, Copywriter, Konten Sosmed, Brief Visual | riset → copywriter & sosmed, copywriter → brief visual | fakta produk cocok sama bahan, nggak ada klaim ngawur, typo, format per platform |
+| **Laporan & Keuangan** | Pengolah Data, Analis Bisnis, Penulis Laporan | data → analis → laporan | **hitung ulang** angka kunci dari data sumber pakai script sendiri, total cocok, file asli nggak berubah |
+| **Administrasi & Pemberkasan** | Penyortir Dokumen, Form & Surat, Pengarsip | penyortir → form & arsip, form → arsip | kelengkapan berkas, isi form cocok sama sumber (nggak ada yang dikarang), file asli nggak hilang |
+
+Di luar coding, prompt agent ngomongin "folder kerja (dokumen, data, hasil)", bukan repository. Tiap tim juga dapet aturan sesuai jenisnya: hasil disimpan sebagai file di `hasil/` (bahasa Inggris: `results/`), angka dihitung pakai script (Python/Node) dan bukan dikira-kira, file asli user nggak boleh ditimpa atau dihapus, dan data pribadi yang nggak ada nggak boleh dikarang (dikasih penanda, misalnya `[PERLU DIISI: NPWP]`). Modal juga ngasih peringatan bahwa isi file yang dibaca agent tetap dikirim ke penyedia AI.
+
+![Pilih jenis workspace](images/kantor-ai/workspace-kinds.png)
+
+Workspace non-coding ambil **folder baru** atau **folder yang udah ada** (berisi dokumen/data), dan langsung dibikin dengan tim jenisnya. Clone GitHub dan analisis aplikasi cuma buat coding. Tim hasil analisis selalu bikin workspace coding.
+
+### Folder
+
+Workspace selalu terikat ke folder. Untuk jenis coding pilihannya:
 
 1. **Folder baru:** ketik path folder baru (atau cari folder induknya). Folder dibuat dan didaftarkan sebagai proyek lewat alur pembuatan proyek yang sudah ada, lalu workspace dibuat dengan tim default. Folder yang sudah berisi file ditolak di pilihan ini.
 2. **Aplikasi yang udah ada:** tunjuk foldernya. Kalau belum jadi proyek, didaftarkan. Lalu pilih:
@@ -207,12 +226,14 @@ Flow diterapkan setiap kali subtask ditambahkan (rencana awal dan check-in). Men
 Untuk task yang dipilih ada tiga tab:
 
 - **Hasil:** kontrol task, timeline subtask, dan ringkasan akhir (chat dengan orchestrator pindah ke dock di canvas).
-- **File:** **"hasilnya disimpan di"** path folder workspace (bisa disalin), lalu pohon folder seperti file explorer berisi file yang ditulis/diedit tiap subtask (dicatat dari tool call `Write`/`Edit`/patch agent; titik warna menunjukkan tim mana). Klik file untuk pratinjau isinya. File di luar folder workspace ditampilkan terpisah. **Klik kanan** file buat download file-nya; klik kanan folder (atau tombol download di kotak "disimpan di") buat download foldernya jadi zip sesuai isi di disk sekarang (folder yang diabaikan kayak `node_modules` dan `.git` ga ikut), atau cuma file yang diubah task itu.
+- **File:** **"hasilnya disimpan di"** path folder workspace (bisa disalin), tombol **upload bahan** (file masuk ke subfolder `bahan/`, bahasa Inggris `materials/`, dan langsung bisa diklik buat preview), lalu pohon folder seperti file explorer berisi file yang ditulis/diedit tiap subtask (dicatat dari tool call `Write`/`Edit`/patch agent; di workspace non-coding juga dari perbandingan isi folder sebelum dan sesudah subtask, jadi file yang dibikin script ikut tercatat; titik warna menunjukkan tim mana). Klik file untuk pratinjau: teks apa adanya, Excel (`.xlsx`, sheet pertama) dan CSV jadi tabel, Word (`.docx`) jadi paragraf dan tabel, PDF dan gambar tampil langsung. Preview dibatasi 200 baris. File di luar folder workspace ditampilkan terpisah. **Klik kanan** file buat download file-nya; klik kanan folder (atau tombol download di kotak "disimpan di") buat download foldernya jadi zip sesuai isi di disk sekarang (folder yang diabaikan kayak `node_modules` dan `.git` ga ikut), atau cuma file yang diubah task itu.
 - **Token:** total token task (input, output, cache), batang per tim, dan rincian per sesi. Angka diambil dari transcript provider sendiri: sesi Claude dijumlahkan per pesan API, Codex dan OpenCode memakai total berjalan yang mereka laporkan, Cursor tidak melaporkan token. Angka diperbarui saat ada perubahan subtask/task (frame WebSocket), bukan polling.
 
 Klik node atau agent di sidebar membuka panel agent. Setiap bagiannya bisa dilipat: agent (nama, tim, warna, aktif), model, peran (pratinjau markdown atau edit), tools, skills, serta kerjaan dan transcript.
 
 ![Tab file](images/kantor-ai/workspace-files.png)
+
+![Workspace keuangan: upload bahan dan preview Excel](images/kantor-ai/workspace-finance-files.png)
 
 ## Git dan GitHub
 
@@ -231,7 +252,7 @@ Semua di bawah `/api/office` (butuh login):
 | --- | --- | --- |
 | GET | `/?projectId=` | Snapshot workspace sebuah folder (atau `null`), termasuk `flow` |
 | GET | `/workspaces` | Semua workspace dengan proyek dan jumlah task |
-| POST | `/` | Buat workspace `{ projectId, locale, divisions?, appSummary? }` |
+| POST | `/` | Buat workspace `{ projectId, locale, kind?, divisions?, appSummary? }`; `kind` = `coding` (default), `content`, `finance`, `admin` |
 | DELETE | `/:officeId` | Hapus workspace (folder tidak disentuh) |
 | POST | `/folders` | Siapkan folder `{ path, mode: 'new' \| 'existing' }` |
 | POST / GET | `/analyses`, `/analyses/:id` | Mulai / baca analisis aplikasi `{ projectId, provider, model, locale }` |
@@ -271,7 +292,9 @@ Kode backend ada di `server/modules/office` (orchestrator, parser rencana, sched
 - **Pemecahan plan per tim bergantung ke judul subbagian** (`### <nama tim>`). Kalau planner ga nulis subbagian, hasilnya diterusin utuh ke semua tim.
 - **Kunci file cuma di app ini.** Editor lain atau shell yang ngedit file langsung ga ketahan; terminal cuma ngasih peringatan.
 - **Biaya token.** Tiap subtask minimal dua giliran (kerja + audit), ditambah giliran orchestrator (rencana, check-in, ringkasan).
-- **Pembacaan file yang diubah bergantung pada tool call.** File yang diubah lewat `Bash` (misalnya `sed -i` atau generator) tidak tercatat di tab file.
+- **Pembacaan file yang diubah di workspace coding bergantung pada tool call.** File yang diubah lewat `Bash` (misalnya `sed -i` atau generator) tidak tercatat di tab file. Workspace non-coding membandingkan isi folder (maks. 5000 file, tanpa `node_modules`/`.git`), jadi file yang dibikin tim lain yang jalan *barengan* bisa ikut tercatat di subtask itu.
+- **Preview dokumen masih sederhana.** Excel cuma sheet pertama dan nilai tersimpan (bukan rumus), Word cuma teks dan tabel (tanpa gambar dan format), `.doc`/`.xls`/`.pptx` lama belum ada preview-nya.
+- **Workspace non-coding tetap pakai agent coding** (Claude Code, Codex, dll.) yang bikin file lewat script. Hasil hitungan dan dokumen tetap perlu dicek manusia; ini bukan pengganti akuntan atau konsultan pajak.
 - **Token Cursor tidak tersedia**, dan token sesi yang transcript-nya sudah dihapus dihitung nol.
 - **Analisis aplikasi hanya di memori server**; kalau server restart sebelum usulannya dipakai, analisis perlu diulang.
 - **Frame `office:log` dan `office:analysis` dikirim ke semua klien yang terhubung.** Cocok untuk pemakaian self-hosted satu user; belum ada langganan per workspace.

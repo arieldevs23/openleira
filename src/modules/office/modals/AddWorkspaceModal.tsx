@@ -1,11 +1,13 @@
-import { ChevronRight, FolderPlus, FolderSearch, GitBranch, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronRight, FolderPlus, FolderSearch, GitBranch, Loader2, Plus, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ModelSelect from '@/modules/office/ModelSelect';
 import { cloneWorkspaceWithProgress, fetchGithubTokenCredentials, WorkspacePathField } from '@/modules/project-creation-wizard';
 import AnalysisProgress from '@/modules/office/AnalysisProgress';
+import WorkspaceKindIcon from '@/modules/office/WorkspaceKindIcon';
 import { api, readApiJson } from '@/shared/api';
+import { OFFICE_WORKSPACE_KINDS } from '@/shared/constants';
 import { Button, Dialog, DialogContent, DialogTitle } from '@/shared/ui';
 import type {
   GithubTokenCredential,
@@ -14,10 +16,11 @@ import type {
   OfficeDivisionProposal,
   OfficeModelGroup,
   OfficePreparedFolder,
+  OfficeWorkspaceKind,
 } from '@/shared/types';
 import { cn } from '@/shared/utils';
 
-type Step = 'source' | 'folder' | 'setup' | 'analysing' | 'review';
+type Step = 'kind' | 'source' | 'folder' | 'setup' | 'analysing' | 'review';
 
 const inputClass = 'w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring';
 
@@ -49,10 +52,12 @@ const stepFor = (analysis: OfficeAnalysis): Step => (
 );
 
 /**
- * "Add workspace": a workspace always works in one folder, so the folder
- * comes first. Either a new, empty folder (default divisions), or an app
- * that already exists, which an agent reads to propose divisions the user
- * reviews before the workspace is created.
+ * "Add workspace": first the kind of work (coding, content, finance,
+ * admin), then the folder, because a workspace always works in one folder.
+ * A coding workspace takes a new, empty folder (default divisions), an app
+ * that already exists (an agent reads it to propose divisions the user
+ * reviews) or a git clone. The other kinds take a new folder or an existing
+ * folder of documents and start with that kind's teams.
  */
 export default function AddWorkspaceModal({
   open,
@@ -68,7 +73,9 @@ export default function AddWorkspaceModal({
   const { t } = useTranslation('office');
   const resumed = analyses.find((candidate) => candidate.id === resumeAnalysisId) ?? null;
   // The dialog page on screen; a reopened analysis starts where it stands.
-  const [step, setStep] = useState<Step>(() => (resumed ? stepFor(resumed) : 'source'));
+  const [step, setStep] = useState<Step>(() => (resumed ? stepFor(resumed) : 'kind'));
+  // What kind of work the new workspace does; an app analysis always makes a coding workspace.
+  const [kind, setKind] = useState<OfficeWorkspaceKind>('coding');
   // New folder or existing app.
   const [mode, setMode] = useState<'new' | 'existing' | 'github'>(resumed ? 'existing' : 'new');
   // The repository to clone (https, or git@host:owner/repo over the server's SSH keys).
@@ -152,8 +159,9 @@ export default function AddWorkspaceModal({
       return;
     }
     setFolder(prepared);
-    if (mode === 'new') {
-      await readApiJson(await api.office.create(prepared.projectId, locale));
+    // Only an existing coding app goes on to the analysis; everything else is created right away.
+    if (mode === 'new' || kind !== 'coding') {
+      await readApiJson(await api.office.create(prepared.projectId, locale, { kind }));
       onReady(prepared.projectId);
       onOpenChange(false);
       return;
@@ -220,7 +228,7 @@ export default function AddWorkspaceModal({
     }
     await readApiJson(await api.office.create(folder.projectId, locale, divisions
       ? { divisions: divisions.filter((proposal) => proposal.name.trim()), appSummary: summary }
-      : {}));
+      : { kind }));
     onReady(folder.projectId);
     onOpenChange(false);
   });
@@ -254,12 +262,62 @@ export default function AddWorkspaceModal({
       <DialogContent className="flex max-h-[88vh] max-w-2xl flex-col gap-3 p-5">
         <DialogTitle className="not-sr-only text-base font-semibold text-foreground">{t('addWorkspace.title')}</DialogTitle>
 
+        {step === 'kind' && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">{t('addWorkspace.kindIntro')}</p>
+            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t('addWorkspace.kindIntro')}>
+              {OFFICE_WORKSPACE_KINDS.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={kind === value}
+                  onClick={() => {
+                    setKind(value);
+                    setStep('source');
+                    setError(null);
+                  }}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-[12px] border border-border p-3 text-left hover:border-primary/60 hover:bg-primary/5',
+                    kind === value && 'border-primary/60',
+                  )}
+                  data-testid={`office-kind-${value}`}
+                >
+                  <WorkspaceKindIcon kind={value} className="mt-0.5 h-5 w-5 text-primary" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">{t(`workspaceKinds.${value}.title`)}</span>
+                    <span className="block text-xs text-muted-foreground">{t(`workspaceKinds.${value}.body`)}</span>
+                    <span className="mt-1 block text-[11px] text-muted-foreground/90">{t(`workspaceKinds.${value}.teams`)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {step === 'source' && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">{t('addWorkspace.intro')}</p>
-            {sourceCard('new', FolderPlus, t('addWorkspace.newTitle'), t('addWorkspace.newBody'))}
-            {sourceCard('existing', FolderSearch, t('addWorkspace.existingTitle'), t('addWorkspace.existingBody'))}
-            {sourceCard('github', GitBranch, t('addWorkspace.githubTitle'), t('addWorkspace.githubBody'))}
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <WorkspaceKindIcon kind={kind} className="h-3.5 w-3.5 text-primary" />
+              {t(`workspaceKinds.${kind}.title`)} · {t('addWorkspace.intro')}
+            </p>
+            {kind === 'coding' ? (
+              <>
+                {sourceCard('new', FolderPlus, t('addWorkspace.newTitle'), t('addWorkspace.newBody'))}
+                {sourceCard('existing', FolderSearch, t('addWorkspace.existingTitle'), t('addWorkspace.existingBody'))}
+                {sourceCard('github', GitBranch, t('addWorkspace.githubTitle'), t('addWorkspace.githubBody'))}
+              </>
+            ) : (
+              <>
+                {sourceCard('new', FolderPlus, t('addWorkspace.newTitle'), t('addWorkspace.workNewBody'))}
+                {sourceCard('existing', FolderSearch, t('addWorkspace.workExistingTitle'), t('addWorkspace.workExistingBody'))}
+                <p className="flex items-start gap-1.5 rounded-[10px] border border-warn/40 bg-warn/5 p-2 text-[11px] text-muted-foreground" data-testid="office-kind-privacy">
+                  <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" />
+                  {t('addWorkspace.privacyNote')}
+                </p>
+              </>
+            )}
+            <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => { setStep('kind'); setError(null); }}>{t('addWorkspace.back')}</Button>
           </div>
         )}
 
@@ -340,7 +398,9 @@ export default function AddWorkspaceModal({
 
         {step === 'folder' && mode !== 'github' && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">{mode === 'new' ? t('addWorkspace.newFolderHint') : t('addWorkspace.existingFolderHint')}</p>
+            <p className="text-xs text-muted-foreground">
+              {mode === 'new' ? t('addWorkspace.newFolderHint') : kind === 'coding' ? t('addWorkspace.existingFolderHint') : t('addWorkspace.workExistingFolderHint')}
+            </p>
             <WorkspacePathField value={folderPath} onChange={setFolderPath} onAdvanceToConfirm={() => void prepareFolder()} disabled={isBusy} />
             {error && (
               <p className="text-xs text-err">
@@ -356,7 +416,7 @@ export default function AddWorkspaceModal({
               <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => { setStep('source'); setError(null); }}>{t('addWorkspace.back')}</Button>
               <Button type="button" size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={!folderPath.trim() || isBusy} onClick={() => void prepareFolder()}>
                 {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                {mode === 'new' ? t('addWorkspace.createFolder') : t('addWorkspace.next')}
+                {mode === 'new' ? t('addWorkspace.createFolder') : kind === 'coding' ? t('addWorkspace.next') : t('addWorkspace.create')}
               </Button>
             </div>
           </div>

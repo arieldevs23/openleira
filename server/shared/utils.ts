@@ -24,6 +24,7 @@ import type {
   ApiSuccessShape,
   AppErrorOptions,
   NormalizedMessage,
+  OfficeWorkspaceKind,
   ProviderCurrentActiveModel,
   ProviderModelsDefinition,
   ProviderSkillSource,
@@ -1414,4 +1415,20 @@ export function buildGithubTokenGitEnvironment(githubToken: string | null): Node
     CLOUDCLI_GITHUB_TOKEN: githubToken,
     GIT_TERMINAL_PROMPT: '0',
   };
+}
+
+// ---------------------------
+//----------------- OFFICE WORKSPACE KIND UTILITIES ------------
+
+/** Every workspace kind, in the order the "new workspace" picker lists them. */
+const OFFICE_WORKSPACE_KINDS: OfficeWorkspaceKind[] = ['coding', 'content', 'finance', 'admin'];
+
+/**
+ * Whether a value names a known workspace kind. The office database
+ * repository uses it to read stored kinds (anything unknown reads as
+ * `coding`), and the office service uses it to validate the kind a client
+ * asks for when it creates a workspace.
+ */
+export function isOfficeWorkspaceKind(value: unknown): value is OfficeWorkspaceKind {
+  return typeof value === 'string' && (OFFICE_WORKSPACE_KINDS as string[]).includes(value);
 }

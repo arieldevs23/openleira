@@ -208,6 +208,7 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
       locale: readOptionalString(body, 'locale') ?? null,
       divisions: readProposals(body),
       appSummary: readOptionalString(body, 'appSummary') ?? null,
+      kind: readOptionalString(body, 'kind') ?? null,
     });
     res.status(201).json(createApiSuccessResponse(snapshot));
   }));

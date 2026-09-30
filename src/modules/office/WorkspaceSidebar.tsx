@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import MarkdownPreview from '@/modules/office/MarkdownPreview';
+import WorkspaceKindIcon from '@/modules/office/WorkspaceKindIcon';
 import { analysisStage } from '@/modules/office/utils/officeAnalysis';
 import { ContextMenu } from '@/shared/ui';
 import type { OfficeAnalysis, OfficeDivision, OfficeWorkspaceSummary } from '@/shared/types';
@@ -135,6 +136,9 @@ export default function WorkspaceSidebar({
                   title={workspace.office.projectPath}
                 >
                   <span className="flex min-w-0 items-center gap-1.5">
+                    <span title={t(`workspaceKinds.${workspace.office.kind ?? 'coding'}.title`)} className="text-muted-foreground">
+                      <WorkspaceKindIcon kind={workspace.office.kind ?? 'coding'} className="h-3.5 w-3.5" />
+                    </span>
                     <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{workspace.office.name}</span>
                     {workspace.activeCases > 0 && (
                       <span className="shrink-0 rounded-full bg-primary/15 px-1.5 text-[10px] text-primary" title={t('sidebar.activeCases', { count: workspace.activeCases })}>

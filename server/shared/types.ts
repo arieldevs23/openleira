@@ -1583,6 +1583,15 @@ export type OfficeMessageKind = 'assign' | 'result' | 'question' | 'audit_pass' 
 export type OfficePermissionMode = 'bypassPermissions' | 'acceptEdits' | 'default';
 
 /**
+ * What kind of work a workspace does. It picks the default teams, the flow
+ * between them, how agents are told about their folder and how the audit
+ * layer checks results: `coding` works on a code repository, `content` on
+ * sales and marketing content, `finance` on business and financial reports,
+ * `admin` on documents and filing. Stored per office; old offices are `coding`.
+ */
+export type OfficeWorkspaceKind = 'coding' | 'content' | 'finance' | 'admin';
+
+/**
  * One office (one per project path). Returned by the database module's
  * `officesDb` and serialized as-is by the Office routes.
  */
@@ -1591,6 +1600,8 @@ export type Office = {
   projectPath: string;
   name: string;
   locale: string;
+  /** What kind of work the workspace does; see `OfficeWorkspaceKind`. */
+  kind: OfficeWorkspaceKind;
   maxParallel: number;
   permissionMode: OfficePermissionMode;
   permissionWarningAcknowledged: boolean;

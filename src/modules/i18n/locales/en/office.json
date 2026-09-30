@@ -64,6 +64,28 @@
     "audit_fail": "Audit failed",
     "note": "Note"
   },
+  "workspaceKinds": {
+    "coding": {
+      "title": "Coding",
+      "body": "build or maintain an app in a code repository.",
+      "teams": "Planner · Designer · Backend · Frontend · Security · Docs"
+    },
+    "content": {
+      "title": "Content & Sales",
+      "body": "sales copy, captions, content calendars and design briefs from your product material.",
+      "teams": "Market Research · Copywriter · Social Media · Visual Brief"
+    },
+    "finance": {
+      "title": "Reports & Finance",
+      "body": "turn sales and finance data into Word, Excel or PDF reports. Figures are computed by script and rechecked by QA.",
+      "teams": "Data Prep · Business Analyst · Report Writer"
+    },
+    "admin": {
+      "title": "Admin & Filing",
+      "body": "sort documents, fill in forms and letters, tidy up the archive.",
+      "teams": "Document Sorter · Forms & Letters · Archivist"
+    }
+  },
   "tree": {
     "label": "Workspace canvas",
     "caseNode": "Work",
@@ -329,7 +351,13 @@
     "tokenNew": "Paste a token for this clone",
     "githubHint": "Tokens are managed in Settings. An SSH URL uses the SSH keys of the server this app runs on. Agents push and pull with the same access.",
     "clone": "Clone",
-    "cloneNoPath": "The clone finished but did not report where it went."
+    "cloneNoPath": "The clone finished but did not report where it went.",
+    "kindIntro": "What kind of work is this workspace for?",
+    "workNewBody": "Start from a new, empty folder. Upload your material later from the files tab.",
+    "workExistingTitle": "Existing folder",
+    "workExistingBody": "A folder that already holds your documents, data or material. Original files are never changed or deleted.",
+    "workExistingFolderHint": "The folder with your documents or data. Agents work here and save results in a results/ subfolder.",
+    "privacyNote": "The server is yours, but file contents the agents read are still sent to the AI provider (Anthropic, OpenAI, etc.) while they work. Keep data that must not leave out of this folder, and check figures and documents before you use them."
   },
   "menu": {
     "label": "Actions",
@@ -380,7 +408,17 @@
     "downloadMenu": "Download",
     "rightClickHint": "Right-click a file or folder to download it.",
     "preparing": "Preparing the download…",
-    "menu": "File actions"
+    "menu": "File actions",
+    "materialsFolder": "materials",
+    "materialsHint": "Upload material (sales data, invoices, documents) into {{folder}}/ so the agents can read it.",
+    "uploadMaterial": "Upload material",
+    "uploaded": "Just uploaded",
+    "uploadedHint": "Mention these file names when you give the coordinator work.",
+    "previewFailed": "This file could not be opened for a preview.",
+    "noPreview": "No preview for this file type yet. Right-click to download it.",
+    "sheetCount": "{{count}} sheets (showing the first)",
+    "emptySheet": "The sheet is empty.",
+    "truncated": "Only part of it is shown. Download it to see everything."
   },
   "usage": {
     "loading": "Reading token usage...",
