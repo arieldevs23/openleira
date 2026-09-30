@@ -26,6 +26,8 @@ type ModelWizardModalProps = {
   onRefreshProviders: () => void;
   /** Step to open on; defaults to "providers" until one is connected. */
   initialStep?: WizardStep;
+  /** The model the "pick automatically" button puts on every agent; the button is hidden when null. */
+  defaultChoice?: ModelChoice;
   onSave: (assignments: Array<{ agentId: string; provider: string; model: string }>) => Promise<void>;
 };
 
@@ -52,6 +54,7 @@ export default function ModelWizardModal({
   onConnectProvider,
   onRefreshProviders,
   initialStep,
+  defaultChoice = null,
   onSave,
 }: ModelWizardModalProps) {
   const { t } = useTranslation('office');
@@ -188,6 +191,17 @@ export default function ModelWizardModal({
                 <span className="text-[11px] text-muted-foreground">{t('wizard.applyAllLabel')}</span>
                 <ModelSelect value={bulkChoice} groups={groups} onChange={setBulkChoice} ariaLabel={t('wizard.applyAllLabel')} />
               </label>
+              {defaultChoice && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-9 px-3 text-xs"
+                  onClick={() => setChoices(Object.fromEntries(divisions.map((division) => [division.agent.id, defaultChoice])))}
+                >
+                  {t('wizard.pickAuto')}
+                </Button>
+              )}
               <Button
                 type="button"
                 size="sm"

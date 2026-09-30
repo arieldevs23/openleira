@@ -27,6 +27,7 @@ import MessagesPanel from '@/modules/office/MessagesPanel';
 import OfficeCanvas from '@/modules/office/OfficeCanvas';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
 import ShapePanel from '@/modules/office/ShapePanel';
+import SimpleView from '@/modules/office/SimpleView';
 import SkillNodePanel from '@/modules/office/SkillNodePanel';
 import UsagePanel from '@/modules/office/UsagePanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
@@ -51,7 +52,7 @@ import { ProviderLoginModal } from '@/modules/provider-auth';
 import { api, readApiJson } from '@/shared/api';
 import { OFFICE_CHAT_DOCK_STORAGE_KEY, OFFICE_COLLAPSED_PANELS_STORAGE_KEY } from '@/shared/constants';
 import { Button } from '@/shared/ui';
-import type { LLMProvider, OfficeDivision, OfficeSelection, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
+import type { LLMProvider, OfficeDivision, OfficeModelGroup, OfficeSelection, OfficeTask, OfficeWorkspaceSummary } from '@/shared/types';
 import { cn } from '@/shared/utils';
 
 /** Below this width the sidebar and the right panel turn into drawers. */
@@ -59,6 +60,35 @@ const NARROW_LAYOUT_QUERY = '(max-width: 899px)';
 const SELECTED_WORKSPACE_KEY = 'office-selected-project';
 const COLLAPSED_PANELS_KEY = OFFICE_COLLAPSED_PANELS_STORAGE_KEY;
 const CHAT_DOCK_KEY = OFFICE_CHAT_DOCK_STORAGE_KEY;
+const VIEW_MODE_KEY = 'office-view-mode';
+
+/** How a workspace is shown: the guided simple view (default) or the full canvas with every control. */
+type ViewMode = 'simple' | 'full';
+
+const readViewMode = (): ViewMode => {
+  try {
+    return window.localStorage.getItem(VIEW_MODE_KEY) === 'full' ? 'full' : 'simple';
+  } catch {
+    return 'simple';
+  }
+};
+
+/** Models whose name marks a balanced everyday choice; used when the user is not asked to pick. */
+const BALANCED_MODEL = /sonnet|gpt-5(?!.*(mini|nano))|auto/i;
+
+/**
+ * The model a new team starts with when the user is not asked to choose: the
+ * first connected provider's balanced model, else its first one. Null while no
+ * connected provider lists a model.
+ */
+const pickDefaultModel = (groups: OfficeModelGroup[]): { provider: LLMProvider; model: string } | null => {
+  const group = groups.find((candidate) => candidate.options.length > 0);
+  if (!group) {
+    return null;
+  }
+  const option = group.options.find((candidate) => BALANCED_MODEL.test(candidate.value) || BALANCED_MODEL.test(candidate.label)) ?? group.options[0];
+  return { provider: group.provider, model: option.value };
+};
 
 const readDockMode = (): CoordinatorDockMode => {
   try {
@@ -232,6 +262,20 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
   // How much of the coordinator chat is shown over the canvas; remembered per browser.
   const [dockMode, setDockModeState] = useState<CoordinatorDockMode>(readDockMode);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  // The simple guided view or the full canvas; remembered per browser so it stays where the user left it.
+  const [viewMode, setViewModeState] = useState<ViewMode>(readViewMode);
+  // The automatic model setup is running, or why it failed; the simple view shows both.
+  const [autoSetup, setAutoSetup] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
+  const autoSetupOfficeRef = useRef<string | null>(null);
+
+  const setViewMode = (mode: ViewMode) => {
+    setViewModeState(mode);
+    try {
+      window.localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // Not remembered in private windows.
+    }
+  };
 
   const setDockMode = (mode: CoordinatorDockMode) => {
     setDockModeState(mode);
@@ -293,9 +337,43 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     return totals;
   }, [usage]);
 
-  // The setup wizard opens by itself once per workspace while its setup is unfinished.
+  const defaultModel = useMemo(() => pickDefaultModel(modelGroups), [modelGroups]);
+
+  /** Gives every agent that has no model the default one, so nobody has to choose models to start. */
+  const applyAutomaticModels = async () => {
+    if (!defaultModel) {
+      setAutoSetup({ busy: false, error: t('simple.setup.autoFailed', { message: t('wizard.noModels') }) });
+      return;
+    }
+    setAutoSetup({ busy: true, error: null });
+    try {
+      await actions.assignModels(missingModelAgents.map((division) => ({
+        agentId: division.agent.id,
+        provider: defaultModel.provider,
+        model: defaultModel.model,
+      })));
+      setAutoSetup({ busy: false, error: null });
+    } catch (error) {
+      setAutoSetup({ busy: false, error: t('simple.setup.autoFailed', { message: error instanceof Error ? error.message : String(error) }) });
+    }
+  };
+
+  // In the simple view the models are picked automatically, once per workspace, as soon as an AI is connected.
   useEffect(() => {
-    if (!office || !providersChecked || autoWizardOfficeRef.current === office.id) {
+    if (viewMode !== 'simple' || !office || !defaultModel || connectedProviders.length === 0
+      || missingModelAgents.length === 0 || autoSetupOfficeRef.current === office.id) {
+      return;
+    }
+    autoSetupOfficeRef.current = office.id;
+    void applyAutomaticModels();
+    // applyAutomaticModels only reads the values this effect already depends on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, office, defaultModel, connectedProviders.length, missingModelAgents.length]);
+
+  // The setup wizard opens by itself once per workspace while its setup is unfinished (full view only;
+  // the simple view has the same steps inline).
+  useEffect(() => {
+    if (viewMode !== 'full' || !office || !providersChecked || autoWizardOfficeRef.current === office.id) {
       return;
     }
     if (noProviderConnected || missingModelAgents.length > 0) {
@@ -303,7 +381,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
       setWizardStep(undefined);
       setIsWizardOpen(true);
     }
-  }, [missingModelAgents.length, noProviderConnected, office, providersChecked]);
+  }, [missingModelAgents.length, noProviderConnected, office, providersChecked, viewMode]);
 
   const openWizard = (step?: 'providers' | 'models') => {
     setWizardStep(step);
@@ -631,6 +709,34 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
         </div>
       );
     }
+    if (viewMode === 'simple' && selectedProjectId) {
+      return (
+        <SimpleView
+          office={office}
+          projectId={selectedProjectId}
+          divisions={divisions}
+          cases={cases}
+          selectedCaseId={activeCaseId}
+          tasks={tasks}
+          messages={messages}
+          setup={{
+            connected: connectedProviders,
+            statuses: providers.statuses,
+            isChecking: providers.isChecking,
+            missingModels: missingModelAgents.length,
+            isAutoSetting: autoSetup.busy,
+            error: autoSetup.error,
+            onConnect: connectProvider,
+            onRefresh: () => void providers.refresh(),
+            onAutoSetup: () => void applyAutomaticModels(),
+          }}
+          onSubmitWork={(items) => submitWork(items, null)}
+          onAnswer={async (caseId, text) => { await actions.postNote(caseId, text); }}
+          onSelectCase={(caseId) => { setSelectedCaseId(caseId); setSelection({ type: 'case' }); }}
+          onShowTeam={() => setViewMode('full')}
+        />
+      );
+    }
     return (
       <OfficeCanvas
         key={`${office.id}:${activeCaseId ?? 'no-case'}`}
@@ -743,11 +849,32 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
           <h1 className="min-w-0 flex-1 truncate px-1 text-sm font-semibold text-foreground">{office?.name ?? t('sidebar.title')}</h1>
           {office && (
             <>
-              {toolbarButton(t('toolbar.providers'), Plug, () => openWizard('providers'))}
-              {toolbarButton(t('toolbar.models'), Cpu, () => openWizard())}
-              {toolbarButton(t('toolbar.addDivision'), Plus, () => setNewDivisionAt(null), 'office-toolbar-add-agent')}
+              <div role="group" aria-label={t('simple.viewLabel')} className="mr-1 flex rounded-[10px] border border-border bg-muted/40 p-0.5">
+                {(['simple', 'full'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={viewMode === mode}
+                    onClick={() => setViewMode(mode)}
+                    className={cn(
+                      'rounded-[8px] px-2.5 py-1 text-xs transition-colors',
+                      viewMode === mode ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    data-testid={`office-view-${mode}`}
+                  >
+                    {t(mode === 'simple' ? 'simple.viewSimple' : 'simple.viewFull')}
+                  </button>
+                ))}
+              </div>
+              {viewMode === 'full' && (
+                <>
+                  {toolbarButton(t('toolbar.providers'), Plug, () => openWizard('providers'))}
+                  {toolbarButton(t('toolbar.models'), Cpu, () => openWizard())}
+                  {toolbarButton(t('toolbar.addDivision'), Plus, () => setNewDivisionAt(null), 'office-toolbar-add-agent')}
+                </>
+              )}
               {toolbarButton(t('toolbar.settings'), Settings2, () => setIsSettingsOpen(true))}
-              {isNarrow && (
+              {isNarrow && viewMode === 'full' && (
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsPanelOpen(true)} aria-label={t('panel.label')}>
                   <PanelRight className="h-4 w-4" />
                 </Button>
@@ -756,7 +883,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
           )}
         </div>
 
-        {office && (noProviderConnected ? (
+        {office && viewMode === 'full' && (noProviderConnected ? (
           <div data-testid="office-setup-banner" className={bannerClass}>
             <span>{t('providers.noneBanner')}</span>
             <button type="button" className="font-medium underline underline-offset-2" onClick={() => openWizard('providers')}>{t('providers.connectAction')}</button>
@@ -782,7 +909,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
         <div className="flex min-h-0 flex-1">
           <main className="relative min-h-0 min-w-0 flex-1">
             {renderMain()}
-            {office && (
+            {office && viewMode === 'full' && (
               <CoordinatorDock
                 ref={composerRef}
                 cases={cases}
@@ -805,15 +932,15 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
             )}
           </main>
 
-          {office && isNarrow && isPanelOpen && (
+          {office && viewMode === 'full' && isNarrow && isPanelOpen && (
             <button type="button" aria-label={t('common.close')} className="fixed inset-0 z-30 bg-black/30 backdrop-blur-[1px]" onClick={() => setIsPanelOpen(false)} />
           )}
-          {office && !isNarrow && collapsed.right && (
+          {office && viewMode === 'full' && !isNarrow && collapsed.right && (
             <aside className="flex w-10 shrink-0 flex-col items-center gap-1 border-l border-border/60 py-2" aria-label={t('panel.label')} data-testid="office-right-rail">
               {railButton(t('panel.showPanel'), PanelRightOpen, () => setPanelCollapsed('right', false), 'office-show-right')}
             </aside>
           )}
-          {office && (isNarrow || !collapsed.right) && (
+          {office && viewMode === 'full' && (isNarrow || !collapsed.right) && (
             <aside
               className={cn(
                 'flex min-h-0 flex-col',
@@ -856,6 +983,7 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
           onConnectProvider={connectProvider}
           onRefreshProviders={() => void providers.refresh()}
           initialStep={wizardStep}
+          defaultChoice={defaultModel}
           onSave={actions.assignModels}
         />
       )}

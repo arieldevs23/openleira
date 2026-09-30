@@ -3,8 +3,8 @@ import { useMemo, useRef, useState, type ChangeEvent, type MouseEvent as ReactMo
 import { useTranslation } from 'react-i18next';
 
 import ResultFilePreview from '@/modules/office/ResultFilePreview';
+import { useMaterialUpload } from '@/modules/office/hooks/useMaterialUpload';
 import { downloadResultFile, downloadResultFilesZip, downloadResultFolderZip } from '@/modules/office/utils/resultDownloads';
-import { api, readApiJson } from '@/shared/api';
 import { ContextMenu } from '@/shared/ui';
 import type { OfficeDivision, OfficeTask } from '@/shared/types';
 import { cn } from '@/shared/utils';
@@ -52,8 +52,8 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   // The file shown in the preview.
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  // Material the user uploaded in this panel (the uploaded paths), or why the upload failed.
-  const [upload, setUpload] = useState<{ busy: boolean; files: string[]; error: string | null }>({ busy: false, files: [], error: null });
+  // Material the user uploaded from this panel (or the simple view), and the upload's state.
+  const materials = useMaterialUpload(projectId);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   // Brief "copied" confirmation next to the folder path.
   const [copied, setCopied] = useState(false);
@@ -81,24 +81,10 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
 
   const openFile = (filePath: string) => setSelectedPath(filePath);
 
-  /** Uploads the picked files into the material folder, next to where the agents work. */
-  const uploadMaterial = async (event: ChangeEvent<HTMLInputElement>) => {
+  const uploadMaterial = (event: ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(event.target.files ?? []);
     event.target.value = '';
-    if (picked.length === 0) return;
-    const folder = t('files.materialsFolder');
-    const formData = new FormData();
-    formData.append('targetPath', folder);
-    formData.append('requestedFileCount', String(picked.length));
-    formData.append('relativePaths', JSON.stringify(picked.map((file) => file.name)));
-    picked.forEach((file) => formData.append('files', file));
-    setUpload({ busy: true, files: [], error: null });
-    try {
-      await readApiJson(await api.uploadFiles(projectId, formData));
-      setUpload({ busy: false, files: picked.map((file) => `${folder}/${file.name}`), error: null });
-    } catch (error) {
-      setUpload({ busy: false, files: [], error: error instanceof Error ? error.message : String(error) });
-    }
+    void materials.upload(picked);
   };
 
   const copyPath = async () => {
@@ -244,17 +230,17 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
           <button
             type="button"
             onClick={() => uploadInputRef.current?.click()}
-            disabled={upload.busy}
+            disabled={materials.busy}
             className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-foreground hover:bg-muted disabled:opacity-60"
           >
-            {upload.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+            {materials.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
             {t('files.uploadMaterial')}
           </button>
-          <input ref={uploadInputRef} type="file" multiple className="hidden" onChange={(event) => void uploadMaterial(event)} data-testid="office-materials-input" />
+          <input ref={uploadInputRef} type="file" multiple className="hidden" onChange={uploadMaterial} data-testid="office-materials-input" />
         </div>
-        {upload.files.length > 0 && (
+        {materials.files.length > 0 && (
           <ul className="mt-1.5 space-y-0.5" aria-label={t('files.uploaded')}>
-            {upload.files.map((filePath) => (
+            {materials.files.map((filePath) => (
               <li key={filePath}>
                 <button type="button" onClick={() => openFile(filePath)} className="truncate font-mono text-[11px] text-primary hover:underline" title={filePath}>{filePath}</button>
               </li>
@@ -262,7 +248,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
             <li className="text-[10.5px] text-muted-foreground">{t('files.uploadedHint')}</li>
           </ul>
         )}
-        {upload.error && <p className="mt-1 text-[11px] text-err">{upload.error}</p>}
+        {materials.error && <p className="mt-1 text-[11px] text-err">{materials.error}</p>}
       </div>
       {download.busy && (
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />{t('files.preparing')}</p>
