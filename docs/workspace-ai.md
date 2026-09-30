@@ -64,6 +64,21 @@ Setiap kerjaan baru dimulai dengan sesi orchestrator yang baru. Supaya dia tetap
 - Setiap perubahan workspace/tim/agent/task/subtask/pesan dikirim lewat WebSocket chat yang sudah ada sebagai frame `office:update` berisi baris yang berubah. Transcript sesi yang berjalan mengalir sebagai frame `office:log`. Halaman workspace tidak pernah polling; setelah reconnect dia mengambil snapshot sekali.
 - Saat server start, task yang tadinya `running` diparkir jadi `waiting_user` (alasan `interrupted`) dan subtask yang sedang jalan kembali ke `queued`. Klik **lanjut** untuk meneruskan; subtask melanjutkan sesinya sendiri.
 
+## Tampilan Simpel dan Lengkap
+
+Tiap workspace punya dua tampilan, dipilih dengan tombol **Simpel | Lengkap** di header (pilihan diingat per browser). **Simpel adalah bawaannya**, buat orang yang nggak mau lihat kanvas:
+
+1. **Hubungkan AI (sekali aja).** Kalau belum ada akun AI yang terhubung, kartu pertama ngejelasin caranya dengan bahasa biasa: klik hubungkan, ikuti tulisan di jendela login, lalu "cek lagi". Begitu ada yang terhubung, **model buat tiap anggota tim dipilihin otomatis** (model seimbang dari provider pertama yang terhubung, sekali per workspace), jadi nggak ada langkah "pilih model". Bisa diganti nanti di tampilan Lengkap, dan wizard model punya tombol "pilih otomatis buat semua".
+2. **Taruh bahan** (workspace non-coding). Pilih atau seret file; masuk ke folder `bahan/`. Boleh dilewatin.
+3. **Tulis kerjaan.** Satu kotak, dengan contoh kerjaan yang bisa diklik sesuai jenis workspace. Beberapa baris `- ` jadi beberapa kerjaan yang dikerjain gantian. `Ctrl+Enter` buat kirim.
+4. **Ambil hasil.** Status dalam kalimat biasa ("Tim lagi kerja…", "Beres!"), daftar anggota tim yang jalan beserta statusnya, ringkasan dari koordinator, dan file hasil yang bisa dilihat (preview di tempat) atau di-download. Kalau koordinator nanya sesuatu, jawabannya ditulis di situ juga.
+
+Tampilan Simpel nyembunyiin kanvas, panel kanan, chat dock, dan tombol teknis (akun AI, model tim, tambah anggota tim). Tautan **lihat timnya** (atau tombol **Lengkap**) buka kanvas kalau perlu kontrol penuh: gambar flow, atur agent, skill, token. Wizard setup otomatis di tampilan Lengkap tetap seperti sebelumnya.
+
+Istilah di antarmuka bahasa Indonesia juga disederhanain: "orchestrator" jadi **koordinator**, "subtask" jadi **langkah**, tab "token" jadi **pemakaian**, tombol mode "Node Design" jadi **Tim AI**.
+
+![Tampilan Simpel](images/kantor-ai/workspace-simple.png)
+
 ## Mode Chat dan mode Node Design
 
 Pojok kanan atas header berisi saklar **Chat | Node Design** (dulu tempat tab chat, shell, file).

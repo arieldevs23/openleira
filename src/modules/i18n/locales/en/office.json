@@ -221,7 +221,8 @@
     "steps": "Setup steps",
     "stepProviders": "Connect providers",
     "stepModels": "Pick models",
-    "next": "Next"
+    "next": "Next",
+    "pickAuto": "Pick automatically for all"
   },
   "permission": {
     "title": "Agents will run without asking",
@@ -529,5 +530,126 @@
     "asking": "has a question",
     "openResult": "open the result",
     "queuedBody": "This item of a work list waits for the item before it and starts by itself once that one is finished."
+  },
+  "simple": {
+    "title": "What should we get done today?",
+    "subtitle": {
+      "coding": "Say what you want and the AI team builds it in your app folder. No technical knowledge needed.",
+      "content": "Give it your product material, say what to make, and the AI team writes the copy and content.",
+      "finance": "Drop in your sales or finance data and the AI team processes it and builds the report.",
+      "admin": "Drop in your documents and the AI team sorts them, fills in forms and tidies the archive."
+    },
+    "stepsLabel": "how it works",
+    "steps": {
+      "connect": "Connect an AI",
+      "materials": "Add material",
+      "job": "Write the job",
+      "result": "Take the result"
+    },
+    "setup": {
+      "title": "Connect an AI first (one time)",
+      "body": "OpenLeira needs one AI account to work. Pick the one you have; one is enough.",
+      "provider": {
+        "claude": "easiest if you have a Claude account",
+        "codex": "if you have a ChatGPT/OpenAI account",
+        "cursor": "if you use Cursor",
+        "opencode": "if you have an OpenCode account or API key"
+      },
+      "step1": "Click \"Connect\" on the AI you have.",
+      "step2": "A login window opens. Follow the text on screen: usually open a link, log in in the browser, then paste a code if asked.",
+      "step3": "When done, close the window. If the status has not changed, click \"Check again\".",
+      "preparing": "Getting your team ready…",
+      "preparingBody": "The AI is connected. A model for each team member is picked for you automatically, nothing to set up. You can change it later in the full view.",
+      "prepare": "Set up automatically",
+      "ready": "AI connected: {{providers}}. The team is ready.",
+      "autoFailed": "The automatic model could not be set: {{message}}"
+    },
+    "materials": {
+      "title": "Add your material",
+      "body": {
+        "content": "Product photos/descriptions, catalogue, price list, examples of past content. The more you give, the better it fits.",
+        "finance": "Excel/CSV files with sales data, receipts or last month's report. Original files are never changed.",
+        "admin": "The documents to handle: scans, PDFs, blank forms, requirement lists."
+      },
+      "pick": "Choose files",
+      "optional": "You can skip this if you have no material. You can also drag files here."
+    },
+    "job": {
+      "title": "Write your job",
+      "placeholder": {
+        "coding": "e.g. build a login page with email and password",
+        "content": "e.g. write 5 Instagram captions for the weekend coffee promo",
+        "finance": "e.g. build the September sales report from materials/sales-september.xlsx",
+        "admin": "e.g. check the credit application documents in the materials folder are complete"
+      },
+      "examples": "Examples:",
+      "list": "Read as {{count}} jobs, done one after another.",
+      "hint": "Ctrl+Enter to send. Want several jobs at once? Write one per line starting with \"-\".",
+      "notReady": "Finish step 1 first so the team can work.",
+      "send": "Do it"
+    },
+    "examples": {
+      "coding": [
+        "Build a login page with email and password",
+        "Add a button to export data as CSV",
+        "Fix the bug: the cart is empty after a refresh"
+      ],
+      "content": [
+        "Write 5 Instagram captions for the weekend promo",
+        "Write product descriptions for the 3 best sellers",
+        "Make a one-week social media content calendar"
+      ],
+      "finance": [
+        "Build this month's sales report from the Excel file in the materials folder",
+        "Compute the margin per product and give 3 suggestions",
+        "Clean the transaction data and flag the odd rows"
+      ],
+      "admin": [
+        "Check the documents in the materials folder are complete",
+        "Fill in the form from the data in the documents",
+        "Tidy the archive: group by type and standardise file names"
+      ]
+    },
+    "result": {
+      "title": "Progress & results",
+      "team": "team members working",
+      "summary": "Summary from the coordinator",
+      "files": "Result files ({{count}})",
+      "view": "View",
+      "hide": "Close",
+      "download": "Download",
+      "question": "The coordinator needs your answer to continue",
+      "answer": "Your answer",
+      "sendAnswer": "Send answer"
+    },
+    "state": {
+      "done": "Done! The results are below.",
+      "failed": "Something failed. Open the full view for details and to retry.",
+      "queued": "Waiting for the previous job to finish.",
+      "working": "Working on it."
+    },
+    "phase": {
+      "planning": "The coordinator is splitting the work across the team…",
+      "executing": "The team is working…",
+      "finalizing": "Writing the summary of the results…"
+    },
+    "waiting": {
+      "paused": "Paused.",
+      "question": "The coordinator asked something, answer below to continue.",
+      "interrupted": "The server restarted. Open the full view and click resume.",
+      "provider_limit": "The AI quota ran out. Wait for it to reset, then resume from the full view."
+    },
+    "taskState": {
+      "queued": "queued",
+      "running": "working",
+      "review": "QA checking",
+      "done": "done",
+      "failed": "failed",
+      "blocked": "waiting for the previous team"
+    },
+    "showTeam": "See the team (full view)",
+    "viewSimple": "Simple",
+    "viewFull": "Full",
+    "viewLabel": "view"
   }
 }

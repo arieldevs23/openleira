@@ -4,17 +4,17 @@
   "retry": "coba lagi",
   "empty": {
     "title": "belum ada workspace",
-    "body": "workspace itu tim agent AI yang kerja di satu folder aplikasi: orchestrator mecah task jadi subtask buat tiap tim, ngikutin flow yang lo gambar, terus lapisan audit ngecek tiap hasil. mulai dari folder baru, atau biar agent baca aplikasi yang udah ada.",
+    "body": "workspace itu tim agent AI yang kerja di satu folder aplikasi: koordinator mecah task jadi langkah buat tiap tim, ngikutin flow yang lo gambar, terus lapisan audit ngecek tiap hasil. mulai dari folder baru, atau biar agent baca aplikasi yang udah ada.",
     "create": "buat pakai tim default",
     "creating": "lagi buat workspace...",
     "folderWithout": "folder ini belum punya workspace.",
     "pick": "pilih workspace di kiri, atau tambah yang baru."
   },
   "toolbar": {
-    "models": "model agent",
-    "addDivision": "tambah agent",
+    "models": "model tim",
+    "addDivision": "tambah anggota tim",
     "settings": "pengaturan",
-    "providers": "provider"
+    "providers": "akun AI"
   },
   "missingModels": {
     "banner": "{{count}} agent belum punya model",
@@ -26,7 +26,7 @@
     "caseViews": "tampilan task",
     "result": "hasil",
     "files": "file",
-    "usage": "token",
+    "usage": "pemakaian",
     "showSidebar": "tampilin sidebar",
     "hideSidebar": "sembunyiin sidebar",
     "showPanel": "tampilin panel",
@@ -120,30 +120,30 @@
     "delete": "hapus",
     "confirmDelete": "yakin hapus?",
     "phase": {
-      "planning": "orchestrator lagi nyusun rencana...",
+      "planning": "koordinator lagi nyusun rencana...",
       "executing": "tim lagi kerja...",
-      "finalizing": "orchestrator lagi nulis ringkasan..."
+      "finalizing": "koordinator lagi nulis ringkasan..."
     },
     "waiting": {
       "paused": "lagi dijeda. kerjaan yang jalan tetap diselesaiin, yang baru ga dimulai.",
-      "question": "orchestrator punya pertanyaan. jawab di bagan atau di kotak pesan bawah biar lanjut.",
+      "question": "koordinator punya pertanyaan. jawab di bagan atau di kotak pesan bawah biar lanjut.",
       "interrupted": "server sempet restart pas ini jalan. klik lanjut buat nerusin dari posisi terakhir.",
       "provider_limit": "kuota provider AI lagi abis. ga ada yang dihitung gagal: tunggu sampai reset, terus klik lanjut buat nerusin dari langkah yang sama."
     },
     "modelsMissing": "belum bisa jalan: pilih model dulu buat {{names}}.",
     "providersMissing": "belum bisa jalan: login ke {{providers}} dulu.",
     "finalSummary": "ringkasan akhir",
-    "timeline": "timeline subtask",
-    "noTasks": "belum ada subtask.",
-    "noTasksDraft": "subtask bakal muncul di sini setelah kerjaannya mulai.",
+    "timeline": "timeline langkah",
+    "noTasks": "belum ada langkah.",
+    "noTasksDraft": "langkah bakal muncul di sini setelah kerjaannya mulai.",
     "auditAttempts": "gagal audit {{count}}x",
     "deletedDivision": "tim udah dihapus",
     "openSession": "buka sesinya di chat",
-    "conversation": "chat sama orchestrator",
+    "conversation": "chat sama koordinator",
     "noConversation": "belum ada pesan.",
     "you": "lo",
-    "coordinator": "orchestrator",
-    "notePlaceholder": "kirim pesan ke orchestrator (ctrl+enter buat kirim)",
+    "coordinator": "koordinator",
+    "notePlaceholder": "kirim pesan ke koordinator (ctrl+enter buat kirim)",
     "send": "kirim",
     "noCaseSelected": "belum ada kerjaan. tulis prompt di chat bawah canvas.",
     "retry": "ulangi yang gagal",
@@ -157,14 +157,14 @@
     "color": "warna",
     "delete": "hapus tim",
     "confirmDelete": "yakin hapus?",
-    "protected": "orchestrator dan lapisan audit bisa diedit, tapi ga bisa dihapus.",
-    "coordinatorTag": "orchestrator",
+    "protected": "koordinator dan lapisan audit bisa diedit, tapi ga bisa dihapus.",
+    "coordinatorTag": "koordinator",
     "auditTag": "lapisan audit",
     "addTitle": "tambah agent",
     "add": "tambah",
     "addHint": "tim baru dapet agent sendiri. atur peran, model, tools, sama skills-nya setelah ditambah.",
     "agentNamePlaceholder": "misal Dewi",
-    "deleteBody": "hapus tim {{name}} beserta agent-nya? subtask lamanya tetap ada di histori task."
+    "deleteBody": "hapus tim {{name}} beserta agent-nya? langkah lamanya tetap ada di histori task."
   },
   "agent": {
     "section": "agent",
@@ -173,7 +173,7 @@
     "pickModel": "pilih model",
     "rolePrompt": "peran (markdown)",
     "rolePromptPlaceholder": "agent ini fokus ke apa, kerjanya gimana, apa yang ga boleh...",
-    "rolePromptHint": "dikirim ke agent sebagai instruksi peran di setiap subtask.",
+    "rolePromptHint": "dikirim ke agent sebagai instruksi peran di setiap langkah.",
     "tools": "tools yang boleh",
     "toolsAll": "kalau ga ada yang dipilih, semua tools boleh.",
     "toolsLimited": "cuma tools yang dipilih yang bisa dipakai.",
@@ -184,8 +184,8 @@
     "enabledAudit": "audit ngecek tiap hasil (kalau mati, hasil langsung diterima)",
     "saved": "kesimpen.",
     "noCase": "pilih task buat liat kerjaan agent ini.",
-    "noTasks": "tim ini belum dapet subtask di task yang dipilih.",
-    "task": "subtask",
+    "noTasks": "tim ini belum dapet langkah di task yang dipilih.",
+    "task": "langkah",
     "result": "hasil",
     "auditNotes": "catatan audit",
     "work": "kerjaan dan transcript",
@@ -199,7 +199,7 @@
   },
   "messages": {
     "title": "pesan sama {{name}}",
-    "subtitle": "semua lewat orchestrator dan message bus.",
+    "subtitle": "semua lewat koordinator dan message bus.",
     "empty": "belum ada pesan sama tim ini di task yang dipilih."
   },
   "wizard": {
@@ -214,19 +214,20 @@
     "steps": "langkah setup",
     "stepProviders": "hubungkan provider",
     "stepModels": "pilih model",
-    "next": "lanjut"
+    "next": "lanjut",
+    "pickAuto": "pilih otomatis buat semua"
   },
   "permission": {
-    "title": "agent bakal jalan tanpa nanya",
-    "body": "workspace ini jalanin sesinya dengan bypass permission: agent bakal ngedit file dan jalanin command di foldernya tanpa minta izin lo dulu.",
-    "hint": "bisa ganti ke mode yang lebih ketat di pengaturan workspace. kalau mode ketat, setujui tool call dengan buka sesinya di chat.",
+    "title": "tim AI bakal kerja sendiri",
+    "body": "tim AI bakal bikin dan ngubah file di folder workspace ini tanpa minta izin satu-satu. file asli lo tetap ada di folder itu, jadi pastiin foldernya bukan folder penting yang belum di-backup.",
+    "hint": "bisa diganti ke mode yang lebih ketat di pengaturan workspace. kalau mode ketat, setujui tool call dengan buka sesinya di chat.",
     "confirm": "oke, jalanin"
   },
   "settings": {
     "title": "pengaturan workspace",
     "name": "nama workspace",
     "maxParallel": "sesi yang jalan barengan",
-    "maxParallelHint": "gabungan sesi subtask dan audit, per task (1–6).",
+    "maxParallelHint": "gabungan sesi langkah dan audit, per task (1–6).",
     "permissionMode": "mode permission",
     "modes": {
       "bypassPermissions": "bypass permission (default)",
@@ -256,14 +257,14 @@
   },
   "providers": {
     "title": "hubungkan provider AI",
-    "subtitle": "agent jalan pakai CLI provider yang ke-install di server tempat app ini jalan. login minimal satu. model yang muncul cuma dari provider yang udah terhubung.",
+    "subtitle": "agent jalan pakai akun AI lo (Claude, Codex, Cursor, atau OpenCode). login minimal satu. model yang muncul cuma dari yang udah terhubung.",
     "checking": "lagi dicek...",
     "connected": "terhubung",
     "connectedAs": "terhubung sebagai {{email}}",
     "notConnected": "belum terhubung",
     "notConnectedShort": "belum terhubung",
     "connect": "hubungkan",
-    "hint": "tombol hubungkan buka terminal di server (misalnya VPS lo) terus jalanin perintah login provider di sana. login-nya nyimpen di server itu, workspace ga nyimpen API key apa pun.",
+    "hint": "tombol hubungkan buka jendela login di app ini. ikuti tulisan di layar. login-nya kesimpen di server tempat OpenLeira jalan, workspace nggak nyimpen API key apa pun.",
     "recheck": "cek lagi",
     "noneBanner": "belum ada provider AI yang terhubung, jadi agent belum bisa kerja",
     "disconnectedBanner": "ada agent yang pakai provider yang belum terhubung: {{providers}}",
@@ -310,8 +311,8 @@
     "useDefaults": "lewati analisis, pakai tim default",
     "analysing": "lagi baca {{name}}...",
     "analysisFailed": "analisisnya ga selesai.",
-    "reviewIntro": "tim usulan. ganti nama, edit, hapus, atau tambah dulu sebelum dibikin. orchestrator dan lapisan audit ditambahin otomatis.",
-    "summary": "tentang aplikasi (dikasih ke orchestrator)",
+    "reviewIntro": "tim usulan. ganti nama, edit, hapus, atau tambah dulu sebelum dibikin. koordinator dan lapisan audit ditambahin otomatis.",
+    "summary": "tentang aplikasi (dikasih ke koordinator)",
     "editRole": "edit peran",
     "removeDivision": "hapus tim",
     "addDivision": "tambah tim",
@@ -356,7 +357,7 @@
     "role": "peran (markdown)",
     "tools": "tools",
     "connectTo": "hubungkan ke…",
-    "messages": "pesan sama orchestrator",
+    "messages": "pesan sama koordinator",
     "enable": "aktifin",
     "disable": "matiin",
     "resetPosition": "balikin posisi",
@@ -365,7 +366,7 @@
     "deleteArrow": "hapus panah",
     "addAgentHere": "tambah agent di sini",
     "autoLayout": "rapiin otomatis",
-    "messageCoordinator": "kirim pesan ke orchestrator",
+    "messageCoordinator": "kirim pesan ke koordinator",
     "connectSkill": "hubungkan ke skill…",
     "viewSkill": "buka skill",
     "connectAgent": "hubungkan ke agent…",
@@ -422,18 +423,18 @@
     "removedDivision": "(tim udah dihapus)",
     "role": {
       "coordinator": "orch.",
-      "task": "subtask",
+      "task": "langkah",
       "audit": "audit"
     },
     "nodeTitle": "{{count}} token kepakai di task ini",
     "note": "diambil dari transcript tiap provider. token cache biasanya jauh lebih murah dari token input."
   },
   "question": {
-    "label": "pertanyaan dari orchestrator",
+    "label": "pertanyaan dari koordinator",
     "title": "{{name}} nanya",
-    "placeholder": "jawab orchestrator",
+    "placeholder": "jawab koordinator",
     "send": "kirim jawaban",
-    "chip": "ada pertanyaan dari orchestrator",
+    "chip": "ada pertanyaan dari koordinator",
     "fold": "kecilin"
   },
   "skills": {
@@ -498,14 +499,14 @@
     "show": "chat kerjaan",
     "openCount_one": "{{count}} jalan",
     "openCount_other": "{{count}} jalan",
-    "empty": "belum ada kerjaan. tulis prompt atau list di bawah: ke orchestrator, atau langsung ke satu agent.",
+    "empty": "belum ada kerjaan. tulis prompt atau list di bawah: ke koordinator, atau langsung ke satu agent.",
     "to": "ke",
     "target": "siapa yang dapet pesan ini",
     "planned": "dibagi ke tim",
     "directGroup": "langsung ke satu agent",
     "noteGroup": "catatan buat kerjaan yang jalan",
     "answer": "jawab",
-    "placeholder": "prompt atau list kerjaan buat orchestrator (satu item per baris \"- \"). ctrl+enter buat kirim.",
+    "placeholder": "prompt atau list kerjaan buat koordinator (satu item per baris \"- \"). ctrl+enter buat kirim.",
     "teamPlaceholder": "prompt atau list kerjaan buat agent ini. ctrl+enter buat kirim.",
     "notePlaceholder": "catatan buat kerjaan ini (ctrl+enter buat kirim)",
     "message": "pesan",
@@ -516,5 +517,126 @@
     "asking": "nanya ke lo",
     "openResult": "buka hasilnya",
     "queuedBody": "item list ini nunggu kerjaan sebelumnya kelar, abis itu jalan sendiri."
+  },
+  "simple": {
+    "title": "Mau dikerjain apa hari ini?",
+    "subtitle": {
+      "coding": "Tulis apa yang lo mau, tim AI yang bikinin di folder aplikasinya. Nggak perlu ngerti teknis.",
+      "content": "Kasih bahan produk, tulis mau dibikinin apa, tim AI yang nyusun naskah dan kontennya.",
+      "finance": "Taruh data penjualan atau keuangan lo, tim AI yang ngolah dan bikin laporannya.",
+      "admin": "Taruh berkas lo, tim AI yang nyortir, ngisi formulir, dan ngerapiin arsipnya."
+    },
+    "stepsLabel": "langkah pakai",
+    "steps": {
+      "connect": "hubungkan AI",
+      "materials": "taruh bahan",
+      "job": "tulis kerjaan",
+      "result": "ambil hasil"
+    },
+    "setup": {
+      "title": "hubungkan AI dulu (sekali aja)",
+      "body": "OpenLeira butuh satu akun AI buat kerja. Pilih yang lo punya, cukup satu.",
+      "provider": {
+        "claude": "paling gampang kalau lo punya akun Claude",
+        "codex": "kalau lo punya akun ChatGPT/OpenAI",
+        "cursor": "kalau lo pakai Cursor",
+        "opencode": "kalau lo punya akun OpenCode atau API key"
+      },
+      "step1": "Klik \"hubungkan\" di AI yang lo punya.",
+      "step2": "Jendela login kebuka. Ikuti tulisan di layar: biasanya buka link, login di browser, lalu tempel kode kalau diminta.",
+      "step3": "Kalau udah, tutup jendelanya. Kalau status belum berubah, klik \"cek lagi\".",
+      "preparing": "nyiapin tim lo…",
+      "preparingBody": "AI-nya udah terhubung. Model buat tiap anggota tim dipilihin otomatis, nggak perlu lo atur. Bisa diganti nanti di tampilan lengkap.",
+      "prepare": "siapin otomatis",
+      "ready": "AI terhubung: {{providers}}. Tim siap kerja.",
+      "autoFailed": "model otomatis belum bisa dipasang: {{message}}"
+    },
+    "materials": {
+      "title": "taruh bahan kerja",
+      "body": {
+        "content": "Foto/deskripsi produk, katalog, daftar harga, contoh konten lama. Makin lengkap makin pas hasilnya.",
+        "finance": "File Excel/CSV data penjualan, nota, atau laporan bulan lalu. File aslinya nggak diubah.",
+        "admin": "Berkas yang mau diurus: scan, PDF, formulir kosong, daftar syarat."
+      },
+      "pick": "pilih file",
+      "optional": "boleh dilewatin kalau nggak ada bahan. Bisa juga seret file ke sini."
+    },
+    "job": {
+      "title": "tulis kerjaan lo",
+      "placeholder": {
+        "coding": "contoh: bikin halaman login dengan email dan password",
+        "content": "contoh: bikin 5 caption Instagram buat promo kopi susu akhir pekan",
+        "finance": "contoh: bikin laporan penjualan September dari bahan/penjualan-september.xlsx",
+        "admin": "contoh: cek kelengkapan berkas pengajuan kredit di folder bahan"
+      },
+      "examples": "contoh:",
+      "list": "kebaca {{count}} kerjaan, bakal dikerjain gantian.",
+      "hint": "ctrl+enter buat kirim. Mau beberapa kerjaan sekaligus? Tulis per baris pakai tanda \"-\".",
+      "notReady": "selesaiin langkah 1 dulu biar tim bisa kerja.",
+      "send": "kerjain"
+    },
+    "examples": {
+      "coding": [
+        "Bikin halaman login dengan email dan password",
+        "Tambahin tombol ekspor data ke CSV",
+        "Perbaiki bug: keranjang belanja kosong setelah refresh"
+      ],
+      "content": [
+        "Bikin 5 caption Instagram buat promo akhir pekan",
+        "Tulis deskripsi produk buat 3 produk terlaris",
+        "Bikin kalender konten sosmed 1 minggu"
+      ],
+      "finance": [
+        "Bikin laporan penjualan bulan ini dari file Excel di folder bahan",
+        "Hitung margin per produk dan kasih 3 saran",
+        "Rapiin data transaksi dan tandain yang aneh"
+      ],
+      "admin": [
+        "Cek kelengkapan berkas di folder bahan",
+        "Isi formulir dari data di berkas",
+        "Rapiin arsip: kelompokin per jenis dan seragamin nama file"
+      ]
+    },
+    "result": {
+      "title": "perkembangan & hasil",
+      "team": "anggota tim yang kerja",
+      "summary": "ringkasan dari koordinator",
+      "files": "file hasil ({{count}})",
+      "view": "lihat",
+      "hide": "tutup",
+      "download": "download",
+      "question": "koordinator butuh jawaban lo biar bisa lanjut",
+      "answer": "jawaban lo",
+      "sendAnswer": "kirim jawaban"
+    },
+    "state": {
+      "done": "Beres! Hasilnya ada di bawah.",
+      "failed": "Ada yang gagal. Buka tampilan lengkap buat lihat detail dan ulangi.",
+      "queued": "Nunggu kerjaan sebelumnya kelar.",
+      "working": "Lagi dikerjain."
+    },
+    "phase": {
+      "planning": "Koordinator lagi bagi tugas ke tim…",
+      "executing": "Tim lagi kerja…",
+      "finalizing": "Lagi nulis ringkasan hasil…"
+    },
+    "waiting": {
+      "paused": "Lagi dijeda.",
+      "question": "Koordinator nanya sesuatu, jawab di bawah biar lanjut.",
+      "interrupted": "Server sempat restart. Buka tampilan lengkap terus klik lanjut.",
+      "provider_limit": "Kuota AI lagi abis. Tunggu sampai reset, terus lanjutin dari tampilan lengkap."
+    },
+    "taskState": {
+      "queued": "antre",
+      "running": "lagi dikerjain",
+      "review": "lagi dicek QA",
+      "done": "beres",
+      "failed": "gagal",
+      "blocked": "nunggu tim sebelumnya"
+    },
+    "showTeam": "lihat timnya (tampilan lengkap)",
+    "viewSimple": "Simpel",
+    "viewFull": "Lengkap",
+    "viewLabel": "tampilan"
   }
 }
