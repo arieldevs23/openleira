@@ -3,9 +3,15 @@ name: Windows installer
 # Builds OpenLeira-Setup-<version>.exe on a Windows machine: the server and its
 # native modules have to be compiled for Windows, so this cannot be done from
 # Linux. Runs by hand, on version tags (and attaches the installer to the
-# release), and when the desktop shell or its build scripts change.
+# release), and when the desktop shell or its build scripts change. A manual
+# run with `release_tag` (e.g. v1.37.4) creates that tag and release too.
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to create, e.g. v1.37.4 (empty = build only)'
+        required: false
+        default: ''
   push:
     tags: ['v*']
     branches: ['**']
@@ -25,6 +31,8 @@ jobs:
       HUSKY: '0'
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # The tag being released: the pushed tag, or the manual run's input.
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,19 +70,21 @@ jobs:
       # A copy under a fixed name, so https://github.com/<repo>/releases/latest/download/OpenLeira-Setup.exe
       # (the landing page's download button) always serves the newest installer.
       - name: Add the fixed-name copy
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.RELEASE_TAG != ''
         shell: bash
         run: |
           mkdir -p release/stable
           cp release/desktop/OpenLeira-Setup-*.exe release/stable/OpenLeira-Setup.exe
 
       - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.RELEASE_TAG != ''
         uses: softprops/action-gh-release@v2
         with:
-          name: OpenLeira - Reaver4 ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: OpenLeira - Reaver4 ${{ env.RELEASE_TAG }}
           body: |
-            Installer Windows OpenLeira - Reaver4 (${{ github.ref_name }}).
+            Installer Windows OpenLeira - Reaver4 (${{ env.RELEASE_TAG }}).
 
             - **OpenLeira-Setup.exe**: installer terbaru (nama tetap, dipakai tombol download di landing page).
             - **OpenLeira-Setup-<versi>.exe**: file yang sama dengan nomor versi.
