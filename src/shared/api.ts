@@ -439,7 +439,7 @@ export const api = {
     create: (
       projectId: string,
       locale: string,
-      extra: { divisions?: unknown[]; appSummary?: string | null; kind?: OfficeWorkspaceKind } = {},
+      extra: { divisions?: unknown[]; appSummary?: string | null; kind?: OfficeWorkspaceKind; auditChecks?: string | null } = {},
     ) => post('/api/office', { projectId, locale, ...extra }),
     workspaces: () => get('/api/office/workspaces'),
     remove: (officeId: string) => del(`/api/office/${encodeURIComponent(officeId)}`),

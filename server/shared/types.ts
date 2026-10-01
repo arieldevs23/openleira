@@ -1587,9 +1587,11 @@ export type OfficePermissionMode = 'bypassPermissions' | 'acceptEdits' | 'defaul
  * between them, how agents are told about their folder and how the audit
  * layer checks results: `coding` works on a code repository, `content` on
  * sales and marketing content, `finance` on business and financial reports,
- * `admin` on documents and filing. Stored per office; old offices are `coding`.
+ * `admin` on documents and filing, and so on for research, education,
+ * support, hr, legal, ecommerce, translation and project work; `custom` has
+ * teams the user defined. Stored per office; old offices are `coding`.
  */
-export type OfficeWorkspaceKind = 'coding' | 'content' | 'finance' | 'admin';
+export type OfficeWorkspaceKind = 'coding' | 'content' | 'finance' | 'admin' | 'research' | 'education' | 'support' | 'hr' | 'legal' | 'ecommerce' | 'translation' | 'project' | 'custom';
 
 /**
  * One office (one per project path). Returned by the database module's

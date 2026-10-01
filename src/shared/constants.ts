@@ -241,4 +241,4 @@ export const PROVIDER_PERMISSION_PREFERENCE_KEYS: Record<LLMProvider, UserPrefer
  * Every workspace kind, in the order the "add workspace" dialog offers them.
  * The office module uses it for the kind picker and the kind icon/label.
  */
-export const OFFICE_WORKSPACE_KINDS: OfficeWorkspaceKind[] = ['coding', 'content', 'finance', 'admin'];
+export const OFFICE_WORKSPACE_KINDS: OfficeWorkspaceKind[] = ['coding', 'content', 'finance', 'admin', 'research', 'education', 'support', 'hr', 'legal', 'ecommerce', 'translation', 'project', 'custom'];

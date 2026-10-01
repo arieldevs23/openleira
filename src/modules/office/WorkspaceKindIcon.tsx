@@ -1,4 +1,4 @@
-import { ClipboardList, Code2, LineChart, Megaphone } from 'lucide-react';
+import { CalendarCheck, ClipboardList, Code2, GraduationCap, Headset, Languages, LineChart, Megaphone, Scale, Search, ShoppingBag, SlidersHorizontal, UserRound } from 'lucide-react';
 
 import type { OfficeWorkspaceKind } from '@/shared/types';
 import { cn } from '@/shared/utils';
@@ -8,6 +8,15 @@ const ICON_BY_KIND = {
   content: Megaphone,
   finance: LineChart,
   admin: ClipboardList,
+  research: Search,
+  education: GraduationCap,
+  support: Headset,
+  hr: UserRound,
+  legal: Scale,
+  ecommerce: ShoppingBag,
+  translation: Languages,
+  project: CalendarCheck,
+  custom: SlidersHorizontal,
 } as const;
 
 /**
