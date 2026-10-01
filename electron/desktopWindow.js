@@ -41,6 +41,7 @@ export class DesktopWindowManager {
     getLocalState,
     actions,
     tabs,
+    standalone = false,
   }) {
     this.appName = appName;
     this.getWindowIconPath = getWindowIconPath;
@@ -54,6 +55,9 @@ export class DesktopWindowManager {
     this.getLocalState = getLocalState;
     this.actions = actions;
     this.tabs = tabs;
+    // Standalone: no cloud, so the window is just OpenLeira itself, full size
+    // under the normal OS title bar, with no launcher, tab strip or status bar.
+    this.standalone = standalone;
 
     this.mainWindow = null;
     this.settingsWindow = null;
@@ -79,13 +83,14 @@ export class DesktopWindowManager {
   }
 
   getContentViewBounds() {
-    if (!this.mainWindow) return { x: 0, y: TITLEBAR_HEIGHT, width: 0, height: 0 };
+    const top = this.standalone ? 0 : TITLEBAR_HEIGHT;
+    if (!this.mainWindow) return { x: 0, y: top, width: 0, height: 0 };
     const [width, height] = this.mainWindow.getContentSize();
     return {
       x: 0,
-      y: TITLEBAR_HEIGHT,
+      y: top,
       width,
-      height: Math.max(0, height - TITLEBAR_HEIGHT),
+      height: Math.max(0, height - top),
     };
   }
 
@@ -199,6 +204,11 @@ export class DesktopWindowManager {
 
   async showLauncher() {
     if (!this.mainWindow) return;
+    // A standalone window has nothing to launch but OpenLeira itself.
+    if (this.standalone && this.launcherLoaded) {
+      await this.actions.openLocalInDesktop();
+      return;
+    }
     const target = { kind: 'launcher', name: this.appName, url: null };
     this.tabs.upsertTarget(target);
     this.actions.setActiveTarget(target);
@@ -425,11 +435,13 @@ export class DesktopWindowManager {
           { type: 'separator' },
           {
             label: 'Show Launcher',
+            visible: !this.standalone,
             accelerator: 'CmdOrCtrl+Shift+L',
             click: () => void this.showLauncher().catch((error) => this.actions.showError('Could not show launcher', error)),
           },
           {
             label: 'Switch Environment',
+            visible: !this.standalone,
             accelerator: 'CmdOrCtrl+Shift+E',
             click: () => void this.actions.showEnvironmentPicker().catch((error) => this.actions.showError('Could not switch environment', error)),
           },
@@ -455,15 +467,17 @@ export class DesktopWindowManager {
         ],
       },
       {
-        label: 'Environment',
+        label: this.standalone ? 'Server' : 'Environment',
         submenu: [
           {
             label: 'Show Launcher',
+            visible: !this.standalone,
             accelerator: 'CmdOrCtrl+Shift+L',
             click: () => void this.showLauncher().catch((error) => this.actions.showError('Could not show launcher', error)),
           },
           {
             label: 'Switch Environment',
+            visible: !this.standalone,
             accelerator: 'CmdOrCtrl+Shift+E',
             click: () => void this.actions.showEnvironmentPicker().catch((error) => this.actions.showError('Could not switch environment', error)),
           },
@@ -500,7 +514,7 @@ export class DesktopWindowManager {
           },
         ],
       },
-      {
+      ...(this.standalone ? [] : [{
         label: 'Cloud',
         submenu: [
           {
@@ -524,7 +538,7 @@ export class DesktopWindowManager {
             submenu: remoteItems,
           },
         ],
-      },
+      }]),
       {
         label: 'Edit',
         submenu: [
@@ -714,11 +728,13 @@ export class DesktopWindowManager {
       minWidth: 1024,
       minHeight: 720,
       show: false,
-      backgroundColor: '#0f172a',
+      backgroundColor: '#0a0a0b',
       title: this.appName,
       icon: this.getWindowIconPath(),
-      titleBarStyle: 'hidden',
-      ...(process.platform === 'darwin'
+      // Standalone keeps the normal OS title bar and hides the menu bar
+      // (Alt shows it), so the window looks like the web app in a browser.
+      ...(this.standalone ? { autoHideMenuBar: true } : { titleBarStyle: 'hidden' }),
+      ...(this.standalone ? {} : process.platform === 'darwin'
         ? { trafficLightPosition: { x: 18, y: 14 } }
         : {
             titleBarOverlay: {
@@ -762,5 +778,11 @@ export class DesktopWindowManager {
 
     this.buildAppMenu();
     await this.showLauncher();
+    if (this.standalone) {
+      // Not awaited: the first start can take a while and must not hold up
+      // (or, on failure, abort) the rest of app startup.
+      void this.actions.openLocalInDesktop()
+        .catch((error) => this.actions.showError('Could not start OpenLeira', error));
+    }
   }
 }
