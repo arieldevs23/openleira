@@ -59,8 +59,27 @@ jobs:
           path: release/desktop/*.exe
           if-no-files-found: error
 
+      # A copy under a fixed name, so https://github.com/<repo>/releases/latest/download/OpenLeira-Setup.exe
+      # (the landing page's download button) always serves the newest installer.
+      - name: Add the fixed-name copy
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          mkdir -p release/stable
+          cp release/desktop/OpenLeira-Setup-*.exe release/stable/OpenLeira-Setup.exe
+
       - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/desktop/*.exe
+          name: OpenLeira - Reaver4 ${{ github.ref_name }}
+          body: |
+            Installer Windows OpenLeira - Reaver4 (${{ github.ref_name }}).
+
+            - **OpenLeira-Setup.exe**: installer terbaru (nama tetap, dipakai tombol download di landing page).
+            - **OpenLeira-Setup-<versi>.exe**: file yang sama dengan nomor versi.
+
+            Windows 10/11 64-bit. Installer belum ditandatangani: kalau muncul "Windows protected your PC", pilih More info lalu Run anyway. Panduan: https://github.com/arieldevs23/openleira/blob/main/docs/install-windows.md
+          files: |
+            release/desktop/*.exe
+            release/stable/OpenLeira-Setup.exe
