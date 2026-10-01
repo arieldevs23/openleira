@@ -102,7 +102,7 @@ Buat development: `npm run dev` (server + Vite dengan hot reload).
 
 ## Asal-usul dan lisensi
 
-Rilis saat ini: **OpenLeira - Reaver4**. OpenLeira adalah versi modifikasi, bukan software CloudCLI UI yang asli, dan nggak di-endorse oleh Siteboon AI B.V. Basisnya berasal dari:
+Rilis saat ini: **OpenLeira - Reaver4**. Proyek berikutnya: **OpenLeira - Clove4** (sedang disiapkan). OpenLeira adalah versi modifikasi, bukan software CloudCLI UI yang asli, dan nggak di-endorse oleh Siteboon AI B.V. Basisnya berasal dari:
 
 > CloudCLI UI (https://github.com/siteboon/claudecodeui)
 
