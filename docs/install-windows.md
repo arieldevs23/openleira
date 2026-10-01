@@ -6,7 +6,8 @@ Panduan ini buat Windows 10 atau 11 (64-bit). Nggak perlu ngerti coding.
 
 Ambil file **`OpenLeira-Setup-<versi>.exe`**:
 
-- dari halaman **Releases** repo ini (versi resmi), atau
+- dari tombol **Download untuk Windows** di https://openleira.online, atau langsung https://github.com/arieldevs23/openleira/releases/latest/download/OpenLeira-Setup.exe (selalu versi terbaru), atau
+- dari halaman **Releases** repo ini (semua versi), atau
 - dari tab **Actions** → *Windows installer* → run terakhir yang hijau → bagian **Artifacts** → `OpenLeira-Windows-Setup` (file zip, isinya `.exe`).
 
 ## 2. Pasang

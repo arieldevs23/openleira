@@ -82,7 +82,12 @@
         </div>
 
         <div class="install" data-rv="rise">
-          <p class="chap install__label" id="install-label">Pasang dengan satu perintah</p>
+          <p class="chap install__label" id="dl-label">Pakai di Windows</p>
+          <div class="dl">
+            <a class="btn btn--primary dl__btn" href="https://github.com/arieldevs23/openleira/releases/latest/download/OpenLeira-Setup.exe" aria-describedby="dl-label dl-meta">Download untuk Windows</a>
+            <span class="dl__meta" id="dl-meta">Windows 10/11 64-bit · gratis · <a href="https://github.com/arieldevs23/openleira/releases/latest" target="_blank" rel="noopener noreferrer">semua versi</a></span>
+          </div>
+          <p class="chap install__label install__label--server" id="install-label">Atau pasang di server dengan satu perintah</p>
           <div class="cmd">
             <code id="cmd-install">curl -fsSL https://openleira.online/install.sh | bash</code>
             <button class="btn btn--primary btn--copy" type="button" data-copy="cmd-install" aria-describedby="install-label">Salin</button>
@@ -236,12 +241,12 @@
         <p class="chap" data-rv>IV · Pasang</p>
         <h2 id="h-pasang" data-rv="rise">Cara pasang</h2>
       </header>
-      <p class="req" data-rv="side"><span class="chap">Syarat</span> Ubuntu 22.04+ atau Debian 12 atau macOS atau WSL2, 2&nbsp;vCPU, 4&nbsp;GB RAM, Node&nbsp;20.</p>
+      <p class="req" data-rv="side"><span class="chap">Syarat</span> Windows 10/11 64-bit dengan 8&nbsp;GB RAM. Untuk server: Ubuntu 22.04+ atau Debian 12 atau macOS atau WSL2, 2&nbsp;vCPU, 4&nbsp;GB RAM, Node&nbsp;22.</p>
       <ol class="steps">
-        <li data-rv>Siapkan VPS atau mesin lokal yang memenuhi syarat.</li>
-        <li data-rv>Jalankan perintah installer dari bagian atas halaman ini.</li>
-        <li data-rv>Buka alamat server di browser dan buat akun pertama, yang otomatis menjadi admin.</li>
-        <li data-rv>Sambungkan Claude Code, Codex, OpenCode, atau Cursor Agent yang sudah dilanggani.</li>
+        <li data-rv><span><b>Windows:</b> <a href="https://github.com/arieldevs23/openleira/releases/latest/download/OpenLeira-Setup.exe">download installer</a>, klik dua kali, lalu ikuti wizard-nya. Kalau muncul layar &ldquo;Windows protected your PC&rdquo;, pilih <i>More info</i> lalu <i>Run anyway</i>, karena installer belum ditandatangani.</span></li>
+        <li data-rv><span><b>Server:</b> siapkan VPS atau mesin lokal yang memenuhi syarat, lalu jalankan perintah installer dari bagian atas halaman ini.</span></li>
+        <li data-rv><span>Buka OpenLeira (atau alamat server di browser) dan buat akun pertama, yang otomatis menjadi admin.</span></li>
+        <li data-rv><span>Sambungkan Claude Code, Codex, OpenCode, atau Cursor Agent yang sudah dilanggani.</span></li>
       </ol>
     </section>
 
@@ -252,7 +257,7 @@
       </header>
       <dl class="facts">
         <div data-rv><dt>Asal</dt><dd>Dibuat di Indonesia.</dd></div>
-        <div data-rv><dt>Lisensi</dt><dd>Open source, GPL-3.0.</dd></div>
+        <div data-rv><dt>Lisensi</dt><dd>Open source, AGPL-3.0.</dd></div>
         <div data-rv><dt>Token</dt><dd>Tidak menjual token. Biaya AI mengikuti langganan masing-masing.</dd></div>
         <div data-rv><dt>Kunci API</dt><dd>Tidak disimpan di luar server pengguna.</dd></div>
         <div data-rv><dt>Telemetri</dt><dd>Tidak ada.</dd></div>
@@ -271,7 +276,7 @@
   <footer class="footer">
     <div class="wrap footer__inner">
       <a class="wordmark wordmark--sm" href="#top" aria-label="OpenLeira, kembali ke atas"><span class="wordmark__open">Open</span><span class="wordmark__leira">Leira</span></a>
-      <p>OpenLeira <span aria-hidden="true">·</span> GPL-3.0 <span aria-hidden="true">·</span> 2026 <span aria-hidden="true">·</span> <a href="https://saweria.co/leira" target="_blank" rel="noopener noreferrer">Dukung</a></p>
+      <p>OpenLeira <span aria-hidden="true">·</span> AGPL-3.0 <span aria-hidden="true">·</span> 2026 <span aria-hidden="true">·</span> <a href="https://saweria.co/leira" target="_blank" rel="noopener noreferrer">Dukung</a></p>
     </div>
   </footer>
 
