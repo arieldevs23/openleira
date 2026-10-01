@@ -562,7 +562,9 @@ async function openLocalInDesktop() {
   const pendingTarget = localServer.getPendingTarget();
   tabs.upsertTarget(pendingTarget);
   setActiveTarget(pendingTarget);
-  await desktopWindow.showLocalStartupTarget(pendingTarget, localServer.getStartupLogs());
+  // A startup log line arriving meanwhile reloads this page; that abort is expected.
+  await desktopWindow.showLocalStartupTarget(pendingTarget, localServer.getStartupLogs())
+    .catch((error) => { if (!isExpectedNavigationAbort(error)) throw error; });
   desktopWindow.emitDesktopState();
 
   const target = await localServer.getResolvedTarget();
@@ -864,6 +866,7 @@ async function createDesktopWindow() {
       copyLocalWebUrl,
       openNotificationTarget,
     },
+    standalone: !CLOUD_ENABLED,
   });
 
   desktopWindow.createTray();

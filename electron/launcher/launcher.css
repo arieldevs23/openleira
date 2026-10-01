@@ -14,48 +14,52 @@ body.cc-modal-window {
 }
 
 :root {
-  --bg: #111315;
-  --s1: #171a1d;
-  --s2: #1e2328;
-  --s3: #262d34;
-  --b-subtle: #28303a;
-  --b: #313b46;
-  --b-strong: #42505f;
-  --tx: #f5f7fa;
-  --tx2: #adb8c5;
-  --tx3: #7f8b98;
-  --brand: #0a66d9;
-  --brand-2: #5fa5ff;
-  --brand-faint: rgba(10, 102, 217, 0.14);
-  --ok: #2aa775;
-  --warn: #d48b20;
-  --err: #d65252;
-  --tab-hover-bg: rgba(255, 255, 255, 0.08);
-  --tab-active-bg: rgba(255, 255, 255, 0.14);
-  --mono: "SF Mono", "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  /* Same palette as the web app (src/index.css), so the desktop shell and
+     the OpenLeira UI it hosts read as one app. */
+  --bg: #0a0a0b;
+  --s1: #141416;
+  --s2: #1c1c1f;
+  --s3: #232327;
+  --b-subtle: #232327;
+  --b: #2a2a2e;
+  --b-strong: #3a3a40;
+  --tx: #f2f2f0;
+  --tx2: #c4c4c8;
+  --tx3: #8a8a90;
+  --brand: #c9ccd4;
+  --brand-2: #ffffff;
+  --brand-faint: rgba(201, 204, 212, 0.12);
+  --on-brand: #0a0a0b;
+  --ok: #7fb08a;
+  --warn: #c9a96a;
+  --err: #c07c7c;
+  --tab-hover-bg: rgba(255, 255, 255, 0.06);
+  --tab-active-bg: rgba(255, 255, 255, 0.12);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --bg: #f3f5f8;
+  --bg: #f2f2f0;
   --s1: #ffffff;
-  --s2: #f7f9fb;
-  --s3: #edf1f5;
-  --b-subtle: #e5eaf0;
-  --b: #d8dee6;
-  --b-strong: #c3ccd6;
-  --tx: #11151a;
-  --tx2: #566171;
-  --tx3: #7f8b98;
-  --brand: #0a66d9;
-  --brand-2: #0f5fc6;
-  --brand-faint: rgba(10, 102, 217, 0.09);
-  --ok: #1f8e61;
-  --warn: #b67515;
-  --err: #c24747;
-  --tab-hover-bg: rgba(15, 23, 42, 0.05);
-  --tab-active-bg: rgba(15, 23, 42, 0.08);
+  --s2: #e9e9e6;
+  --s3: #dededa;
+  --b-subtle: #e2e2de;
+  --b: #d8d8d4;
+  --b-strong: #bdbdb8;
+  --tx: #0a0a0b;
+  --tx2: #3a3a40;
+  --tx3: #6b6b72;
+  --brand: #2a2a2e;
+  --brand-2: #0a0a0b;
+  --brand-faint: rgba(42, 42, 46, 0.08);
+  --on-brand: #ffffff;
+  --ok: #3e7a50;
+  --warn: #8a6a20;
+  --err: #8e3b3b;
+  --tab-hover-bg: rgba(10, 10, 11, 0.05);
+  --tab-active-bg: rgba(10, 10, 11, 0.08);
   color-scheme: light;
 }
 
@@ -183,7 +187,7 @@ svg {
 .btn.pri {
   background: var(--brand);
   border-color: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
 }
 
 .btn.pri:hover {
