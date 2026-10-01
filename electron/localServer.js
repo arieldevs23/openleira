@@ -382,6 +382,15 @@ export class LocalServerController {
       return bundledEntry;
     }
 
+    // A full installer ships the server (with native modules built for this
+    // Electron) under resources/server, so nothing has to be downloaded.
+    const embeddedEntry = this.isPackaged && process.resourcesPath
+      ? path.join(process.resourcesPath, 'server', 'dist-server', 'server', 'index.js')
+      : null;
+    if (process.env.CLOUDCLI_USE_INSTALLED_SERVER !== '1' && embeddedEntry && await pathExists(embeddedEntry)) {
+      return embeddedEntry;
+    }
+
     if (!this.appVersion) {
       throw new Error('Cannot install local server: app version is unknown.');
     }

@@ -1,7 +1,7 @@
 {
   "name": "@cloudcli-ai/cloudcli",
   "version": "1.37.3",
-  "productName": "CloudCLI",
+  "productName": "OpenLeira",
   "description": "A web-based UI for Claude Code CLI",
   "type": "module",
   "main": "dist-server/server/index.js",
@@ -63,10 +63,10 @@
     "update:platform": "./update-platform.sh"
   },
   "build": {
-    "appId": "ai.cloudcli.desktop",
-    "productName": "CloudCLI",
+    "appId": "online.openleira.desktop",
+    "productName": "OpenLeira",
     "asar": false,
-    "artifactName": "cloudcli-desktop-${version}-${os}-${arch}.${ext}",
+    "artifactName": "OpenLeira-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "release/desktop"
     },
@@ -118,8 +118,16 @@
       ]
     },
     "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "OpenLeira",
+      "artifactName": "OpenLeira-Setup-${version}.${ext}",
       "installerIcon": "electron/assets/logo-windows.ico",
-      "uninstallerIcon": "electron/assets/logo-windows.ico"
+      "uninstallerIcon": "electron/assets/logo-windows.ico",
+      "uninstallDisplayName": "OpenLeira"
     }
   },
   "keywords": [
