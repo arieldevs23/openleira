@@ -1,13 +1,14 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, session, shell } from 'electron';
+// OpenLeira desktop app: a single window showing the same OpenLeira web app
+// you get in the browser, served by the server that ships inside the
+// installer. There is no launcher, no tab strip and no cloud account: the app
+// starts its own server, waits for it, and opens it full-window.
+import { app, BrowserWindow, Menu, dialog, session, shell } from 'electron';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import http from 'node:http';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { CloudController } from './cloud.js';
-import { DesktopWindowManager } from './desktopWindow.js';
-import { DesktopNotificationsController } from './desktopNotifications.js';
-import { LocalServerController } from './localServer.js';
-import { TabsController } from './tabs.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,943 +16,369 @@ const APP_NAME = 'OpenLeira';
 // Release line shown with the name ("OpenLeira - Reaver4"); keep in sync with releaseName in package.json.
 const RELEASE_NAME = 'Reaver4';
 const APP_USER_MODEL_ID = 'online.openleira.desktop';
-const CALLBACK_PROTOCOL = 'openleira';
-const CALLBACK_URL = `${CALLBACK_PROTOCOL}://auth/callback`;
-const OPENLEIRA_CONTROL_PLANE_URL = process.env.OPENLEIRA_CONTROL_PLANE_URL || 'https://openleira.online';
-// OpenLeira has no hosted cloud yet: the cloud account and remote environments
-// (inherited from the CloudCLI desktop app) only show up when a control plane
-// is configured explicitly.
-const CLOUD_ENABLED = Boolean(process.env.OPENLEIRA_CONTROL_PLANE_URL);
-const REMOTE_START_TIMEOUT_MS = 30000;
-const AUTH_CALLBACK_TTL_MS = 10 * 60 * 1000;
+const HOST = '127.0.0.1';
+// A port of its own, so the app never ends up on another (older) OpenLeira or
+// CloudCLI server already listening on 3001, and the address (and with it the
+// browser storage that keeps you signed in) stays the same between runs.
+const PREFERRED_PORT = Number.parseInt(process.env.OPENLEIRA_DESKTOP_PORT || '', 10) || 37301;
+const SERVER_START_TIMEOUT_MS = 90000;
+const MAX_LOG_LINES = 400;
 
-const tabs = new TabsController();
+/** The OpenLeira server this app started, while it runs. */
+let serverProcess = null;
+/** http://127.0.0.1:<port> of that server once it answers. */
+let serverUrl = null;
+/** The one app window. */
+let mainWindow = null;
+/** Recent server output, shown when the server fails to start. */
+const serverLog = [];
+let logStream = null;
+let quitting = false;
 
+// Set before anything reads userData, so data lives under "OpenLeira" from source too.
+app.setName(APP_NAME);
 if (process.platform === 'win32') {
   app.setAppUserModelId(APP_USER_MODEL_ID);
 }
 
-let activeTarget = { kind: 'launcher', name: APP_NAME, url: null };
-let desktopWindow = null;
-let localServer = null;
-let cloud = null;
-let desktopNotifications = null;
-let isQuitting = false;
-let isRefreshingCloud = false;
-let pendingCloudConnectStartedAt = 0;
+/** Where the running server's process id is kept, to clean up after a crash. */
+const pidFile = () => path.join(app.getPath('userData'), 'server.pid');
+
+/**
+ * Stops a server left running by an earlier run that did not shut down
+ * cleanly. Only when an OpenLeira server still answers on our port, so a
+ * reused process id never takes down some unrelated program.
+ */
+async function stopLeftoverServer() {
+  let pid = 0;
+  try {
+    pid = Number.parseInt(fs.readFileSync(pidFile(), 'utf8'), 10);
+  } catch {
+    return;
+  }
+  fs.rmSync(pidFile(), { force: true });
+  if (!(pid > 0) || !(await isHealthy(`http://${HOST}:${PREFERRED_PORT}`))) return;
+  try {
+    process.kill(pid);
+    log(`server lama (pid ${pid}) dihentikan`);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  } catch {
+    // Already gone.
+  }
+}
 
 function getAppRoot() {
   return app.isPackaged ? app.getAppPath() : path.resolve(__dirname, '..');
 }
 
-function getLauncherPath() {
-  return path.join(__dirname, 'launcher', 'index.html');
-}
-
-function getPreloadPath() {
-  return path.join(__dirname, 'preload.cjs');
-}
-
-function getWindowIconPath() {
+function getIconPath() {
   if (process.platform === 'darwin') {
     return path.join(getAppRoot(), 'electron', 'assets', 'logo-macos.png');
   }
   return path.join(getAppRoot(), 'public', 'logo-512.png');
 }
 
-function getStorePath() {
-  return path.join(app.getPath('userData'), 'cloud-account.json');
+function log(line) {
+  const text = String(line ?? '').trimEnd();
+  if (!text) return;
+  serverLog.push(text);
+  if (serverLog.length > MAX_LOG_LINES) serverLog.splice(0, serverLog.length - MAX_LOG_LINES);
+  logStream?.write(`${new Date().toISOString()} ${text}\n`);
 }
 
-function getSettingsPath() {
-  return path.join(app.getPath('userData'), 'desktop-settings.json');
+/**
+ * The server entry: the one the installer ships under resources/server, or
+ * the repo's own build when running from source (`npm run desktop`).
+ */
+function getServerEntry() {
+  if (process.env.ELECTRON_SERVER_ENTRY) return process.env.ELECTRON_SERVER_ENTRY;
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'server', 'dist-server', 'server', 'index.js');
+  }
+  return path.join(getAppRoot(), 'dist-server', 'server', 'index.js');
 }
 
-function getDesktopNotificationsSettingsPath() {
-  return path.join(app.getPath('userData'), 'desktop-notifications-settings.json');
+/**
+ * The installer's server has native modules built for this Electron, so it
+ * runs on Electron's own Node. From source it runs on the system Node that
+ * `npm install` built them for.
+ */
+function getNodeRuntime() {
+  if (app.isPackaged) {
+    return { command: process.execPath, env: { ELECTRON_RUN_AS_NODE: '1' } };
+  }
+  return { command: process.env.npm_node_execpath || 'node', env: {} };
 }
 
-function getRunningEnvironmentUrls() {
-  return cloud.getEnvironments()
-    .filter((environment) => environment.status === 'running')
-    .map((environment) => cloud.getEnvironmentUrl(environment))
-    .filter(Boolean);
+function isPortFree(port) {
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.once('error', () => resolve(false));
+    probe.once('listening', () => probe.close(() => resolve(true)));
+    probe.listen(port, HOST);
+  });
 }
 
-function getDisplayTargetName() {
-  return activeTarget?.name || APP_NAME;
+function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.once('listening', () => {
+      const { port } = probe.address();
+      probe.close(() => resolve(port));
+    });
+    probe.listen(0, HOST);
+  });
 }
 
-function getCloudState() {
-  return {
-    account: cloud.getAccount(),
-    environments: cloud.getEnvironments(),
-    controlPlaneUrl: OPENLEIRA_CONTROL_PLANE_URL,
-  };
+function isHealthy(baseUrl) {
+  return new Promise((resolve) => {
+    const req = http.get(`${baseUrl}/health`, { timeout: 1000 }, (res) => {
+      res.resume();
+      resolve(res.statusCode >= 200 && res.statusCode < 300);
+    });
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('error', () => resolve(false));
+  });
 }
 
-function getLocalState() {
-  return {
-    desktopSettings: localServer.getSettings(),
-    localServerRunning: Boolean(localServer.getLocalServerUrl()),
-    localWebUrl: localServer.getLocalServerUrl(),
-    shareableWebUrl: localServer.getShareableWebUrl(),
-  };
-}
+/** Starts the bundled server and resolves with its URL once it answers /health. */
+async function startServer() {
+  const entry = getServerEntry();
+  if (!fs.existsSync(entry)) {
+    throw new Error(`Server OpenLeira tidak ditemukan di ${entry}. Pasang ulang OpenLeira.`);
+  }
 
-function serializeEnvironment(environment) {
-  return {
-    id: environment.id,
-    name: environment.name,
-    subdomain: environment.subdomain,
-    access_url: cloud.getEnvironmentUrl(environment),
-    status: environment.status,
-    created_at: environment.created_at,
-    github_url: environment.github_url || null,
-    region: environment.region || null,
-    agent: environment.agent || null,
-  };
-}
+  await stopLeftoverServer();
+  const port = (await isPortFree(PREFERRED_PORT)) ? PREFERRED_PORT : await getFreePort();
+  const baseUrl = `http://${HOST}:${port}`;
+  const runtime = getNodeRuntime();
+  // Installed layout is <root>/dist-server/server/index.js; the server finds dist/ from <root>.
+  const cwd = path.resolve(path.dirname(entry), '..', '..');
+  log(`$ ${runtime.command} ${entry} (port ${port})`);
 
-function getDesktopState() {
-  const cloudAccount = cloud.getAccount();
-  const localState = getLocalState();
-  const authState = cloud.getAuthState();
-  return {
-    account: {
-      connected: authState === 'connected',
-      email: cloudAccount?.email || null,
-      authState,
-      requiresReconnect: authState === 'expired',
+  const child = spawn(runtime.command, [entry], {
+    cwd,
+    env: {
+      ...process.env,
+      ...runtime.env,
+      NODE_ENV: 'production',
+      HOST,
+      SERVER_PORT: String(port),
     },
-    activeTarget,
-    desktopSettings: localState.desktopSettings,
-    localWebUrl: localState.localWebUrl,
-    shareableWebUrl: localState.shareableWebUrl,
-    localServerRunning: localState.localServerRunning,
-    localStartupLogs: localServer.getStartupLogs(),
-    cloudLoading: isRefreshingCloud,
-    tabs: tabs.getSerializableTabs(),
-    activeTabId: tabs.activeTabId,
-    environments: cloud.getEnvironments().map(serializeEnvironment),
-    cloudEnabled: CLOUD_ENABLED,
-    desktopNotifications: desktopNotifications?.getState() || { enabled: false, supported: false, connectedCount: 0, targetCount: 0 },
-  };
-}
-
-async function openExternalUrl(url) {
-  if (String(url).startsWith(CALLBACK_PROTOCOL + "://")) {
-    await handleDeepLink(url);
-    return;
-  }
-
-  await shell.openExternal(url);
-}
-
-async function showError(title, error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`${title}: ${message}`);
-  await dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
-    type: 'error',
-    title,
-    message: title,
-    detail: message,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
   });
-}
-
-function isExpectedNavigationAbort(error) {
-  const message = error instanceof Error ? error.message : String(error);
-  return error?.code === 'ERR_ABORTED' || message.includes('ERR_ABORTED') || message.includes('(-3)');
-}
-
-function syncDesktopState() {
-  if (!desktopWindow) return;
-  desktopWindow.buildAppMenu();
-  desktopWindow.emitDesktopState();
-  if (activeTarget?.kind === 'local' && !localServer?.getLocalServerUrl()) {
-    void desktopWindow.showLocalStartupTarget(localServer.getPendingTarget(), localServer.getStartupLogs())
-      .catch((error) => {
-        if (isExpectedNavigationAbort(error)) return;
-        void showError('Could not update local startup log', error);
-      });
-  }
-}
-
-function setActiveTarget(target) {
-  activeTarget = target;
-}
-
-function getEnvironmentTarget(environment) {
-  return {
-    kind: 'remote',
-    id: environment.id,
-    name: environment.name || environment.subdomain,
-    url: cloud.getEnvironmentUrl(environment),
-  };
-}
-
-async function getEnvironmentLaunchTarget(environment) {
-  const environmentUrl = cloud.getEnvironmentUrl(environment);
-  return {
-    ...getEnvironmentTarget(environment),
-    url: environmentUrl,
-    loadUrl: await cloud.getEnvironmentLaunchUrl(environment),
-  };
-}
-
-async function hasCloudWebSession() {
-  const cookies = await session.defaultSession.cookies.get({});
-  return cookies.some((cookie) => {
-    const cookieDomain = String(cookie.domain || '');
-    return cookieDomain.includes('openleira.online')
-      && /-auth-token(?:\.\d+)?$/.test(cookie.name)
-      && Boolean(cookie.value);
-  });
-}
-
-function isCloudAuthRedirect(url) {
-  if (!url) return false;
-  try {
-    const parsed = new URL(url);
-    const controlPlane = new URL(OPENLEIRA_CONTROL_PLANE_URL);
-    return parsed.origin === controlPlane.origin
-      && (parsed.pathname === '/login' || parsed.pathname.startsWith('/auth/'));
-  } catch {
-    return false;
-  }
-}
-
-function getDiagnosticsText() {
-  const cloudAccount = cloud.getAccount();
-  const localState = getLocalState();
-  return JSON.stringify({
-    app: APP_NAME,
-    version: app.getVersion(),
-    electron: process.versions.electron,
-    node: process.versions.node,
-    platform: process.platform,
-    arch: process.arch,
-    appPath: getAppRoot(),
-    userDataPath: app.getPath('userData'),
-    activeTarget,
-    localServerUrl: localState.localWebUrl,
-    localServerPort: localServer.localServerPort,
-    localWebUrl: localState.localWebUrl,
-    shareableWebUrl: localState.shareableWebUrl,
-    desktopSettings: localState.desktopSettings,
-    cloudConnected: Boolean(cloudAccount?.apiKey),
-    cloudEmail: cloudAccount?.email || null,
-    cloudEnvironmentCount: cloud.getEnvironments().length,
-    cloudRunningEnvironmentCount: getRunningEnvironmentUrls().length,
-    cloudAuthState: cloud.getAuthState(),
-    cloudAccountPath: getStorePath(),
-    controlPlaneUrl: OPENLEIRA_CONTROL_PLANE_URL,
-  }, null, 2);
-}
-
-async function copyDiagnostics() {
-  clipboard.writeText(getDiagnosticsText());
-  await dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
-    type: 'info',
-    title: 'Diagnostics copied',
-    message: 'OpenLeira desktop diagnostics were copied to the clipboard.',
-  });
-}
-
-async function refreshCloudEnvironments({ showErrors = false } = {}) {
-  isRefreshingCloud = true;
-  syncDesktopState();
-  try {
-    return await cloud.refreshCloudEnvironments();
-  } catch (error) {
-    const authState = cloud.getAuthState();
-    if (authState === 'expired') {
-      const expiredError = new Error('Your OpenLeira session expired. Reconnect your account.');
-      if (showErrors) {
-        await showError('OpenLeira login required', expiredError);
-        return [];
+  serverProcess = child;
+  if (child.pid) fs.writeFileSync(pidFile(), String(child.pid));
+  child.stdout.on('data', (chunk) => String(chunk).split(/\r?\n/).forEach(log));
+  child.stderr.on('data', (chunk) => String(chunk).split(/\r?\n/).forEach(log));
+  const exited = new Promise((resolve) => {
+    child.once('error', (error) => { log(`gagal menjalankan server: ${error.message}`); resolve(); });
+    child.once('exit', (code, signal) => {
+      log(`server berhenti (code ${code ?? '-'}, signal ${signal ?? '-'})`);
+      if (serverProcess === child) {
+        serverProcess = null;
+        fs.rmSync(pidFile(), { force: true });
       }
-      throw expiredError;
-    }
-    if (showErrors) {
-      await showError('Could not load OpenLeira environments', error);
-      return [];
-    }
-    throw error;
-  } finally {
-    isRefreshingCloud = false;
-    void desktopNotifications?.sync().catch((error) => console.error('[DesktopNotifications] sync failed:', error?.message || error));
-    syncDesktopState();
+      resolve();
+      if (!quitting && serverUrl) void handleServerCrash();
+    });
+  });
+
+  const startedAt = Date.now();
+  let stopped = false;
+  void exited.then(() => { stopped = true; });
+  while (!stopped && Date.now() - startedAt < SERVER_START_TIMEOUT_MS) {
+    if (await isHealthy(baseUrl)) return baseUrl;
+    await new Promise((resolve) => setTimeout(resolve, 300));
   }
+  stopServer();
+  throw new Error(stopped ? 'Server OpenLeira berhenti saat dinyalakan.' : 'Server OpenLeira tidak merespons.');
 }
 
-async function connectCloudAccount() {
-  const connectUrl = cloud.buildConnectUrl();
-  pendingCloudConnectStartedAt = Date.now();
-  clipboard.writeText(connectUrl);
-  await openExternalUrl(connectUrl);
-  return connectUrl;
+function stopServer() {
+  if (!serverProcess) return;
+  const child = serverProcess;
+  serverProcess = null;
+  fs.rmSync(pidFile(), { force: true });
+  child.kill();
 }
 
-async function handleDeepLink(url) {
-  let parsed;
+const escapeHtml = (value) => String(value)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** The page shown while the server starts, in the web app's colours and type. */
+function startupPage({ error = null } = {}) {
+  const body = error
+    ? `<p class="msg err">${escapeHtml(error)}</p><pre>${escapeHtml(serverLog.slice(-60).join('\n') || 'Tidak ada output.')}</pre>`
+    : '<p class="msg"><span class="dot"></span>Menyalakan OpenLeira…</p>';
+  return `data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html><meta charset="utf-8"><title>${APP_NAME}</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0a0b;color:#f2f2f0;font:15px Inter,-apple-system,"Segoe UI",sans-serif}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;box-sizing:border-box}
+h1{margin:0;font:700 44px/1 "Playfair Display",Georgia,serif;letter-spacing:.01em}
+h1 span{color:#8a8a90}
+.rel{margin:0;font:600 11px/1 Cinzel,Georgia,serif;letter-spacing:.32em;text-transform:uppercase;color:#8a8a90}
+.msg{display:flex;align-items:center;gap:10px;margin:8px 0 0;color:#c4c4c8}
+.err{color:#c07c7c;max-width:720px;text-align:center}
+.dot{width:8px;height:8px;border-radius:50%;background:#c9ccd4;animation:p 1.2s ease-in-out infinite}
+@keyframes p{50%{opacity:.25}}
+pre{width:min(900px,100%);max-height:45vh;overflow:auto;margin:0;padding:14px;border:1px solid #2a2a2e;border-radius:6px;background:#141416;color:#c4c4c8;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;user-select:text}
+</style>
+<h1>Open<span>Leira</span></h1><p class="rel">${RELEASE_NAME}</p>${body}`)}`;
+}
+
+function isOwnUrl(url) {
+  return Boolean(serverUrl) && (url === serverUrl || url.startsWith(`${serverUrl}/`));
+}
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1440,
+    height: 920,
+    minWidth: 960,
+    minHeight: 640,
+    show: false,
+    backgroundColor: '#0a0a0b',
+    title: APP_NAME,
+    icon: getIconPath(),
+    // Normal OS title bar; the menu bar stays hidden until Alt is pressed.
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      spellcheck: false,
+    },
+  });
+  mainWindow.once('ready-to-show', () => mainWindow?.show());
+  mainWindow.on('closed', () => { mainWindow = null; });
+  // The page's own <title> would replace the app name in the title bar.
+  mainWindow.on('page-title-updated', (event) => event.preventDefault());
+
+  // Links leaving OpenLeira open in the normal browser; its own pages stay here.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isOwnUrl(url)) return { action: 'allow' };
+    if (/^(https?|mailto):/i.test(url)) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (isOwnUrl(url) || url.startsWith('data:')) return;
+    event.preventDefault();
+    if (/^(https?|mailto):/i.test(url)) void shell.openExternal(url);
+  });
+}
+
+async function openOpenLeira() {
+  await mainWindow.loadURL(startupPage());
   try {
-    parsed = new URL(url);
-  } catch {
-    return;
-  }
-
-  if (parsed.protocol !== `${CALLBACK_PROTOCOL}:` || parsed.hostname !== 'auth') {
-    return;
-  }
-
-  if (!pendingCloudConnectStartedAt || Date.now() - pendingCloudConnectStartedAt > AUTH_CALLBACK_TTL_MS) {
-    await showError('OpenLeira account connection failed', new Error('No recent OpenLeira account connection was started from this app.'));
-    return;
-  }
-
-  const apiKey = parsed.searchParams.get('api_key');
-  if (!apiKey) {
-    await showError('OpenLeira account connection failed', new Error('The callback did not include an API key.'));
-    return;
-  }
-
-  await cloud.saveFromCallback({
-    apiKey,
-    email: parsed.searchParams.get('email'),
-  });
-  pendingCloudConnectStartedAt = 0;
-  await refreshCloudEnvironments({ showErrors: true });
-
-  dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
-    type: 'info',
-    title: 'OpenLeira account connected',
-    message: cloud.getAccount()?.email ? `Connected as ${cloud.getAccount().email}.` : 'OpenLeira account connected.',
-  }).catch(() => {});
-}
-
-async function copyLocalWebUrl() {
-  await localServer.ensureLocalServer();
-  const shareableUrl = localServer.getShareableWebUrl();
-  const localUrl = localServer.getLocalServerUrl();
-
-  if (!shareableUrl) {
-    throw new Error('Local OpenLeira URL is not available yet.');
-  }
-
-  clipboard.writeText(shareableUrl);
-  const isLanUrl = shareableUrl !== localUrl;
-  await dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
-    type: 'info',
-    title: 'Web URL copied',
-    message: isLanUrl ? 'LAN web URL copied.' : 'Local web URL copied.',
-    detail: isLanUrl
-      ? `${shareableUrl}\n\nUse this URL from another device on the same network.`
-      : `${shareableUrl}\n\nThis URL works on this computer. Enable LAN access before starting Local OpenLeira to copy a phone-accessible URL.`,
-  });
-
-  return getDesktopState();
-}
-
-async function openLocalWebUi() {
-  await localServer.ensureLocalServer();
-  const url = localServer.getShareableWebUrl() || localServer.getLocalServerUrl();
-  if (!url) {
-    throw new Error('Local OpenLeira URL is not available yet.');
-  }
-
-  await openExternalUrl(url);
-  return getDesktopState();
-}
-
-async function updateDesktopSetting(key, value) {
-  const result = await localServer.updateDesktopSetting(key, value);
-  syncDesktopState();
-
-  if (result.requiresRestartNotice) {
-    await dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
-      type: 'info',
-      title: 'Restart local server to apply',
-      message: 'LAN access changes apply the next time the local server starts.',
-      detail: 'Quit OpenLeira and stop the local server, then open Local OpenLeira again.',
-    });
-  }
-
-  return getDesktopState();
-}
-
-async function showEnvironmentPicker() {
-  let environments = cloud.getEnvironments();
-  let refreshError = null;
-
-  if (cloud.getAccount()?.apiKey) {
-    try {
-      environments = await refreshCloudEnvironments({ showErrors: false });
-    } catch (error) {
-      refreshError = error;
-      console.warn('[Cloud] Could not refresh environments before showing picker:', error?.message || error);
-    }
-  }
-
-  const choices = ['Local OpenLeira', ...environments.map((environment) => {
-    const status = environment.status === 'running' ? '' : ` (${environment.status})`;
-    return `${environment.name || environment.subdomain}${status}`;
-  })];
-
-  const response = await dialog.showMessageBox(desktopWindow?.getMainWindow(), {
-    type: 'question',
-    buttons: [...choices, 'Cancel'],
-    defaultId: 0,
-    cancelId: choices.length,
-    title: 'Switch OpenLeira Environment',
-    message: 'Choose where this desktop window should connect.',
-    detail: refreshError ? `Cloud environments could not be refreshed. Showing cached environments.\n\n${refreshError.message || refreshError}` : undefined,
-  });
-
-  if (response.response === choices.length) return getDesktopState();
-  if (response.response === 0) return openLocalInDesktop();
-  return openEnvironmentInDesktop(environments[response.response - 1]);
-}
-
-async function startEnvironment(environment) {
-  await cloud.startEnvironmentAndWait(environment, REMOTE_START_TIMEOUT_MS);
-  await refreshCloudEnvironments({ showErrors: true });
-  return getDesktopState();
-}
-
-async function stopEnvironment(environment) {
-  await cloud.stopEnvironment(environment);
-  await refreshCloudEnvironments({ showErrors: true });
-  return getDesktopState();
-}
-
-async function openEnvironmentInBrowser(environment) {
-  await openExternalUrl(await cloud.getEnvironmentLaunchUrl(environment));
-  return getDesktopState();
-}
-
-function getProjectFolder(environment) {
-  return String(environment.name || environment.subdomain || 'workspace').replace(/[^a-zA-Z0-9-]/g, '');
-}
-
-function getSshTarget(credentials) {
-  if (credentials.ssh_command) {
-    const parts = String(credentials.ssh_command).split(/\s+/);
-    if (parts.length >= 2) return parts[1];
-  }
-  return `${credentials.username}@ssh.openleira.online`;
-}
-
-function getSshHost(credentials) {
-  const target = getSshTarget(credentials);
-  const atIndex = target.indexOf('@');
-  return atIndex >= 0 ? target.slice(atIndex + 1) : 'ssh.openleira.online';
-}
-
-function getSafeSshUsername(credentials) {
-  const username = String(credentials.username || '');
-  if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
-    throw new Error('Cloud environment returned an invalid SSH username.');
-  }
-  return username;
-}
-
-function getSafeSshHost(credentials) {
-  const host = getSshHost(credentials);
-  if (!/^[a-zA-Z0-9.-]+$/.test(host)) {
-    throw new Error('Cloud environment returned an invalid SSH host.');
-  }
-  return host;
-}
-
-function shellQuote(value) {
-  return `'${String(value).replace(/'/g, `'\\''`)}'`;
-}
-
-async function getEnvironmentCredentials(environment) {
-  const credentials = await cloud.getEnvironmentCredentials(environment);
-  if (credentials.password) {
-    clipboard.writeText(credentials.password);
-  }
-  return credentials;
-}
-
-async function openEnvironmentInIde(environment, ide) {
-  const credentials = await getEnvironmentCredentials(environment);
-  const scheme = ide === 'cursor' ? 'cursor' : 'vscode';
-  const remoteUri = `${scheme}://vscode-remote/ssh-remote+${getSafeSshUsername(credentials)}@${getSafeSshHost(credentials)}/workspace/${getProjectFolder(environment)}?windowId=_blank`;
-  await shell.openExternal(remoteUri);
-  return getDesktopState();
-}
-
-async function openEnvironmentInSsh(environment) {
-  const credentials = await getEnvironmentCredentials(environment);
-  const remoteCommand = `cd /workspace/${getProjectFolder(environment)} && exec $SHELL -l`;
-  const sshCommand = `ssh -t ${shellQuote(getSshTarget(credentials))} ${shellQuote(remoteCommand)}`;
-
-  if (process.platform === 'darwin') {
-    const escaped = sshCommand.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    spawn('osascript', ['-e', `tell application "Terminal" to do script "${escaped}"`], {
-      detached: true,
-      stdio: 'ignore',
-    }).unref();
-  } else {
-    clipboard.writeText(sshCommand);
-    await dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
-      type: 'info',
-      title: 'SSH command copied',
-      message: 'The SSH command was copied to the clipboard.',
-      detail: sshCommand,
-    });
-  }
-
-  return getDesktopState();
-}
-
-async function copyEnvironmentMobileUrl(environment) {
-  const url = cloud.getEnvironmentUrl(environment);
-  clipboard.writeText(url);
-  await dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
-    type: 'info',
-    title: 'Environment URL copied',
-    message: 'Use this URL from your mobile browser.',
-    detail: url,
-  });
-  return getDesktopState();
-}
-
-async function openCloudDashboard() {
-  await openExternalUrl(OPENLEIRA_CONTROL_PLANE_URL);
-  return getDesktopState();
-}
-
-function getActiveRemoteEnvironment() {
-  if (activeTarget?.kind !== 'remote') return null;
-  return cloud.findEnvironment(activeTarget.id);
-}
-
-async function runActiveEnvironmentAction(action) {
-  const environment = getActiveRemoteEnvironment();
-  if (!environment) {
-    throw new Error('Open a cloud environment first.');
-  }
-
-  switch (action) {
-    case 'web':
-      return openEnvironmentInBrowser(environment);
-    case 'vscode':
-      return openEnvironmentInIde(environment, 'vscode');
-    case 'cursor':
-      return openEnvironmentInIde(environment, 'cursor');
-    case 'ssh':
-      return openEnvironmentInSsh(environment);
-    case 'mobile':
-      return copyEnvironmentMobileUrl(environment);
-    default:
-      throw new Error(`Unknown environment action: ${action}`);
-  }
-}
-
-async function openLocalInDesktop() {
-  const existingTab = tabs.getTab('local');
-  if (existingTab && localServer.getLocalServerUrl()) {
-    await desktopWindow.showTarget(await localServer.getResolvedTarget());
-    return getDesktopState();
-  }
-
-  const pendingTarget = localServer.getPendingTarget();
-  tabs.upsertTarget(pendingTarget);
-  setActiveTarget(pendingTarget);
-  // A startup log line arriving meanwhile reloads this page; that abort is expected.
-  await desktopWindow.showLocalStartupTarget(pendingTarget, localServer.getStartupLogs())
-    .catch((error) => { if (!isExpectedNavigationAbort(error)) throw error; });
-  desktopWindow.emitDesktopState();
-
-  const target = await localServer.getResolvedTarget();
-  await desktopWindow.showTarget(target);
-  return getDesktopState();
-}
-
-async function openEnvironmentInDesktop(environment) {
-  const pendingTarget = getEnvironmentTarget(environment);
-  const tabId = tabs.getTabIdForTarget(pendingTarget);
-  const hadTab = Boolean(tabs.getTab(tabId));
-  const previousTabId = tabs.activeTabId;
-
-  if (!hadTab) {
-    await desktopWindow.showTabPlaceholder(
-      pendingTarget,
-      `${environment.status === 'running' ? 'Opening' : 'Starting'} ${pendingTarget.name}...`,
-    );
-    tabs.upsertTarget(pendingTarget);
-    desktopWindow.emitDesktopState();
-  }
-
-  let nextEnvironment = environment;
-
-  if (environment.status !== 'running') {
-    const response = await dialog.showMessageBox(desktopWindow?.getMainWindow(), {
-      type: 'question',
-      buttons: ['Start Environment', 'Cancel'],
+    serverUrl = process.env.ELECTRON_DEV_URL || await startServer();
+    log(`OpenLeira siap di ${serverUrl}`);
+    await mainWindow.loadURL(serverUrl);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log(message);
+    await mainWindow.loadURL(startupPage({ error: message }));
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: APP_NAME,
+      message: 'OpenLeira gagal dinyalakan',
+      detail: `${message}\n\nLog lengkap: ${path.join(app.getPath('userData'), 'server.log')}`,
+      buttons: ['Coba lagi', 'Keluar'],
       defaultId: 0,
       cancelId: 1,
-      title: 'Start environment?',
-      message: `${pendingTarget.name} is ${environment.status}.`,
-      detail: 'OpenLeira can start it before opening the remote app.',
     });
-
-    if (response.response !== 0) {
-      if (!hadTab) {
-        tabs.remove(tabId);
-        desktopWindow.destroyTabView(tabId);
-        if (previousTabId && previousTabId !== tabId) {
-          await desktopWindow.switchDesktopTab(previousTabId);
-        } else {
-          await desktopWindow.showLauncher();
-        }
-      }
-      return getDesktopState();
-    }
-
-    if (hadTab) {
-      await desktopWindow.showTabPlaceholder(pendingTarget, `Starting ${pendingTarget.name}...`);
-      tabs.upsertTarget(pendingTarget);
-      desktopWindow.emitDesktopState();
-    }
-
-    nextEnvironment = await cloud.startEnvironmentAndWait(environment, REMOTE_START_TIMEOUT_MS);
-  }
-
-  let target = getEnvironmentTarget(nextEnvironment);
-  if (!(await hasCloudWebSession())) {
-    target = await getEnvironmentLaunchTarget(nextEnvironment);
-  }
-
-  const usedBootstrap = Boolean(target.loadUrl);
-  const finalUrl = await desktopWindow.showTarget(target);
-  if (!usedBootstrap && isCloudAuthRedirect(finalUrl)) {
-    const bootstrapTarget = await getEnvironmentLaunchTarget(nextEnvironment);
-    bootstrapTarget.forceLoad = true;
-    await desktopWindow.showTarget(bootstrapTarget);
-  }
-  return getDesktopState();
-}
-
-function findEnvironmentByUrl(environmentUrl) {
-  const targetOrigin = (() => {
-    try {
-      return new URL(environmentUrl).origin;
-    } catch {
-      return null;
-    }
-  })();
-  if (!targetOrigin) return null;
-
-  return cloud.getEnvironments().find((environment) => {
-    try {
-      return new URL(cloud.getEnvironmentUrl(environment)).origin === targetOrigin;
-    } catch {
-      return false;
-    }
-  }) || null;
-}
-
-async function openNotificationTarget({ environmentUrl, sessionId = null }) {
-  const window = desktopWindow?.getMainWindow();
-  if (window) {
-    if (window.isMinimized()) window.restore();
-    window.show();
-    window.focus();
-  }
-
-  const environment = findEnvironmentByUrl(environmentUrl);
-  if (environment) {
-    await openEnvironmentInDesktop(environment);
-  } else {
-    const parsed = new URL(environmentUrl);
-    await desktopWindow.showTarget({
-      kind: 'remote',
-      name: parsed.hostname,
-      url: parsed.origin,
-    });
-  }
-
-  const targetUrl = new URL(sessionId ? `/session/${encodeURIComponent(sessionId)}` : '/', environmentUrl).toString();
-  await desktopWindow.navigateActiveView(targetUrl);
-  return getDesktopState();
-}
-
-async function getEnvironmentAuthToken(environmentUrl) {
-  return (await desktopWindow?.readAuthTokenForTarget(environmentUrl)) || null;
-}
-
-async function clearCloudAccount() {
-  await cloud.clearCloudAccount();
-  desktopNotifications?.stop();
-  const removedTabs = tabs.removeByKind('remote');
-  for (const tab of removedTabs) {
-    desktopWindow?.destroyTabView(tab.id);
-  }
-  if (activeTarget?.kind === 'remote') {
-    await desktopWindow?.showLauncher();
-  } else {
-    syncDesktopState();
-  }
-  return getDesktopState();
-}
-
-function getRemoteEnvironmentMenuItems() {
-  const cloudAccount = cloud.getAccount();
-  const environments = cloud.getEnvironments();
-
-  if (!CLOUD_ENABLED) {
-    return [{ label: 'Local only', enabled: false }];
-  }
-  if (!cloudAccount?.apiKey) {
-    return [{ label: 'Connect OpenLeira Account...', click: () => void connectCloudAccount() }];
-  }
-
-  if (!environments.length) {
-    return [{ label: 'No environments found', enabled: false }];
-  }
-
-  return environments.map((environment) => ({
-    label: `${environment.name || environment.subdomain}${environment.status === 'running' ? '' : ` (${environment.status})`}`,
-    click: () => void openEnvironmentInDesktop(environment)
-      .catch((error) => showError('Could not open environment', error)),
-  }));
-}
-
-function registerProtocolHandler() {
-  const appEntry = path.join(getAppRoot(), 'electron', 'main.js');
-  if (process.defaultApp && process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(CALLBACK_PROTOCOL, process.execPath, [appEntry]);
-  } else {
-    app.setAsDefaultProtocolClient(CALLBACK_PROTOCOL);
+    if (response === 0) return openOpenLeira();
+    app.quit();
   }
 }
 
-function registerIpcHandlers() {
-  ipcMain.handle('openleira-desktop:connect-cloud', async () => ({
-    ...getDesktopState(),
-    connectUrl: await connectCloudAccount(),
-  }));
-
-  ipcMain.handle('openleira-desktop:copy-diagnostics', async () => {
-    await copyDiagnostics();
-    return getDesktopState();
+async function handleServerCrash() {
+  serverUrl = null;
+  if (!mainWindow) return;
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'error',
+    title: APP_NAME,
+    message: 'Server OpenLeira berhenti',
+    detail: serverLog.slice(-15).join('\n'),
+    buttons: ['Nyalakan lagi', 'Keluar'],
+    defaultId: 0,
+    cancelId: 1,
   });
-
-  ipcMain.handle('openleira-desktop:copy-local-web-url', async () => copyLocalWebUrl());
-  ipcMain.handle('openleira-desktop:get-state', () => getDesktopState());
-  ipcMain.handle('openleira-desktop:open-cloud-dashboard', async () => openCloudDashboard());
-  ipcMain.handle('openleira-desktop:run-active-environment-action', async (_event, action) => runActiveEnvironmentAction(action));
-  ipcMain.handle('openleira-desktop:open-environment', async (_event, environmentId) => {
-    const environment = cloud.findEnvironment(environmentId);
-    if (!environment) {
-      throw new Error('Environment not found. Refresh and try again.');
-    }
-    return openEnvironmentInDesktop(environment);
-  });
-  ipcMain.handle('openleira-desktop:open-local', async () => openLocalInDesktop());
-  ipcMain.handle('openleira-desktop:open-local-web-ui', async () => openLocalWebUi());
-  ipcMain.handle('openleira-desktop:refresh-environments', async () => {
-    await refreshCloudEnvironments({ showErrors: true });
-    return getDesktopState();
-  });
-  ipcMain.handle('openleira-desktop:disconnect-cloud', async () => clearCloudAccount());
-  ipcMain.handle('openleira-desktop:reload-active-tab', async () => desktopWindow.reloadActiveTab());
-  ipcMain.handle('openleira-desktop:show-environment-picker', async () => showEnvironmentPicker());
-  ipcMain.handle('openleira-desktop:show-launcher', async () => {
-    await desktopWindow.showLauncher();
-    return getDesktopState();
-  });
-  ipcMain.handle('openleira-desktop:update-desktop-notifications', async (_event, settings) => {
-    await desktopNotifications?.saveSettings(settings);
-    return getDesktopState();
-  });
-  ipcMain.handle('openleira-desktop:show-desktop-settings', async () => desktopWindow.showDesktopSettings());
-  ipcMain.handle('openleira-desktop:show-local-settings', async () => desktopWindow.showLocalSettings());
-  ipcMain.handle('openleira-desktop:close-settings-window', async () => {
-    desktopWindow.closeSettingsWindow();
-    return getDesktopState();
-  });
-  ipcMain.handle('openleira-desktop:show-active-environment-actions-menu', async () => desktopWindow.showActiveEnvironmentActionsMenu());
-  ipcMain.handle('openleira-desktop:show-environment-actions-menu', async (_event, environmentId) => desktopWindow.showEnvironmentActionsMenu(environmentId));
-  ipcMain.handle('openleira-desktop:switch-tab', async (_event, tabId) => desktopWindow.switchDesktopTab(tabId));
-  ipcMain.handle('openleira-desktop:close-tab', async (_event, tabId) => desktopWindow.closeDesktopTab(tabId));
-  ipcMain.handle('openleira-desktop:update-setting', async (_event, key, value) => updateDesktopSetting(key, value));
+  if (response === 0) await openOpenLeira();
+  else app.quit();
 }
 
-function registerAppEvents() {
-  app.on('open-url', (event, url) => {
-    event.preventDefault();
-    void handleDeepLink(url);
-  });
+function buildMenu() {
+  const isMac = process.platform === 'darwin';
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    ...(isMac ? [{ role: 'appMenu' }] : []),
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    { role: 'windowMenu' },
+    {
+      role: 'help',
+      submenu: [
+        { label: 'openleira.online', click: () => void shell.openExternal('https://openleira.online') },
+        { label: 'Buka di browser', click: () => serverUrl && void shell.openExternal(serverUrl) },
+        { label: 'Buka log server', click: () => void shell.openPath(path.join(app.getPath('userData'), 'server.log')) },
+      ],
+    },
+  ]));
+}
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      if (desktopWindow) {
-        void desktopWindow.createWindow();
-      } else {
-        void createDesktopWindow();
-      }
-      return;
-    }
-
-    const window = desktopWindow?.getMainWindow();
-    if (window) {
-      window.show();
-      window.focus();
-    }
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
   });
 
   app.on('before-quit', () => {
-    desktopNotifications?.stop();
+    quitting = true;
+    stopServer();
   });
+  app.on('window-all-closed', () => app.quit());
+  // Closing the app from a terminal (Ctrl+C, kill) still stops the server.
+  for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => app.quit());
 
-  app.on('before-quit', (event) => {
-    if (isQuitting || !localServer?.hasOwnedServer()) return;
-    if (localServer.getSettings().keepLocalServerRunning) {
-      localServer.detachOwnedServer();
-      return;
-    }
+  app.whenReady().then(async () => {
+    app.setAboutPanelOptions({
+      applicationName: `${APP_NAME} - ${RELEASE_NAME}`,
+      applicationVersion: app.getVersion(),
+      copyright: 'OpenLeira contributors',
+    });
+    fs.mkdirSync(app.getPath('userData'), { recursive: true });
+    logStream = fs.createWriteStream(path.join(app.getPath('userData'), 'server.log'), { flags: 'w' });
 
-    event.preventDefault();
-    isQuitting = true;
-    void localServer.shutdownOwnedServer().finally(() => app.quit());
-  });
+    // OpenLeira's own pages may use the clipboard, notifications and the mic (voice input).
+    session.defaultSession.setPermissionRequestHandler((contents, _permission, callback) => {
+      callback(isOwnUrl(contents.getURL()));
+    });
 
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      app.quit();
-    }
-  });
-}
-
-async function createDesktopWindow() {
-  desktopWindow = new DesktopWindowManager({
-    appName: APP_NAME,
-    getWindowIconPath,
-    getLauncherPath,
-    getPreloadPath,
-    openExternalUrl,
-    getDesktopState,
-    getDisplayTargetName,
-    getRemoteEnvironmentMenuItems,
-    getCloudState,
-    getLocalState,
-    tabs,
-    actions: {
-      copyDiagnostics,
-      copyText: (text) => clipboard.writeText(text),
-      clearCloudAccount,
-      connectCloudAccount,
-      getActiveTarget: () => activeTarget,
-      getEnvironmentUrl: (environment) => cloud.getEnvironmentUrl(environment),
-      openEnvironmentInBrowser,
-      openEnvironmentInDesktop,
-      openEnvironmentInIde,
-      openEnvironmentInSsh,
-      openLocalInDesktop,
-      openLocalWebUi,
-      openCloudDashboard,
-      refreshCloudEnvironments: () => refreshCloudEnvironments({ showErrors: true }),
-      setActiveTarget,
-      showEnvironmentPicker,
-      showError,
-      startEnvironment,
-      stopEnvironment,
-      updateDesktopSetting,
-      copyLocalWebUrl,
-      openNotificationTarget,
-    },
-    standalone: !CLOUD_ENABLED,
-  });
-
-  desktopWindow.createTray();
-  desktopWindow.configurePermissions();
-  await desktopWindow.createWindow();
-}
-
-function registerSingleInstance() {
-  const gotSingleInstanceLock = app.requestSingleInstanceLock();
-  if (!gotSingleInstanceLock) {
-    app.quit();
-    return false;
-  }
-
-  app.on('second-instance', (_event, argv) => {
-    const deepLink = argv.find((arg) => arg.startsWith(`${CALLBACK_PROTOCOL}://`));
-    if (deepLink) {
-      void handleDeepLink(deepLink);
-    }
-
-    const window = desktopWindow?.getMainWindow();
-    if (window) {
-      if (window.isMinimized()) window.restore();
-      window.show();
-      window.focus();
-    }
-  });
-
-  return true;
-}
-
-async function bootstrap() {
-  app.name = APP_NAME;
-  app.setName(APP_NAME);
-  process.title = APP_NAME;
-
-  await app.whenReady();
-  app.setName(APP_NAME);
-  app.setAboutPanelOptions({
-    applicationName: RELEASE_NAME ? `${APP_NAME} - ${RELEASE_NAME}` : APP_NAME,
-    applicationVersion: app.getVersion(),
-    copyright: 'OpenLeira contributors',
-  });
-
-  localServer = new LocalServerController({
-    appRoot: getAppRoot(),
-    settingsPath: getSettingsPath(),
-    isPackaged: app.isPackaged,
-    appVersion: app.getVersion(),
-    onChange: syncDesktopState,
-  });
-  cloud = new CloudController({
-    storePath: getStorePath(),
-    controlPlaneUrl: OPENLEIRA_CONTROL_PLANE_URL,
-    callbackUrl: CALLBACK_URL,
-    onChange: syncDesktopState,
-  });
-  desktopNotifications = new DesktopNotificationsController({
-    settingsPath: getDesktopNotificationsSettingsPath(),
-    appVersion: app.getVersion(),
-    appName: APP_NAME,
-    getDeviceId: () => cloud.getAccount()?.deviceId || '',
-    getAccountEmail: () => cloud.getAccount()?.email || null,
-    getRunningEnvironmentUrls,
-    getApiKey: () => cloud.getAccount()?.apiKey || '',
-    getAuthToken: getEnvironmentAuthToken,
-    getIconPath: getWindowIconPath,
-    openNotificationTarget,
-    onChange: syncDesktopState,
-  });
-
-  await localServer.loadDesktopSettings();
-  await cloud.loadCloudAccount();
-  await desktopNotifications.loadSettings();
-
-  registerProtocolHandler();
-  registerIpcHandlers();
-  registerAppEvents();
-  await createDesktopWindow();
-  void refreshCloudEnvironments({ showErrors: false });
-}
-
-if (registerSingleInstance()) {
-  bootstrap().catch(async (error) => {
-    await showError('OpenLeira failed to start', error);
+    buildMenu();
+    createWindow();
+    await openOpenLeira();
+  }).catch((error) => {
+    dialog.showErrorBox('OpenLeira gagal dibuka', error instanceof Error ? error.stack || error.message : String(error));
     app.quit();
   });
 }
