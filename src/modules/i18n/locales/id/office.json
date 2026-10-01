@@ -83,6 +83,51 @@
       "title": "Administrasi & Pemberkasan",
       "body": "sortir berkas, isi formulir dan surat, rapikan arsip.",
       "teams": "Penyortir Dokumen · Form & Surat · Pengarsip"
+    },
+    "research": {
+      "title": "Riset & Analisis",
+      "body": "riset pasar, kompetitor, atau topik apa pun jadi ringkasan yang ada sumbernya.",
+      "teams": "Pencari Sumber · Analis · Penulis Ringkasan"
+    },
+    "education": {
+      "title": "Materi & Pelatihan",
+      "body": "modul belajar, materi pelatihan karyawan, soal dan kuis lengkap kunci jawaban.",
+      "teams": "Perancang Materi · Penulis Materi · Pembuat Soal"
+    },
+    "support": {
+      "title": "Layanan Pelanggan",
+      "body": "template balasan chat/email, FAQ, dan SOP penanganan keluhan.",
+      "teams": "Analis Keluhan · Penulis Balasan · Penyusun FAQ & SOP"
+    },
+    "hr": {
+      "title": "HR & Rekrutmen",
+      "body": "lowongan kerja, saring CV, pertanyaan interview, dan materi onboarding.",
+      "teams": "Penyusun Lowongan · Penyaring CV · Penyusun Onboarding"
+    },
+    "legal": {
+      "title": "Draf Dokumen Legal",
+      "body": "draf kontrak, perjanjian kerja sama, dan surat resmi. Tetap wajib dicek ahli hukum.",
+      "teams": "Peninjau Dokumen · Penyusun Draf · Pengecek Konsistensi"
+    },
+    "ecommerce": {
+      "title": "Toko Online",
+      "body": "listing produk marketplace, katalog harga dan stok, serta ide promo.",
+      "teams": "Pengelola Katalog · Penulis Listing · Perencana Promo"
+    },
+    "translation": {
+      "title": "Terjemahan",
+      "body": "terjemahin dokumen, situs, atau konten, istilahnya konsisten.",
+      "teams": "Pengelola Istilah · Penerjemah · Penyunting"
+    },
+    "project": {
+      "title": "Proyek & Acara",
+      "body": "rencana kerja, timeline, anggaran, undangan, dan notulen rapat.",
+      "teams": "Perencana · Penyusun Anggaran · Penulis Komunikasi"
+    },
+    "custom": {
+      "title": "Kustom",
+      "body": "susun tim lo sendiri: nama tiap anggota, tugasnya, dan cara QA ngecek hasilnya.",
+      "teams": "tim bebas, lo yang atur"
     }
   },
   "tree": {
@@ -348,7 +393,12 @@
     "workExistingTitle": "folder yang udah ada",
     "workExistingBody": "folder yang udah berisi dokumen, data, atau bahan kerja lo. file asli nggak diubah atau dihapus.",
     "workExistingFolderHint": "folder dokumen/datanya. agent kerja di folder ini dan nyimpen hasil di subfolder hasil/.",
-    "privacyNote": "server-nya punya lo, tapi isi file yang dibaca agent tetap dikirim ke penyedia AI (Anthropic, OpenAI, dll.) waktu kerja. jangan taruh data yang nggak boleh keluar. hasil hitungan dan dokumen tetap perlu lo cek sebelum dipakai."
+    "privacyNote": "server-nya punya lo, tapi isi file yang dibaca agent tetap dikirim ke penyedia AI (Anthropic, OpenAI, dll.) waktu kerja. jangan taruh data yang nggak boleh keluar. hasil hitungan dan dokumen tetap perlu lo cek sebelum dipakai.",
+    "customIntro": "susun tim lo sendiri. tiap anggota: nama tim, nama agent, tugasnya satu kalimat, lalu peran lengkapnya (apa yang dikerjain, aturan, format hasil). koordinator dan QA ditambahin otomatis.",
+    "customDescriptionPlaceholder": "tugasnya dalam satu kalimat, misalnya \"nulis naskah video pendek\"",
+    "customRolePlaceholder": "peran lengkapnya: apa yang dikerjain, aturan yang harus diikutin, dan format file hasilnya.",
+    "customChecks": "QA harus ngecek apa? (opsional)",
+    "customChecksPlaceholder": "contoh: semua harga harus sama dengan file daftar harga; tiap naskah maksimal 60 detik; nggak boleh ada typo."
   },
   "menu": {
     "label": "aksi",
@@ -524,7 +574,16 @@
       "coding": "Tulis apa yang lo mau, tim AI yang bikinin di folder aplikasinya. Nggak perlu ngerti teknis.",
       "content": "Kasih bahan produk, tulis mau dibikinin apa, tim AI yang nyusun naskah dan kontennya.",
       "finance": "Taruh data penjualan atau keuangan lo, tim AI yang ngolah dan bikin laporannya.",
-      "admin": "Taruh berkas lo, tim AI yang nyortir, ngisi formulir, dan ngerapiin arsipnya."
+      "admin": "Taruh berkas lo, tim AI yang nyortir, ngisi formulir, dan ngerapiin arsipnya.",
+      "research": "Tulis apa yang mau diriset, tim AI yang nyari, nganalisis, dan nulis ringkasannya lengkap sama sumber.",
+      "education": "Tulis topik dan pesertanya, tim AI yang nyusun materi, latihan, dan kuisnya.",
+      "support": "Taruh kebijakan dan contoh pertanyaan pelanggan, tim AI yang nyusun balasan, FAQ, dan SOP-nya.",
+      "hr": "Tulis posisi yang dicari, tim AI yang nyusun lowongan, nyaring CV, dan nyiapin onboarding.",
+      "legal": "Taruh dokumen dan poin kesepakatan, tim AI yang bikin drafnya. Ini draf, bukan nasihat hukum: wajib dicek ahli sebelum dipakai.",
+      "ecommerce": "Taruh data produk lo, tim AI yang nulis listing, ngerapiin katalog, dan nyusun promo.",
+      "translation": "Taruh dokumennya dan sebut bahasa tujuannya, tim AI yang nerjemahin dan nyunting.",
+      "project": "Tulis proyek atau acaranya, tim AI yang nyusun timeline, anggaran, dan semua komunikasinya.",
+      "custom": "Tim yang lo susun sendiri siap kerja. Tulis kerjaannya, koordinator yang bagi ke anggota tim yang paling pas."
     },
     "stepsLabel": "langkah pakai",
     "steps": {
@@ -556,7 +615,16 @@
       "body": {
         "content": "Foto/deskripsi produk, katalog, daftar harga, contoh konten lama. Makin lengkap makin pas hasilnya.",
         "finance": "File Excel/CSV data penjualan, nota, atau laporan bulan lalu. File aslinya nggak diubah.",
-        "admin": "Berkas yang mau diurus: scan, PDF, formulir kosong, daftar syarat."
+        "admin": "Berkas yang mau diurus: scan, PDF, formulir kosong, daftar syarat.",
+        "research": "Dokumen, link, catatan, atau data yang udah lo punya soal topiknya.",
+        "education": "Silabus, buku/modul lama, SOP perusahaan, atau catatan yang mau dijadiin materi.",
+        "support": "Kebijakan toko (retur, pengiriman, garansi), contoh chat/keluhan pelanggan, daftar produk.",
+        "hr": "Deskripsi posisi, CV pelamar (PDF), aturan perusahaan, atau contoh lowongan lama.",
+        "legal": "Kontrak lama, template perusahaan, poin-poin kesepakatan, identitas para pihak.",
+        "ecommerce": "Daftar produk (Excel/CSV), foto, harga modal dan jual, stok, aturan marketplace.",
+        "translation": "Dokumen yang mau diterjemahin, glosarium/istilah baku, contoh terjemahan lama.",
+        "project": "Brief proyek, daftar vendor/harga, catatan rapat, daftar peserta.",
+        "custom": "File apa pun yang dibutuhin tim buat kerja."
       },
       "pick": "pilih file",
       "optional": "boleh dilewatin kalau nggak ada bahan. Bisa juga seret file ke sini."
@@ -567,7 +635,16 @@
         "coding": "contoh: bikin halaman login dengan email dan password",
         "content": "contoh: bikin 5 caption Instagram buat promo kopi susu akhir pekan",
         "finance": "contoh: bikin laporan penjualan September dari bahan/penjualan-september.xlsx",
-        "admin": "contoh: cek kelengkapan berkas pengajuan kredit di folder bahan"
+        "admin": "contoh: cek kelengkapan berkas pengajuan kredit di folder bahan",
+        "research": "contoh: riset 5 kompetitor kedai kopi di Bandung, bandingin harga dan menu",
+        "education": "contoh: bikin materi pelatihan kasir baru, 3 sesi, lengkap kuisnya",
+        "support": "contoh: bikin 15 template balasan WhatsApp buat pertanyaan yang paling sering",
+        "hr": "contoh: bikin lowongan barista part-time dan saring CV di folder bahan",
+        "legal": "contoh: bikin draf perjanjian kerja sama reseller dari poin-poin di folder bahan",
+        "ecommerce": "contoh: tulis judul dan deskripsi Shopee untuk semua produk di file Excel",
+        "translation": "contoh: terjemahin katalog produk di folder bahan ke bahasa Inggris",
+        "project": "contoh: susun rencana acara ulang tahun toko, 100 tamu, anggaran 15 juta",
+        "custom": "tulis kerjaan buat tim lo"
       },
       "examples": "contoh:",
       "list": "kebaca {{count}} kerjaan, bakal dikerjain gantian.",
@@ -595,7 +672,48 @@
         "Cek kelengkapan berkas di folder bahan",
         "Isi formulir dari data di berkas",
         "Rapiin arsip: kelompokin per jenis dan seragamin nama file"
-      ]
+      ],
+      "research": [
+        "Riset 5 kompetitor dan bandingin harga serta keunggulannya",
+        "Rangkum tren pasar skincare lokal tahun ini",
+        "Bikin analisis SWOT dari bahan di folder"
+      ],
+      "education": [
+        "Bikin modul belajar Excel dasar untuk karyawan baru",
+        "Bikin 20 soal pilihan ganda dari materi di folder",
+        "Susun materi pelatihan pelayanan pelanggan 1 hari"
+      ],
+      "support": [
+        "Bikin FAQ dari contoh chat pelanggan di folder",
+        "Tulis template balasan untuk keluhan barang telat",
+        "Susun SOP penanganan retur barang"
+      ],
+      "hr": [
+        "Bikin lowongan kerja untuk posisi admin gudang",
+        "Saring CV di folder bahan, bikin tabel perbandingan",
+        "Susun materi onboarding minggu pertama karyawan baru"
+      ],
+      "legal": [
+        "Bikin draf perjanjian kerja sama dari poin di folder",
+        "Tinjau kontrak di folder dan tandai pasal yang berisiko",
+        "Bikin surat somasi pembayaran yang sopan"
+      ],
+      "ecommerce": [
+        "Tulis judul dan deskripsi listing untuk semua produk di file Excel",
+        "Rapiin katalog harga dan tandai produk yang stoknya tipis",
+        "Bikin rencana promo tanggal kembar bulan ini"
+      ],
+      "translation": [
+        "Terjemahin dokumen di folder bahan ke bahasa Inggris",
+        "Bikin glosarium istilah dari dokumen di folder",
+        "Sunting terjemahan lama biar lebih natural"
+      ],
+      "project": [
+        "Susun timeline dan anggaran acara peluncuran produk",
+        "Bikin notulen dan daftar tindak lanjut dari catatan rapat di folder",
+        "Bikin rencana kerja proyek 3 bulan lengkap PIC-nya"
+      ],
+      "custom": []
     },
     "result": {
       "title": "perkembangan & hasil",

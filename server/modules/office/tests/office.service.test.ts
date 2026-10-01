@@ -96,6 +96,45 @@ test('each workspace kind seeds its own teams and flow; coding stays the default
   });
 });
 
+test('every built-in kind seeds working teams, a flow and its own QA role', async () => {
+  await withProject(async (projectId) => {
+    for (const kind of ['research', 'education', 'support', 'hr', 'legal', 'ecommerce', 'translation', 'project']) {
+      const snapshot = officeService.createOffice({ projectId, locale: 'id', kind });
+      assert.equal(snapshot.office.kind, kind);
+      const workers = snapshot.divisions.filter((division) => !division.isCoordinator && !division.isAudit);
+      assert.ok(workers.length >= 3, `${kind} has teams`);
+      assert.ok(snapshot.flow.length > 0, `${kind} has a flow`);
+      assert.ok(workers.every((division) => division.agent.rolePrompt.includes('hasil/')), `${kind} teams save to hasil/`);
+      const audit = snapshot.divisions.find((division) => division.isAudit);
+      assert.doesNotMatch(audit?.agent.rolePrompt ?? '', /git diff/);
+      officeService.deleteOffice(snapshot.office.id);
+    }
+  });
+});
+
+test('a custom workspace is built from the teams the user wrote, with their QA checks on the audit role', async () => {
+  await withProject(async (projectId) => {
+    assert.throws(() => officeService.createOffice({ projectId, locale: 'en', kind: 'custom' }), rejectsWith('INVALID_OFFICE_INPUT'));
+    const snapshot = officeService.createOffice({
+      projectId,
+      locale: 'en',
+      kind: 'custom',
+      divisions: [
+        { name: 'Script Writer', slug: '', description: 'writes video scripts', color: '#2551BD', agentName: 'Tia', rolePrompt: 'Write 60-second scripts.' },
+        { name: 'Thumbnail Brief', slug: '', description: '', color: 'nope', agentName: '', rolePrompt: '' },
+      ],
+      auditChecks: 'Every script is at most 60 seconds.',
+    });
+    assert.equal(snapshot.office.kind, 'custom');
+    assert.deepEqual(snapshot.divisions.map((division) => division.slug), ['coordinator', 'script-writer', 'thumbnail-brief', 'audit']);
+    const audit = snapshot.divisions.find((division) => division.isAudit);
+    assert.match(audit?.agent.rolePrompt ?? '', /What the user wants checked\nEvery script is at most 60 seconds\./);
+    assert.doesNotMatch(audit?.agent.rolePrompt ?? '', /git diff/);
+    assert.doesNotMatch(snapshot.divisions[0].agent.rolePrompt, /write code/);
+    assert.equal(snapshot.flow.length, 0, 'the coordinator decides the order of a custom team');
+  });
+});
+
 test('divisions get unique slugs, and the coordinator and audit layer cannot be deleted', async () => {
   await withProject(async (projectId) => {
     const { office, divisions } = officeService.createOffice({ projectId, locale: 'en' });

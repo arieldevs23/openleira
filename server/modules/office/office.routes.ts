@@ -209,6 +209,7 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
       divisions: readProposals(body),
       appSummary: readOptionalString(body, 'appSummary') ?? null,
       kind: readOptionalString(body, 'kind') ?? null,
+      auditChecks: readOptionalString(body, 'auditChecks') ?? null,
     });
     res.status(201).json(createApiSuccessResponse(snapshot));
   }));

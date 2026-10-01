@@ -68,8 +68,8 @@ test('office lookup needs a projectId and office creation passes the locale thro
   });
   assert.deepEqual(calls, [
     { method: 'office.getSnapshotForProject', args: ['p1'] },
-    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null, kind: null }] },
-    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null, kind: 'finance' }] },
+    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null, kind: null, auditChecks: null }] },
+    { method: 'office.createOffice', args: [{ projectId: 'p1', locale: 'en', divisions: undefined, appSummary: null, kind: 'finance', auditChecks: null }] },
   ]);
 });
 
@@ -220,5 +220,6 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     divisions: [{ name: 'API', slug: '', description: '', color: '', agentName: '', rolePrompt: 'owns /api' }],
     appSummary: 'a shop',
     kind: null,
+    auditChecks: null,
   });
 });

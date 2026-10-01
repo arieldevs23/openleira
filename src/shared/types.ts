@@ -1773,10 +1773,12 @@ export type OfficePermissionMode = 'bypassPermissions' | 'acceptEdits' | 'defaul
 /**
  * What kind of work a workspace does: `coding` (a code repository),
  * `content` (sales & marketing content), `finance` (business & financial
- * reports) or `admin` (documents & filing). Picks the starting teams and
+ * reports), `admin` (documents & filing), research, education, support, hr,
+ * legal, ecommerce, translation, project, or `custom` (teams the user
+ * defined). Picks the starting teams and
  * how their results are checked; chosen when the workspace is created.
  */
-export type OfficeWorkspaceKind = 'coding' | 'content' | 'finance' | 'admin';
+export type OfficeWorkspaceKind = 'coding' | 'content' | 'finance' | 'admin' | 'research' | 'education' | 'support' | 'hr' | 'legal' | 'ecommerce' | 'translation' | 'project' | 'custom';
 
 /** One office (one per project) with its run settings. */
 export type Office = {

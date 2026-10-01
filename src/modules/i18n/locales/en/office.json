@@ -84,6 +84,51 @@
       "title": "Admin & Filing",
       "body": "sort documents, fill in forms and letters, tidy up the archive.",
       "teams": "Document Sorter · Forms & Letters · Archivist"
+    },
+    "research": {
+      "title": "Research & Analysis",
+      "body": "market, competitor or any-topic research turned into a summary with sources.",
+      "teams": "Source Finder · Analyst · Summary Writer"
+    },
+    "education": {
+      "title": "Lessons & Training",
+      "body": "lesson modules, staff training material, questions and quizzes with answer keys.",
+      "teams": "Course Designer · Material Writer · Quiz Maker"
+    },
+    "support": {
+      "title": "Customer Service",
+      "body": "chat/email reply templates, FAQs and complaint-handling SOPs.",
+      "teams": "Issue Analyst · Reply Writer · FAQ & SOP Writer"
+    },
+    "hr": {
+      "title": "HR & Hiring",
+      "body": "job posts, CV screening, interview questions and onboarding material.",
+      "teams": "Job Post Writer · CV Screener · Onboarding Writer"
+    },
+    "legal": {
+      "title": "Legal Drafts",
+      "body": "draft contracts, partnership agreements and formal letters. A lawyer must still review them.",
+      "teams": "Document Reviewer · Drafter · Consistency Checker"
+    },
+    "ecommerce": {
+      "title": "Online Store",
+      "body": "marketplace listings, price and stock catalogues and promo ideas.",
+      "teams": "Catalogue Keeper · Listing Writer · Promo Planner"
+    },
+    "translation": {
+      "title": "Translation",
+      "body": "translate documents, sites or content with consistent terms.",
+      "teams": "Terminology Keeper · Translator · Editor"
+    },
+    "project": {
+      "title": "Projects & Events",
+      "body": "work plans, timelines, budgets, invitations and meeting notes.",
+      "teams": "Planner · Budget Keeper · Communications Writer"
+    },
+    "custom": {
+      "title": "Custom",
+      "body": "build your own team: each member's name, their job and how QA checks the result.",
+      "teams": "any team, you decide"
     }
   },
   "tree": {
@@ -358,7 +403,12 @@
     "workExistingTitle": "Existing folder",
     "workExistingBody": "A folder that already holds your documents, data or material. Original files are never changed or deleted.",
     "workExistingFolderHint": "The folder with your documents or data. Agents work here and save results in a results/ subfolder.",
-    "privacyNote": "The server is yours, but file contents the agents read are still sent to the AI provider (Anthropic, OpenAI, etc.) while they work. Keep data that must not leave out of this folder, and check figures and documents before you use them."
+    "privacyNote": "The server is yours, but file contents the agents read are still sent to the AI provider (Anthropic, OpenAI, etc.) while they work. Keep data that must not leave out of this folder, and check figures and documents before you use them.",
+    "customIntro": "Build your own team. For each member: the team name, the agent name, their job in one sentence, then the full role (what they do, the rules, the result format). The coordinator and QA are added automatically.",
+    "customDescriptionPlaceholder": "Their job in one sentence, e.g. \"writes short video scripts\"",
+    "customRolePlaceholder": "The full role: what they do, the rules to follow and the result file format.",
+    "customChecks": "What should QA check? (optional)",
+    "customChecksPlaceholder": "e.g. every price must match the price list file; each script at most 60 seconds; no typos."
   },
   "menu": {
     "label": "Actions",
@@ -537,7 +587,16 @@
       "coding": "Say what you want and the AI team builds it in your app folder. No technical knowledge needed.",
       "content": "Give it your product material, say what to make, and the AI team writes the copy and content.",
       "finance": "Drop in your sales or finance data and the AI team processes it and builds the report.",
-      "admin": "Drop in your documents and the AI team sorts them, fills in forms and tidies the archive."
+      "admin": "Drop in your documents and the AI team sorts them, fills in forms and tidies the archive.",
+      "research": "Say what to research and the AI team finds, analyses and writes it up, with sources.",
+      "education": "Give the topic and the audience; the AI team builds the material, exercises and quizzes.",
+      "support": "Drop in your policies and sample customer questions; the AI team writes replies, FAQs and SOPs.",
+      "hr": "Say which role you are hiring for; the AI team writes the post, screens CVs and prepares onboarding.",
+      "legal": "Drop in the documents and agreed points; the AI team drafts them. These are drafts, not legal advice: have a lawyer check them before use.",
+      "ecommerce": "Drop in your product data; the AI team writes listings, tidies the catalogue and plans promos.",
+      "translation": "Drop in the documents and name the target language; the AI team translates and edits.",
+      "project": "Describe the project or event; the AI team builds the timeline, the budget and the communication.",
+      "custom": "The team you built is ready. Write the job and the coordinator hands it to the best-fitting member."
     },
     "stepsLabel": "how it works",
     "steps": {
@@ -569,7 +628,16 @@
       "body": {
         "content": "Product photos/descriptions, catalogue, price list, examples of past content. The more you give, the better it fits.",
         "finance": "Excel/CSV files with sales data, receipts or last month's report. Original files are never changed.",
-        "admin": "The documents to handle: scans, PDFs, blank forms, requirement lists."
+        "admin": "The documents to handle: scans, PDFs, blank forms, requirement lists.",
+        "research": "Documents, links, notes or data you already have on the topic.",
+        "education": "Syllabus, old books/modules, company SOPs or notes to turn into material.",
+        "support": "Store policies (returns, shipping, warranty), sample customer chats/complaints, product list.",
+        "hr": "Role descriptions, applicant CVs (PDF), company rules or past job posts.",
+        "legal": "Past contracts, company templates, agreed points, details of the parties.",
+        "ecommerce": "Product list (Excel/CSV), photos, cost and sale prices, stock, marketplace rules.",
+        "translation": "Documents to translate, a glossary of fixed terms, past translations.",
+        "project": "Project brief, vendor/price lists, meeting notes, attendee lists.",
+        "custom": "Any files the team needs to work."
       },
       "pick": "Choose files",
       "optional": "You can skip this if you have no material. You can also drag files here."
@@ -580,7 +648,16 @@
         "coding": "e.g. build a login page with email and password",
         "content": "e.g. write 5 Instagram captions for the weekend coffee promo",
         "finance": "e.g. build the September sales report from materials/sales-september.xlsx",
-        "admin": "e.g. check the credit application documents in the materials folder are complete"
+        "admin": "e.g. check the credit application documents in the materials folder are complete",
+        "research": "e.g. research 5 coffee-shop competitors in Bandung and compare prices and menus",
+        "education": "e.g. build a 3-session training for new cashiers, with a quiz",
+        "support": "e.g. write 15 WhatsApp reply templates for the most common questions",
+        "hr": "e.g. write a part-time barista job post and screen the CVs in the materials folder",
+        "legal": "e.g. draft a reseller agreement from the points in the materials folder",
+        "ecommerce": "e.g. write marketplace titles and descriptions for every product in the Excel file",
+        "translation": "e.g. translate the product catalogue in the materials folder into Indonesian",
+        "project": "e.g. plan the store's anniversary event, 100 guests, a budget of 15 million",
+        "custom": "write the job for your team"
       },
       "examples": "Examples:",
       "list": "Read as {{count}} jobs, done one after another.",
@@ -608,7 +685,48 @@
         "Check the documents in the materials folder are complete",
         "Fill in the form from the data in the documents",
         "Tidy the archive: group by type and standardise file names"
-      ]
+      ],
+      "research": [
+        "Research 5 competitors and compare prices and strengths",
+        "Summarise this year's local skincare market trends",
+        "Write a SWOT analysis from the material in the folder"
+      ],
+      "education": [
+        "Build a basic Excel module for new staff",
+        "Write 20 multiple-choice questions from the material in the folder",
+        "Put together a one-day customer service training"
+      ],
+      "support": [
+        "Build an FAQ from the sample customer chats in the folder",
+        "Write reply templates for late-delivery complaints",
+        "Write the SOP for handling returns"
+      ],
+      "hr": [
+        "Write a job post for a warehouse admin",
+        "Screen the CVs in the materials folder into a comparison table",
+        "Put together first-week onboarding for new staff"
+      ],
+      "legal": [
+        "Draft a partnership agreement from the points in the folder",
+        "Review the contract in the folder and flag risky clauses",
+        "Write a polite formal payment reminder letter"
+      ],
+      "ecommerce": [
+        "Write listing titles and descriptions for every product in the Excel file",
+        "Tidy the price catalogue and flag low-stock products",
+        "Plan this month's double-date sale"
+      ],
+      "translation": [
+        "Translate the documents in the materials folder into Indonesian",
+        "Build a glossary of terms from the documents in the folder",
+        "Edit an old translation so it reads naturally"
+      ],
+      "project": [
+        "Build the timeline and budget for a product launch event",
+        "Write minutes and action items from the meeting notes in the folder",
+        "Plan a 3-month project with owners for each task"
+      ],
+      "custom": []
     },
     "result": {
       "title": "Progress & results",

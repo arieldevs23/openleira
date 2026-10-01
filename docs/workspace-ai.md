@@ -123,10 +123,23 @@ Langkah pertama milih **jenis kerjaan**. Jenisnya disimpan di workspace (`office
 | **Konten & Penjualan** | Riset Pasar, Copywriter, Konten Sosmed, Brief Visual | riset → copywriter & sosmed, copywriter → brief visual | fakta produk cocok sama bahan, nggak ada klaim ngawur, typo, format per platform |
 | **Laporan & Keuangan** | Pengolah Data, Analis Bisnis, Penulis Laporan | data → analis → laporan | **hitung ulang** angka kunci dari data sumber pakai script sendiri, total cocok, file asli nggak berubah |
 | **Administrasi & Pemberkasan** | Penyortir Dokumen, Form & Surat, Pengarsip | penyortir → form & arsip, form → arsip | kelengkapan berkas, isi form cocok sama sumber (nggak ada yang dikarang), file asli nggak hilang |
+| **Riset & Analisis** | Pencari Sumber, Analis, Penulis Ringkasan | sumber → analis → penulis | tiap klaim penting ada sumbernya dan sumbernya beneran mendukung |
+| **Materi & Pelatihan** | Perancang Materi, Penulis Materi, Pembuat Soal | perancang → penulis → soal | materi akurat sesuai level, QA ngerjain soalnya sendiri buat ngecek kunci jawaban |
+| **Layanan Pelanggan** | Analis Keluhan, Penulis Balasan, Penyusun FAQ & SOP | analis → balasan & FAQ | sopan, sesuai kebijakan di folder, nggak ada data pribadi pelanggan |
+| **HR & Rekrutmen** | Penyusun Lowongan, Penyaring CV, Penyusun Onboarding | lowongan → saring CV & onboarding | nggak diskriminatif, kriteria CV sama buat semua, data pelamar tetap di folder |
+| **Draf Dokumen Legal** | Peninjau Dokumen, Penyusun Draf, Pengecek Konsistensi | peninjau → penyusun → konsistensi | sesuai poin kesepakatan, nama/angka/tanggal konsisten, yang belum pasti ditandai `[PERLU DICEK AHLI]`; ini draf, bukan nasihat hukum |
+| **Toko Online** | Pengelola Katalog, Penulis Listing, Perencana Promo | katalog → listing & promo | harga/stok/spesifikasi persis sama dengan data, margin promo dihitung ulang pakai script |
+| **Terjemahan** | Pengelola Istilah, Penerjemah, Penyunting | istilah → penerjemah → penyunting | makna setia, nggak ada yang terlewat, angka dan nama nggak berubah, istilah konsisten |
+| **Proyek & Acara** | Perencana, Penyusun Anggaran, Penulis Komunikasi | perencana → anggaran & komunikasi | tanggal dan detail sama di semua file, anggaran dijumlah ulang pakai script |
+| **Kustom** | tim yang lo tulis sendiri | nggak ada urutan tetap; koordinator yang nentuin per kerjaan | QA umum + hal yang lo tulis di "QA harus ngecek apa?" |
 
 Di luar coding, prompt agent ngomongin "folder kerja (dokumen, data, hasil)", bukan repository. Tiap tim juga dapet aturan sesuai jenisnya: hasil disimpan sebagai file di `hasil/` (bahasa Inggris: `results/`), angka dihitung pakai script (Python/Node) dan bukan dikira-kira, file asli user nggak boleh ditimpa atau dihapus, dan data pribadi yang nggak ada nggak boleh dikarang (dikasih penanda, misalnya `[PERLU DIISI: NPWP]`). Modal juga ngasih peringatan bahwa isi file yang dibaca agent tetap dikirim ke penyedia AI.
 
 ![Pilih jenis workspace](images/kantor-ai/workspace-kinds.png)
+
+**Kustom:** setelah milih folder, lo nulis timnya sendiri: tiap anggota punya nama tim, nama agent, tugas satu kalimat, dan peran lengkap. Ada kolom opsional **"QA harus ngecek apa?"** yang ditempel ke peran QA. Koordinator dan QA ditambahin otomatis. Lewat API: `POST /api/office` dengan `kind: 'custom'`, `divisions`, dan `auditChecks`.
+
+![Tim kustom](images/kantor-ai/workspace-custom.png)
 
 Workspace non-coding ambil **folder baru** atau **folder yang udah ada** (berisi dokumen/data), dan langsung dibikin dengan tim jenisnya. Clone GitHub dan analisis aplikasi cuma buat coding. Tim hasil analisis selalu bikin workspace coding.
 
@@ -267,7 +280,7 @@ Semua di bawah `/api/office` (butuh login):
 | --- | --- | --- |
 | GET | `/?projectId=` | Snapshot workspace sebuah folder (atau `null`), termasuk `flow` |
 | GET | `/workspaces` | Semua workspace dengan proyek dan jumlah task |
-| POST | `/` | Buat workspace `{ projectId, locale, kind?, divisions?, appSummary? }`; `kind` = `coding` (default), `content`, `finance`, `admin` |
+| POST | `/` | Buat workspace `{ projectId, locale, kind?, divisions?, appSummary? }`; `kind` = `coding` (default), `content`, `finance`, `admin`, `research`, `education`, `support`, `hr`, `legal`, `ecommerce`, `translation`, `project`, atau `custom` (wajib `divisions`, opsional `auditChecks`) |
 | DELETE | `/:officeId` | Hapus workspace (folder tidak disentuh) |
 | POST | `/folders` | Siapkan folder `{ path, mode: 'new' \| 'existing' }` |
 | POST / GET | `/analyses`, `/analyses/:id` | Mulai / baca analisis aplikasi `{ projectId, provider, model, locale }` |

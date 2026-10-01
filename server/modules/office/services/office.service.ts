@@ -458,6 +458,8 @@ export const officeService = {
     appSummary?: string | null;
     /** What kind of work the workspace does; omitted means `coding`. */
     kind?: string | null;
+    /** Custom workspaces only: what the user wants the QA layer to check, added to its role. */
+    auditChecks?: string | null;
   }): OfficeSnapshot {
     const project = projectsDb.getProjectById(input.projectId);
     if (!project) {
@@ -471,8 +473,15 @@ export const officeService = {
     if (input.kind != null && !isOfficeWorkspaceKind(input.kind)) {
       throw badRequest(`Unknown workspace kind "${input.kind}".`);
     }
-    // Teams proposed by an app analysis always make a coding workspace.
-    const kind: OfficeWorkspaceKind = input.divisions ? 'coding' : (input.kind as OfficeWorkspaceKind | null | undefined) ?? 'coding';
+    // Teams come either from an app analysis (a coding workspace) or from the user (a custom one).
+    const requestedKind = (input.kind as OfficeWorkspaceKind | null | undefined) ?? 'coding';
+    if (requestedKind === 'custom' && !input.divisions) {
+      throw badRequest('A custom workspace needs at least one team.');
+    }
+    const kind: OfficeWorkspaceKind = input.divisions ? (requestedKind === 'custom' ? 'custom' : 'coding') : requestedKind;
+    const auditChecks = kind === 'custom' && input.auditChecks
+      ? readBoundedText(String(input.auditChecks), 'auditChecks', LIMITS.rolePrompt, false)
+      : null;
     if (input.divisions && (input.divisions.length === 0 || input.divisions.length > 20)) {
       throw badRequest('A workspace needs between 1 and 20 proposed divisions.');
     }
@@ -485,7 +494,7 @@ export const officeService = {
       locale,
       kind,
       divisions: proposals
-        ? buildDivisionsFromProposals(locale, proposals, input.appSummary ?? null)
+        ? buildDivisionsFromProposals(locale, proposals, input.appSummary ?? null, kind === 'custom' ? 'custom' : 'coding', auditChecks)
         : buildDefaultDivisions(locale, kind),
     });
     // Coordinator → planner → teams, not everyone at once.

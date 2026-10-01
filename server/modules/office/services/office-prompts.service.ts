@@ -169,6 +169,15 @@ const AUDIT_CHECK_BY_KIND: Record<OfficeWorkspaceKind, string> = {
   content: 'Verify the work in the folder: open the result files, compare product facts (prices, specs, promos) with the source material, and check claims, tone, typos and platform fit. Do not fix the work yourself.',
   finance: 'Verify the work in the folder: recompute the key figures from the source data with your own script, check that totals add up, periods and units are consistent and the original files are unchanged, and open the result files. Do not fix the work yourself.',
   admin: 'Verify the work in the folder: check the documents are complete, the data in forms and letters matches the source documents (nothing invented), names and folders are consistent and no original file was lost or overwritten. Do not fix the work yourself.',
+  research: 'Verify the work in the folder: open the result files, check that every important claim cites a source that really supports it and that no figure is invented. Do not fix the work yourself.',
+  education: 'Verify the work in the folder: open the result files, check the material is accurate for its audience and solve the questions yourself to confirm every answer key. Do not fix the work yourself.',
+  support: 'Verify the work in the folder: open the result files and check the replies are polite, match the policies in the folder and contain no customer personal data. Do not fix the work yourself.',
+  hr: 'Verify the work in the folder: open the result files and check there are no discriminatory requirements or judgements, the same criteria were applied to every applicant and personal data stayed in the folder. Do not fix the work yourself.',
+  legal: 'Verify the work in the folder: open the drafts and check they match the agreed points, names, amounts and dates are consistent, nothing is invented and uncertain parts are marked for an expert. Do not fix the work yourself.',
+  ecommerce: 'Verify the work in the folder: check prices, stock and specs match the source data exactly, recompute promo margins with your own script and confirm the original files are unchanged. Do not fix the work yourself.',
+  translation: 'Verify the work in the folder: compare the translation with the source section by section for faithful meaning, nothing skipped, unchanged numbers and names, and terms consistent with the glossary. Do not fix the work yourself.',
+  project: 'Verify the work in the folder: check dates and details agree across the timeline, budget and messages, and re-total the budget with your own script. Do not fix the work yourself.',
+  custom: 'Verify the work in the folder: open the result files and check they really meet the instruction and the checks in your role. Do not fix the work yourself.',
 };
 
 /** Extra working rules for teams outside a code repository. */
@@ -185,6 +194,41 @@ const WORK_RULES_BY_KIND: Record<OfficeWorkspaceKind, string[]> = {
   admin: [
     '- Never delete, move or overwrite the user\'s original documents; copy them when a new structure is needed.',
     '- Never invent personal or official data; leave it blank with a clear marker and list it in your summary.',
+  ],
+  research: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- Cite a source (title and link or file) for every important claim; mark guesses as guesses.',
+  ],
+  education: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- Use the material in the folder as the main source and never invent facts; every question needs an answer key.',
+  ],
+  support: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- Follow the policies in the folder; never promise refunds, discounts or deadlines they do not allow, and never copy customer personal data.',
+  ],
+  hr: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- Judge people only on experience and skills, never on age, religion, ethnicity, gender or looks; keep applicant data inside the folder.',
+  ],
+  legal: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- These are drafts, not legal advice: never invent facts, mark anything uncertain as [EXPERT CHECK NEEDED] and say a lawyer must review it.',
+  ],
+  ecommerce: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- Prices, stock and specs must match the source data exactly; compute margins with a script and never change the original files.',
+  ],
+  translation: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- Translate everything faithfully, keep numbers, names and formatting unchanged, and save the translation as a new file.',
+  ],
+  project: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
+    '- Keep dates and details identical across every file; total budgets with a script, never by hand.',
+  ],
+  custom: [
+    '- Save every deliverable as a file in the folder and name it in your summary; never overwrite or delete the user\'s original files.',
   ],
 };
 

@@ -1421,7 +1421,7 @@ export function buildGithubTokenGitEnvironment(githubToken: string | null): Node
 //----------------- OFFICE WORKSPACE KIND UTILITIES ------------
 
 /** Every workspace kind, in the order the "new workspace" picker lists them. */
-const OFFICE_WORKSPACE_KINDS: OfficeWorkspaceKind[] = ['coding', 'content', 'finance', 'admin'];
+const OFFICE_WORKSPACE_KINDS: OfficeWorkspaceKind[] = ['coding', 'content', 'finance', 'admin', 'research', 'education', 'support', 'hr', 'legal', 'ecommerce', 'translation', 'project', 'custom'];
 
 /**
  * Whether a value names a known workspace kind. The office database

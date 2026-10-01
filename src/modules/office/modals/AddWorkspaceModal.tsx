@@ -20,13 +20,16 @@ import type {
 } from '@/shared/types';
 import { cn } from '@/shared/utils';
 
-type Step = 'kind' | 'source' | 'folder' | 'setup' | 'analysing' | 'review';
+type Step = 'kind' | 'source' | 'folder' | 'setup' | 'analysing' | 'review' | 'custom';
 
 const inputClass = 'w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring';
 
-const emptyProposal = (): OfficeDivisionProposal => ({
-  name: '', slug: '', description: '', color: '#2551BD', agentName: '', rolePrompt: '',
+const emptyProposal = (color = '#2551BD'): OfficeDivisionProposal => ({
+  name: '', slug: '', description: '', color, agentName: '', rolePrompt: '',
 });
+
+/** The rows a custom team starts with: two blank members in different colours. */
+const STARTER_CUSTOM_COLORS = ['#2551BD', '#7C5CC4'];
 
 type AddWorkspaceModalProps = {
   open: boolean;
@@ -76,6 +79,8 @@ export default function AddWorkspaceModal({
   const [step, setStep] = useState<Step>(() => (resumed ? stepFor(resumed) : 'kind'));
   // What kind of work the new workspace does; an app analysis always makes a coding workspace.
   const [kind, setKind] = useState<OfficeWorkspaceKind>('coding');
+  // Custom workspaces only: what the user wants the QA layer to check on every result.
+  const [auditChecks, setAuditChecks] = useState('');
   // New folder or existing app.
   const [mode, setMode] = useState<'new' | 'existing' | 'github'>(resumed ? 'existing' : 'new');
   // The repository to clone (https, or git@host:owner/repo over the server's SSH keys).
@@ -159,6 +164,13 @@ export default function AddWorkspaceModal({
       return;
     }
     setFolder(prepared);
+    // A custom workspace goes on to its team editor.
+    if (kind === 'custom') {
+      setProposals(STARTER_CUSTOM_COLORS.map((color) => emptyProposal(color)));
+      setExpanded(new Set(STARTER_CUSTOM_COLORS.map((_, index) => index)));
+      setStep('custom');
+      return;
+    }
     // Only an existing coding app goes on to the analysis; everything else is created right away.
     if (mode === 'new' || kind !== 'coding') {
       await readApiJson(await api.office.create(prepared.projectId, locale, { kind }));
@@ -233,6 +245,20 @@ export default function AddWorkspaceModal({
     onOpenChange(false);
   });
 
+  /** Creates the custom workspace from the teams the user wrote. */
+  const createCustom = () => run(async () => {
+    if (!folder) {
+      return;
+    }
+    await readApiJson(await api.office.create(folder.projectId, locale, {
+      kind: 'custom',
+      divisions: proposals.filter((proposal) => proposal.name.trim()),
+      auditChecks: auditChecks.trim() || null,
+    }));
+    onReady(folder.projectId);
+    onOpenChange(false);
+  });
+
   const updateProposal = (index: number, changes: Partial<OfficeDivisionProposal>) => {
     setProposals((current) => current.map((proposal, position) => (position === index ? { ...proposal, ...changes } : proposal)));
   };
@@ -259,13 +285,13 @@ export default function AddWorkspaceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[88vh] max-w-2xl flex-col gap-3 p-5">
+      <DialogContent className={cn('flex max-h-[88vh] flex-col gap-3 p-5', step === 'kind' ? 'max-w-4xl' : 'max-w-2xl')}>
         <DialogTitle className="not-sr-only text-base font-semibold text-foreground">{t('addWorkspace.title')}</DialogTitle>
 
         {step === 'kind' && (
-          <div className="space-y-2">
+          <div className="flex min-h-0 flex-col gap-2">
             <p className="text-xs text-muted-foreground">{t('addWorkspace.kindIntro')}</p>
-            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t('addWorkspace.kindIntro')}>
+            <div className="grid min-h-0 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label={t('addWorkspace.kindIntro')}>
               {OFFICE_WORKSPACE_KINDS.map((value) => (
                 <button
                   key={value}
@@ -280,6 +306,7 @@ export default function AddWorkspaceModal({
                   className={cn(
                     'flex w-full items-start gap-3 rounded-[12px] border border-border p-3 text-left hover:border-primary/60 hover:bg-primary/5',
                     kind === value && 'border-primary/60',
+                    value === 'custom' && 'border-dashed',
                   )}
                   data-testid={`office-kind-${value}`}
                 >
@@ -416,7 +443,7 @@ export default function AddWorkspaceModal({
               <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => { setStep('source'); setError(null); }}>{t('addWorkspace.back')}</Button>
               <Button type="button" size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={!folderPath.trim() || isBusy} onClick={() => void prepareFolder()}>
                 {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                {mode === 'new' ? t('addWorkspace.createFolder') : kind === 'coding' ? t('addWorkspace.next') : t('addWorkspace.create')}
+                {kind === 'custom' ? t('addWorkspace.next') : mode === 'new' ? t('addWorkspace.createFolder') : kind === 'coding' ? t('addWorkspace.next') : t('addWorkspace.create')}
               </Button>
             </div>
           </div>
@@ -478,13 +505,15 @@ export default function AddWorkspaceModal({
           )
         )}
 
-        {step === 'review' && (
-          <div className="flex min-h-0 flex-1 flex-col gap-2">
-            <p className="text-xs text-muted-foreground">{t('addWorkspace.reviewIntro')}</p>
-            <label className="block space-y-1">
-              <span className="text-[11px] text-muted-foreground">{t('addWorkspace.summary')}</span>
-              <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={3} className={`${inputClass} py-1.5 text-xs`} />
-            </label>
+        {(step === 'review' || step === 'custom') && (
+          <div className="flex min-h-0 flex-1 flex-col gap-2" data-testid={step === 'custom' ? 'office-custom-team' : undefined}>
+            <p className="text-xs text-muted-foreground">{step === 'custom' ? t('addWorkspace.customIntro') : t('addWorkspace.reviewIntro')}</p>
+            {step === 'review' && (
+              <label className="block space-y-1">
+                <span className="text-[11px] text-muted-foreground">{t('addWorkspace.summary')}</span>
+                <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={3} className={`${inputClass} py-1.5 text-xs`} />
+              </label>
+            )}
             <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1" data-testid="office-proposals">
               {proposals.map((proposal, index) => {
                 const isOpen = expanded.has(index);
@@ -505,29 +534,55 @@ export default function AddWorkspaceModal({
                         <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', isOpen && 'rotate-90')} />
                       </button>
                       <input type="color" value={proposal.color} onChange={(event) => updateProposal(index, { color: event.target.value })} className="h-6 w-7 shrink-0 cursor-pointer rounded border border-input" aria-label={t('division.color')} />
-                      <input value={proposal.name} onChange={(event) => updateProposal(index, { name: event.target.value })} placeholder={t('division.name')} aria-label={t('division.name')} className={`${inputClass} h-7 min-w-0 flex-1`} />
-                      <input value={proposal.agentName} onChange={(event) => updateProposal(index, { agentName: event.target.value })} placeholder={t('agent.name')} aria-label={t('agent.name')} className={`${inputClass} h-7 w-28 shrink-0`} />
+                      <input value={proposal.name} onChange={(event) => updateProposal(index, { name: event.target.value })} placeholder={t('division.name')} aria-label={t('division.name')} className={cn(inputClass, 'h-7 min-w-0 flex-1')} />
+                      <input value={proposal.agentName} onChange={(event) => updateProposal(index, { agentName: event.target.value })} placeholder={t('agent.name')} aria-label={t('agent.name')} className={cn(inputClass, 'h-7 w-28 shrink-0')} />
                       <button type="button" onClick={() => setProposals((current) => current.filter((_, position) => position !== index))} className="rounded-md p-1 text-muted-foreground hover:text-err" aria-label={t('addWorkspace.removeDivision')}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     {isOpen && (
                       <div className="space-y-1.5 px-2 pb-2">
-                        <input value={proposal.description} onChange={(event) => updateProposal(index, { description: event.target.value })} placeholder={t('division.description')} className={`${inputClass} h-7 text-xs`} />
-                        <textarea value={proposal.rolePrompt} onChange={(event) => updateProposal(index, { rolePrompt: event.target.value })} rows={6} placeholder={t('agent.rolePromptPlaceholder')} aria-label={t('agent.rolePrompt')} className={`${inputClass} py-1.5 font-mono text-[11.5px]`} />
+                        <input value={proposal.description} onChange={(event) => updateProposal(index, { description: event.target.value })} placeholder={step === 'custom' ? t('addWorkspace.customDescriptionPlaceholder') : t('division.description')} aria-label={t('division.description')} className={`${inputClass} h-7 text-xs`} />
+                        <textarea value={proposal.rolePrompt} onChange={(event) => updateProposal(index, { rolePrompt: event.target.value })} rows={6} placeholder={step === 'custom' ? t('addWorkspace.customRolePlaceholder') : t('agent.rolePromptPlaceholder')} aria-label={t('agent.rolePrompt')} className={`${inputClass} py-1.5 font-mono text-[11.5px]`} />
                       </div>
                     )}
                   </li>
                 );
               })}
             </ul>
-            <button type="button" className="flex items-center gap-1 self-start text-xs text-primary hover:underline" onClick={() => setProposals((current) => [...current, emptyProposal()])}>
+            <button
+              type="button"
+              className="flex items-center gap-1 self-start text-xs text-primary hover:underline"
+              onClick={() => {
+                setProposals((current) => [...current, emptyProposal()]);
+                if (step === 'custom') setExpanded((current) => new Set([...current, proposals.length]));
+              }}
+            >
               <Plus className="h-3.5 w-3.5" />{t('addWorkspace.addDivision')}
             </button>
+            {step === 'custom' && (
+              <label className="block space-y-1">
+                <span className="text-[11px] text-muted-foreground">{t('addWorkspace.customChecks')}</span>
+                <textarea
+                  value={auditChecks}
+                  onChange={(event) => setAuditChecks(event.target.value)}
+                  rows={3}
+                  placeholder={t('addWorkspace.customChecksPlaceholder')}
+                  aria-label={t('addWorkspace.customChecks')}
+                  className={`${inputClass} py-1.5 text-xs`}
+                />
+              </label>
+            )}
             {error && <p className="text-xs text-err">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => setStep('setup')}>{t('addWorkspace.back')}</Button>
-              <Button type="button" size="sm" className="h-8 px-3 text-xs" disabled={isBusy || !proposals.some((proposal) => proposal.name.trim())} onClick={() => void createWith(proposals)}>
+              <Button type="button" variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={() => setStep(step === 'custom' ? 'source' : 'setup')}>{t('addWorkspace.back')}</Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={isBusy || !proposals.some((proposal) => proposal.name.trim())}
+                onClick={() => void (step === 'custom' ? createCustom() : createWith(proposals))}
+              >
                 {isBusy ? t('common.saving') : t('addWorkspace.create')}
               </Button>
             </div>
