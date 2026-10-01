@@ -62,7 +62,7 @@ export function createCliApplication(): CliApplication {
 
   return createCliService({
     applicationRoot,
-    defaultDatabasePath: path.join(homeDirectory, '.cloudcli', 'auth.db'),
+    defaultDatabasePath: path.join(homeDirectory, '.openleira', 'auth.db'),
     homeDirectory,
     packageMetadata,
     environment: process.env,
@@ -74,12 +74,12 @@ export function createCliApplication(): CliApplication {
       // before this best-effort npm registry check runs.
       await new Promise<void>((resolve) => setImmediate(resolve));
       return execSync(
-        'npm show @cloudcli-ai/cloudcli version',
+        'npm show openleira version',
         { encoding: 'utf8' },
       ).trim();
     },
     updateGlobalPackage: () => {
-      execSync('npm update -g @cloudcli-ai/cloudcli', { stdio: 'inherit' });
+      execSync('npm update -g openleira', { stdio: 'inherit' });
     },
     startServer: async () => {
       // The server executable is an entrypoint rather than a feature module,

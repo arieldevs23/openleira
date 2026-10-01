@@ -38,9 +38,24 @@ try {
   console.error('No .env file found or error reading it:', e.message);
 }
 
+// Before the rename to OpenLeira the user data folder was ~/.cloudcli. Move it
+// once to ~/.openleira so the database, uploads and plugins carry over; when the
+// move is not possible (another process holds it, different device) the old
+// folder is left alone and the new one starts empty.
+const DATA_DIRECTORY = path.join(os.homedir(), '.openleira');
+const LEGACY_DATA_DIRECTORY = path.join(os.homedir(), '.cloudcli');
+try {
+  if (!fs.existsSync(DATA_DIRECTORY) && fs.existsSync(LEGACY_DATA_DIRECTORY)) {
+    fs.renameSync(LEGACY_DATA_DIRECTORY, DATA_DIRECTORY);
+    console.log(`Moved the data folder from ${LEGACY_DATA_DIRECTORY} to ${DATA_DIRECTORY}`);
+  }
+} catch (e: any) {
+  console.error(`Could not move ${LEGACY_DATA_DIRECTORY} to ${DATA_DIRECTORY}:`, e.message);
+}
+
 // Keep the default database in a stable user-level location so rebuilding dist-server
 // never changes where the backend stores auth.db when DATABASE_PATH is not set explicitly.
-const DEFAULT_DATABASE_PATH = path.join(os.homedir(), '.cloudcli', 'auth.db');
+const DEFAULT_DATABASE_PATH = path.join(DATA_DIRECTORY, 'auth.db');
 
 if (!process.env.DATABASE_PATH) {
   process.env.DATABASE_PATH = DEFAULT_DATABASE_PATH;

@@ -747,7 +747,7 @@ export function createBackgroundWorkTracker() {
  * the turn's `result` arrives, which kills the CLI's background tasks. Plain
  * text turns carry string content; turns with image attachments carry the
  * prompt text plus one base64 `image` block per attachment (read from the
- * global `~/.cloudcli/assets` folder).
+ * global `~/.openleira/assets` folder).
  *
  * @param {string} command - User prompt
  * @param {Array} images - Image descriptors ({ path, name?, mimeType? })

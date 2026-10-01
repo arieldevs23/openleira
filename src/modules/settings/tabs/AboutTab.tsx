@@ -11,6 +11,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { APP_RELEASE_NAME } from '@/shared/constants';
 import { BrandWordmark, RoseMark } from '@/shared/ui';
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck';
 
@@ -40,6 +41,7 @@ export default function AboutTab() {
           <BrandWordmark />
         </h2>
         <span className="mt-1.5 rounded bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          {APP_RELEASE_NAME ? `${APP_RELEASE_NAME} · ` : ''}
           {t('about.version', { version: currentVersion, defaultValue: 'Version {{version}}' })}
         </span>
         <p className="mt-2 max-w-md text-xs leading-relaxed text-muted-foreground">

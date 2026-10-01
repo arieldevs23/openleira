@@ -13,15 +13,18 @@ const DISPLAY_HOST = 'localhost';
 const HEALTH_TIMEOUT_MS = 1000;
 const SERVER_START_TIMEOUT_MS = 30000;
 const MAX_STARTUP_LOG_LINES = 300;
-const SERVER_MARKER_PATH = path.join(os.homedir(), '.cloudcli', 'local-server.json');
+// The server moves the old ~/.cloudcli data folder to ~/.openleira on its first
+// start (see server/load-env.ts); until then the marker may still be there.
+const SERVER_MARKER_PATH = path.join(os.homedir(), '.openleira', 'local-server.json');
+const LEGACY_SERVER_MARKER_PATH = path.join(os.homedir(), '.cloudcli', 'local-server.json');
 const LOCAL_SERVER_URL_ENV_KEYS = [
-  'CLOUDCLI_DESKTOP_LOCAL_SERVER_URL',
-  'CLOUDCLI_LOCAL_SERVER_URL',
+  'OPENLEIRA_DESKTOP_LOCAL_SERVER_URL',
+  'OPENLEIRA_LOCAL_SERVER_URL',
   'ELECTRON_LOCAL_SERVER_URL',
 ];
 const LOCAL_SERVER_PORT_ENV_KEYS = [
-  'CLOUDCLI_DESKTOP_LOCAL_SERVER_PORT',
-  'CLOUDCLI_SERVER_PORT',
+  'OPENLEIRA_DESKTOP_LOCAL_SERVER_PORT',
+  'OPENLEIRA_SERVER_PORT',
   'SERVER_PORT',
   'PORT',
 ];
@@ -55,7 +58,7 @@ function requestJson(url, timeoutMs = HEALTH_TIMEOUT_MS) {
   });
 }
 
-async function isCloudCliServer(baseUrl) {
+async function isOpenLeiraServer(baseUrl) {
   const response = await requestJson(`${baseUrl}/health`);
   return response.ok
     && response.json?.status === 'ok'
@@ -207,7 +210,8 @@ function getServerCwd(appRoot, serverEntry) {
 
 async function readServerMarkerUrl() {
   try {
-    const raw = await fs.readFile(SERVER_MARKER_PATH, 'utf8');
+    const raw = await fs.readFile(SERVER_MARKER_PATH, 'utf8')
+      .catch(() => fs.readFile(LEGACY_SERVER_MARKER_PATH, 'utf8'));
     const marker = JSON.parse(raw);
     return marker.url || (marker.port ? `http://${marker.host || HOST}:${marker.port}` : null);
   } catch {
@@ -232,11 +236,11 @@ async function getExistingServerCandidateUrls(defaultUrl) {
   return urls;
 }
 
-async function waitForCloudCliServer(baseUrl, timeoutMs) {
+async function waitForOpenLeiraServer(baseUrl, timeoutMs) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
-    if (await isCloudCliServer(baseUrl)) {
+    if (await isOpenLeiraServer(baseUrl)) {
       return true;
     }
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -294,7 +298,7 @@ export class LocalServerController {
   getPendingTarget() {
     return {
       kind: 'local',
-      name: 'Local CloudCLI',
+      name: 'Local OpenLeira',
       url: this.localServerUrl || `http://${DISPLAY_HOST}:${this.localServerPort || DEFAULT_PORT}`,
     };
   }
@@ -378,8 +382,17 @@ export class LocalServerController {
     }
 
     const bundledEntry = path.join(this.appRoot, 'dist-server', 'server', 'index.js');
-    if (process.env.CLOUDCLI_USE_INSTALLED_SERVER !== '1' && await pathExists(bundledEntry)) {
+    if (process.env.OPENLEIRA_USE_INSTALLED_SERVER !== '1' && await pathExists(bundledEntry)) {
       return bundledEntry;
+    }
+
+    // A full installer ships the server (with native modules built for this
+    // Electron) under resources/server, so nothing has to be downloaded.
+    const embeddedEntry = this.isPackaged && process.resourcesPath
+      ? path.join(process.resourcesPath, 'server', 'dist-server', 'server', 'index.js')
+      : null;
+    if (process.env.OPENLEIRA_USE_INSTALLED_SERVER !== '1' && embeddedEntry && await pathExists(embeddedEntry)) {
+      return embeddedEntry;
     }
 
     if (!this.appVersion) {
@@ -439,7 +452,7 @@ export class LocalServerController {
     this.ownedServerProcess.once('exit', (code, signal) => {
       this.appendStartupLog(`process exited with code ${code ?? 'null'} and signal ${signal ?? 'null'}`);
       if (this.ownedServerProcess) {
-        console.error(`CloudCLI desktop server exited with code ${code ?? 'null'} and signal ${signal ?? 'null'}`);
+        console.error(`OpenLeira desktop server exited with code ${code ?? 'null'} and signal ${signal ?? 'null'}`);
       }
       this.ownedServerProcess = null;
     });
@@ -452,7 +465,7 @@ export class LocalServerController {
     const forceOwnServer = process.env.ELECTRON_FORCE_OWN_SERVER === '1';
 
     if (devUrl) {
-      const ready = await waitForCloudCliServer(defaultUrl, SERVER_START_TIMEOUT_MS);
+      const ready = await waitForOpenLeiraServer(defaultUrl, SERVER_START_TIMEOUT_MS);
       if (!ready) {
         throw new Error(`Development backend did not become ready at ${defaultDisplayUrl}`);
       }
@@ -463,10 +476,10 @@ export class LocalServerController {
     if (!forceOwnServer) {
       const candidateUrls = await getExistingServerCandidateUrls(defaultUrl);
       for (const candidateUrl of candidateUrls) {
-        if (await isCloudCliServer(candidateUrl)) {
+        if (await isOpenLeiraServer(candidateUrl)) {
           const displayUrl = getDisplayUrl(candidateUrl);
           this.localServerPort = getPortFromUrl(candidateUrl);
-          this.appendStartupLog(`Using existing Local CloudCLI at ${displayUrl}`);
+          this.appendStartupLog(`Using existing Local OpenLeira at ${displayUrl}`);
           return displayUrl;
         }
       }
@@ -480,7 +493,7 @@ export class LocalServerController {
     this.localServerPort = port;
     this.startBundledServer(port, serverEntry);
 
-    const ready = await waitForCloudCliServer(serverUrl, SERVER_START_TIMEOUT_MS);
+    const ready = await waitForOpenLeiraServer(serverUrl, SERVER_START_TIMEOUT_MS);
     if (!ready) {
       const recentLogs = this.getStartupLogs().slice(-20).join('\n');
       await this.shutdownOwnedServer();
@@ -491,7 +504,7 @@ export class LocalServerController {
       ].join('\n\n'));
     }
 
-    this.appendStartupLog(`Local CloudCLI ready at ${displayUrl}`);
+    this.appendStartupLog(`Local OpenLeira ready at ${displayUrl}`);
     this.localServerUrl = displayUrl;
     return displayUrl;
   }
@@ -507,7 +520,7 @@ export class LocalServerController {
     await this.ensureLocalServer();
     return {
       kind: 'local',
-      name: 'Local CloudCLI',
+      name: 'Local OpenLeira',
       url: this.localServerUrl,
     };
   }

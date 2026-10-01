@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +65,11 @@ async function copyNodeModule(packageName) {
   return true;
 }
 
+// A server bundle (from `npm run server:bundle`) to ship inside the installer,
+// so the app works offline and does not download its server from a release.
+const embeddedServerBundle = process.env.OPENLEIRA_EMBED_SERVER_BUNDLE || '';
+const embeddedServerDir = 'embedded-server';
+
 function buildDesktopPackageJson(copiedOptionalDependencies) {
   return {
     name: `${packageJson.name}-desktop`,
@@ -98,6 +104,7 @@ function buildDesktopPackageJson(copiedOptionalDependencies) {
         'node_modules/**',
         'package.json',
       ],
+      ...(embeddedServerBundle ? { extraResources: [{ from: embeddedServerDir, to: 'server' }] } : {}),
       protocols: packageJson.build.protocols,
       mac: packageJson.build.mac,
       win: packageJson.build.win,
@@ -137,6 +144,19 @@ for (const name of [
   'temp',
 ]) {
   await copyNodeModule(name);
+}
+
+if (embeddedServerBundle) {
+  const target = path.join(stageDir, embeddedServerDir);
+  await fs.mkdir(target, { recursive: true });
+  // A relative archive path keeps a Windows drive letter ("D:") away from tar,
+  // which would otherwise read it as a remote host.
+  const archive = path.relative(target, path.resolve(rootDir, embeddedServerBundle));
+  const extracted = spawnSync('tar', ['-xzf', archive], { cwd: target, stdio: 'inherit' });
+  if (extracted.status !== 0) {
+    throw new Error(`Could not extract the server bundle ${embeddedServerBundle}`);
+  }
+  console.log(`Embedded server bundle: ${embeddedServerBundle}`);
 }
 
 await fs.writeFile(

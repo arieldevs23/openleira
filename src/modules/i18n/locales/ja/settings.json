@@ -447,7 +447,7 @@
   },
   "pluginSettings": {
     "title": "プラグイン",
-    "description": "カスタムプラグインでインターフェースを拡張します。gitからインストールするか、~/.claude-code-ui/plugins/ にフォルダを配置してください。",
+    "description": "カスタムプラグインでインターフェースを拡張します。gitからインストールするか、~/.openleira/plugins/ にフォルダを配置してください。",
     "installPlaceholder": "https://git.example.com/user/my-plugin.git",
     "installButton": "インストール",
     "installing": "インストール中…",

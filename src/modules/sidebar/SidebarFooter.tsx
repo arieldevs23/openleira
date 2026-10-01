@@ -1,6 +1,7 @@
 import { Settings, ArrowUpCircle, AlertTriangle, FolderOpen, Loader2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
+import { APP_RELEASE_NAME } from '@/shared/constants';
 import { IS_PLATFORM } from '@/shared/utils';
 import type { ReleaseInfo } from '@/shared/types';
 
@@ -124,7 +125,7 @@ export default function SidebarFooter({
       {!IS_PLATFORM && (
         <div className="hidden px-3 py-2 text-center md:block">
           <span className="text-[10px] text-muted-foreground">
-            OpenLeira v{currentVersion}
+            OpenLeira{APP_RELEASE_NAME ? ` - ${APP_RELEASE_NAME}` : ''} v{currentVersion}
           </span>
         </div>
       )}

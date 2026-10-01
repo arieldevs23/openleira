@@ -33,7 +33,7 @@ Catatan koordinasi antar agent yang mengerjakan OpenLeira. Siapa pun (cloud sess
 
 ## Log
 
-- 2026-09-25 · CLI VPS · `main` · rebrand CloudCLI → OpenLeira, theme minimal + glass, locale id gen-z, hapus jejak upstream (github/discord/sponsor), tab chat terpisah (default sonnet), file browser, tool row compact, context-menu copy, iMessage bubble + sound, antrian pesan dengan interupsi, gzip.
+- 2026-09-25 · CLI VPS · `main` · rebrand OpenLeira → OpenLeira, theme minimal + glass, locale id gen-z, hapus jejak upstream (github/discord/sponsor), tab chat terpisah (default sonnet), file browser, tool row compact, context-menu copy, iMessage bubble + sound, antrian pesan dengan interupsi, gzip.
 - 2026-09-25 · cloud session · `feat/kantor-ai` · Workspace AI awal: DB, orkestrasi, websocket observer, halaman + bagan, canvas mode, provider connect sebelum pilih model.
 - 2026-09-25 · CLI VPS · `feat/kantor-ai` · rename istilah UI ke workspace/tim/orchestrator/task; alur berfase opsi B (planner fase 1 menentukan dependensi, audit sekali di akhir, maks 2 putaran fix, bagan pipeline 4 kolom).
 - 2026-09-25 · CLI VPS · `feat/auth-polish` · PR #3.

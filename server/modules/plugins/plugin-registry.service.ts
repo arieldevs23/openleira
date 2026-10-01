@@ -5,8 +5,8 @@ import os from 'os';
 
 import { spawn } from 'cross-spawn';
 
-const PLUGINS_DIR = path.join(os.homedir(), '.claude-code-ui', 'plugins');
-const PLUGINS_CONFIG_PATH = path.join(os.homedir(), '.claude-code-ui', 'plugins.json');
+const PLUGINS_DIR = path.join(os.homedir(), '.openleira', 'plugins');
+const PLUGINS_CONFIG_PATH = path.join(os.homedir(), '.openleira', 'plugins.json');
 
 const REQUIRED_MANIFEST_FIELDS = ['name', 'displayName', 'entry'];
 

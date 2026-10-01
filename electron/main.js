@@ -11,11 +11,17 @@ import { TabsController } from './tabs.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const APP_NAME = 'CloudCLI';
-const APP_USER_MODEL_ID = 'ai.cloudcli.desktop';
-const CALLBACK_PROTOCOL = 'cloudcli';
+const APP_NAME = 'OpenLeira';
+// Release line shown with the name ("OpenLeira - Reaver4"); keep in sync with releaseName in package.json.
+const RELEASE_NAME = 'Reaver4';
+const APP_USER_MODEL_ID = 'online.openleira.desktop';
+const CALLBACK_PROTOCOL = 'openleira';
 const CALLBACK_URL = `${CALLBACK_PROTOCOL}://auth/callback`;
-const CLOUDCLI_CONTROL_PLANE_URL = process.env.CLOUDCLI_CONTROL_PLANE_URL || 'https://cloudcli.ai';
+const OPENLEIRA_CONTROL_PLANE_URL = process.env.OPENLEIRA_CONTROL_PLANE_URL || 'https://openleira.online';
+// OpenLeira has no hosted cloud yet: the cloud account and remote environments
+// (inherited from the CloudCLI desktop app) only show up when a control plane
+// is configured explicitly.
+const CLOUD_ENABLED = Boolean(process.env.OPENLEIRA_CONTROL_PLANE_URL);
 const REMOTE_START_TIMEOUT_MS = 30000;
 const AUTH_CALLBACK_TTL_MS = 10 * 60 * 1000;
 
@@ -80,7 +86,7 @@ function getCloudState() {
   return {
     account: cloud.getAccount(),
     environments: cloud.getEnvironments(),
-    controlPlaneUrl: CLOUDCLI_CONTROL_PLANE_URL,
+    controlPlaneUrl: OPENLEIRA_CONTROL_PLANE_URL,
   };
 }
 
@@ -128,6 +134,7 @@ function getDesktopState() {
     tabs: tabs.getSerializableTabs(),
     activeTabId: tabs.activeTabId,
     environments: cloud.getEnvironments().map(serializeEnvironment),
+    cloudEnabled: CLOUD_ENABLED,
     desktopNotifications: desktopNotifications?.getState() || { enabled: false, supported: false, connectedCount: 0, targetCount: 0 },
   };
 }
@@ -196,7 +203,7 @@ async function hasCloudWebSession() {
   const cookies = await session.defaultSession.cookies.get({});
   return cookies.some((cookie) => {
     const cookieDomain = String(cookie.domain || '');
-    return cookieDomain.includes('cloudcli.ai')
+    return cookieDomain.includes('openleira.online')
       && /-auth-token(?:\.\d+)?$/.test(cookie.name)
       && Boolean(cookie.value);
   });
@@ -206,7 +213,7 @@ function isCloudAuthRedirect(url) {
   if (!url) return false;
   try {
     const parsed = new URL(url);
-    const controlPlane = new URL(CLOUDCLI_CONTROL_PLANE_URL);
+    const controlPlane = new URL(OPENLEIRA_CONTROL_PLANE_URL);
     return parsed.origin === controlPlane.origin
       && (parsed.pathname === '/login' || parsed.pathname.startsWith('/auth/'));
   } catch {
@@ -238,7 +245,7 @@ function getDiagnosticsText() {
     cloudRunningEnvironmentCount: getRunningEnvironmentUrls().length,
     cloudAuthState: cloud.getAuthState(),
     cloudAccountPath: getStorePath(),
-    controlPlaneUrl: CLOUDCLI_CONTROL_PLANE_URL,
+    controlPlaneUrl: OPENLEIRA_CONTROL_PLANE_URL,
   }, null, 2);
 }
 
@@ -247,7 +254,7 @@ async function copyDiagnostics() {
   await dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
     type: 'info',
     title: 'Diagnostics copied',
-    message: 'CloudCLI desktop diagnostics were copied to the clipboard.',
+    message: 'OpenLeira desktop diagnostics were copied to the clipboard.',
   });
 }
 
@@ -259,15 +266,15 @@ async function refreshCloudEnvironments({ showErrors = false } = {}) {
   } catch (error) {
     const authState = cloud.getAuthState();
     if (authState === 'expired') {
-      const expiredError = new Error('Your CloudCLI session expired. Reconnect your account.');
+      const expiredError = new Error('Your OpenLeira session expired. Reconnect your account.');
       if (showErrors) {
-        await showError('CloudCLI login required', expiredError);
+        await showError('OpenLeira login required', expiredError);
         return [];
       }
       throw expiredError;
     }
     if (showErrors) {
-      await showError('Could not load CloudCLI environments', error);
+      await showError('Could not load OpenLeira environments', error);
       return [];
     }
     throw error;
@@ -299,13 +306,13 @@ async function handleDeepLink(url) {
   }
 
   if (!pendingCloudConnectStartedAt || Date.now() - pendingCloudConnectStartedAt > AUTH_CALLBACK_TTL_MS) {
-    await showError('CloudCLI account connection failed', new Error('No recent CloudCLI account connection was started from this app.'));
+    await showError('OpenLeira account connection failed', new Error('No recent OpenLeira account connection was started from this app.'));
     return;
   }
 
   const apiKey = parsed.searchParams.get('api_key');
   if (!apiKey) {
-    await showError('CloudCLI account connection failed', new Error('The callback did not include an API key.'));
+    await showError('OpenLeira account connection failed', new Error('The callback did not include an API key.'));
     return;
   }
 
@@ -318,8 +325,8 @@ async function handleDeepLink(url) {
 
   dialog.showMessageBox(desktopWindow?.getMainWindow() || undefined, {
     type: 'info',
-    title: 'CloudCLI account connected',
-    message: cloud.getAccount()?.email ? `Connected as ${cloud.getAccount().email}.` : 'CloudCLI account connected.',
+    title: 'OpenLeira account connected',
+    message: cloud.getAccount()?.email ? `Connected as ${cloud.getAccount().email}.` : 'OpenLeira account connected.',
   }).catch(() => {});
 }
 
@@ -329,7 +336,7 @@ async function copyLocalWebUrl() {
   const localUrl = localServer.getLocalServerUrl();
 
   if (!shareableUrl) {
-    throw new Error('Local CloudCLI URL is not available yet.');
+    throw new Error('Local OpenLeira URL is not available yet.');
   }
 
   clipboard.writeText(shareableUrl);
@@ -340,7 +347,7 @@ async function copyLocalWebUrl() {
     message: isLanUrl ? 'LAN web URL copied.' : 'Local web URL copied.',
     detail: isLanUrl
       ? `${shareableUrl}\n\nUse this URL from another device on the same network.`
-      : `${shareableUrl}\n\nThis URL works on this computer. Enable LAN access before starting Local CloudCLI to copy a phone-accessible URL.`,
+      : `${shareableUrl}\n\nThis URL works on this computer. Enable LAN access before starting Local OpenLeira to copy a phone-accessible URL.`,
   });
 
   return getDesktopState();
@@ -350,7 +357,7 @@ async function openLocalWebUi() {
   await localServer.ensureLocalServer();
   const url = localServer.getShareableWebUrl() || localServer.getLocalServerUrl();
   if (!url) {
-    throw new Error('Local CloudCLI URL is not available yet.');
+    throw new Error('Local OpenLeira URL is not available yet.');
   }
 
   await openExternalUrl(url);
@@ -366,7 +373,7 @@ async function updateDesktopSetting(key, value) {
       type: 'info',
       title: 'Restart local server to apply',
       message: 'LAN access changes apply the next time the local server starts.',
-      detail: 'Quit CloudCLI and stop the local server, then open Local CloudCLI again.',
+      detail: 'Quit OpenLeira and stop the local server, then open Local OpenLeira again.',
     });
   }
 
@@ -386,7 +393,7 @@ async function showEnvironmentPicker() {
     }
   }
 
-  const choices = ['Local CloudCLI', ...environments.map((environment) => {
+  const choices = ['Local OpenLeira', ...environments.map((environment) => {
     const status = environment.status === 'running' ? '' : ` (${environment.status})`;
     return `${environment.name || environment.subdomain}${status}`;
   })];
@@ -396,7 +403,7 @@ async function showEnvironmentPicker() {
     buttons: [...choices, 'Cancel'],
     defaultId: 0,
     cancelId: choices.length,
-    title: 'Switch CloudCLI Environment',
+    title: 'Switch OpenLeira Environment',
     message: 'Choose where this desktop window should connect.',
     detail: refreshError ? `Cloud environments could not be refreshed. Showing cached environments.\n\n${refreshError.message || refreshError}` : undefined,
   });
@@ -432,13 +439,13 @@ function getSshTarget(credentials) {
     const parts = String(credentials.ssh_command).split(/\s+/);
     if (parts.length >= 2) return parts[1];
   }
-  return `${credentials.username}@ssh.cloudcli.ai`;
+  return `${credentials.username}@ssh.openleira.online`;
 }
 
 function getSshHost(credentials) {
   const target = getSshTarget(credentials);
   const atIndex = target.indexOf('@');
-  return atIndex >= 0 ? target.slice(atIndex + 1) : 'ssh.cloudcli.ai';
+  return atIndex >= 0 ? target.slice(atIndex + 1) : 'ssh.openleira.online';
 }
 
 function getSafeSshUsername(credentials) {
@@ -514,7 +521,7 @@ async function copyEnvironmentMobileUrl(environment) {
 }
 
 async function openCloudDashboard() {
-  await openExternalUrl(CLOUDCLI_CONTROL_PLANE_URL);
+  await openExternalUrl(OPENLEIRA_CONTROL_PLANE_URL);
   return getDesktopState();
 }
 
@@ -588,7 +595,7 @@ async function openEnvironmentInDesktop(environment) {
       cancelId: 1,
       title: 'Start environment?',
       message: `${pendingTarget.name} is ${environment.status}.`,
-      detail: 'CloudCLI can start it before opening the remote app.',
+      detail: 'OpenLeira can start it before opening the remote app.',
     });
 
     if (response.response !== 0) {
@@ -695,8 +702,11 @@ function getRemoteEnvironmentMenuItems() {
   const cloudAccount = cloud.getAccount();
   const environments = cloud.getEnvironments();
 
+  if (!CLOUD_ENABLED) {
+    return [{ label: 'Local only', enabled: false }];
+  }
   if (!cloudAccount?.apiKey) {
-    return [{ label: 'Connect CloudCLI Account...', click: () => void connectCloudAccount() }];
+    return [{ label: 'Connect OpenLeira Account...', click: () => void connectCloudAccount() }];
   }
 
   if (!environments.length) {
@@ -720,55 +730,55 @@ function registerProtocolHandler() {
 }
 
 function registerIpcHandlers() {
-  ipcMain.handle('cloudcli-desktop:connect-cloud', async () => ({
+  ipcMain.handle('openleira-desktop:connect-cloud', async () => ({
     ...getDesktopState(),
     connectUrl: await connectCloudAccount(),
   }));
 
-  ipcMain.handle('cloudcli-desktop:copy-diagnostics', async () => {
+  ipcMain.handle('openleira-desktop:copy-diagnostics', async () => {
     await copyDiagnostics();
     return getDesktopState();
   });
 
-  ipcMain.handle('cloudcli-desktop:copy-local-web-url', async () => copyLocalWebUrl());
-  ipcMain.handle('cloudcli-desktop:get-state', () => getDesktopState());
-  ipcMain.handle('cloudcli-desktop:open-cloud-dashboard', async () => openCloudDashboard());
-  ipcMain.handle('cloudcli-desktop:run-active-environment-action', async (_event, action) => runActiveEnvironmentAction(action));
-  ipcMain.handle('cloudcli-desktop:open-environment', async (_event, environmentId) => {
+  ipcMain.handle('openleira-desktop:copy-local-web-url', async () => copyLocalWebUrl());
+  ipcMain.handle('openleira-desktop:get-state', () => getDesktopState());
+  ipcMain.handle('openleira-desktop:open-cloud-dashboard', async () => openCloudDashboard());
+  ipcMain.handle('openleira-desktop:run-active-environment-action', async (_event, action) => runActiveEnvironmentAction(action));
+  ipcMain.handle('openleira-desktop:open-environment', async (_event, environmentId) => {
     const environment = cloud.findEnvironment(environmentId);
     if (!environment) {
       throw new Error('Environment not found. Refresh and try again.');
     }
     return openEnvironmentInDesktop(environment);
   });
-  ipcMain.handle('cloudcli-desktop:open-local', async () => openLocalInDesktop());
-  ipcMain.handle('cloudcli-desktop:open-local-web-ui', async () => openLocalWebUi());
-  ipcMain.handle('cloudcli-desktop:refresh-environments', async () => {
+  ipcMain.handle('openleira-desktop:open-local', async () => openLocalInDesktop());
+  ipcMain.handle('openleira-desktop:open-local-web-ui', async () => openLocalWebUi());
+  ipcMain.handle('openleira-desktop:refresh-environments', async () => {
     await refreshCloudEnvironments({ showErrors: true });
     return getDesktopState();
   });
-  ipcMain.handle('cloudcli-desktop:disconnect-cloud', async () => clearCloudAccount());
-  ipcMain.handle('cloudcli-desktop:reload-active-tab', async () => desktopWindow.reloadActiveTab());
-  ipcMain.handle('cloudcli-desktop:show-environment-picker', async () => showEnvironmentPicker());
-  ipcMain.handle('cloudcli-desktop:show-launcher', async () => {
+  ipcMain.handle('openleira-desktop:disconnect-cloud', async () => clearCloudAccount());
+  ipcMain.handle('openleira-desktop:reload-active-tab', async () => desktopWindow.reloadActiveTab());
+  ipcMain.handle('openleira-desktop:show-environment-picker', async () => showEnvironmentPicker());
+  ipcMain.handle('openleira-desktop:show-launcher', async () => {
     await desktopWindow.showLauncher();
     return getDesktopState();
   });
-  ipcMain.handle('cloudcli-desktop:update-desktop-notifications', async (_event, settings) => {
+  ipcMain.handle('openleira-desktop:update-desktop-notifications', async (_event, settings) => {
     await desktopNotifications?.saveSettings(settings);
     return getDesktopState();
   });
-  ipcMain.handle('cloudcli-desktop:show-desktop-settings', async () => desktopWindow.showDesktopSettings());
-  ipcMain.handle('cloudcli-desktop:show-local-settings', async () => desktopWindow.showLocalSettings());
-  ipcMain.handle('cloudcli-desktop:close-settings-window', async () => {
+  ipcMain.handle('openleira-desktop:show-desktop-settings', async () => desktopWindow.showDesktopSettings());
+  ipcMain.handle('openleira-desktop:show-local-settings', async () => desktopWindow.showLocalSettings());
+  ipcMain.handle('openleira-desktop:close-settings-window', async () => {
     desktopWindow.closeSettingsWindow();
     return getDesktopState();
   });
-  ipcMain.handle('cloudcli-desktop:show-active-environment-actions-menu', async () => desktopWindow.showActiveEnvironmentActionsMenu());
-  ipcMain.handle('cloudcli-desktop:show-environment-actions-menu', async (_event, environmentId) => desktopWindow.showEnvironmentActionsMenu(environmentId));
-  ipcMain.handle('cloudcli-desktop:switch-tab', async (_event, tabId) => desktopWindow.switchDesktopTab(tabId));
-  ipcMain.handle('cloudcli-desktop:close-tab', async (_event, tabId) => desktopWindow.closeDesktopTab(tabId));
-  ipcMain.handle('cloudcli-desktop:update-setting', async (_event, key, value) => updateDesktopSetting(key, value));
+  ipcMain.handle('openleira-desktop:show-active-environment-actions-menu', async () => desktopWindow.showActiveEnvironmentActionsMenu());
+  ipcMain.handle('openleira-desktop:show-environment-actions-menu', async (_event, environmentId) => desktopWindow.showEnvironmentActionsMenu(environmentId));
+  ipcMain.handle('openleira-desktop:switch-tab', async (_event, tabId) => desktopWindow.switchDesktopTab(tabId));
+  ipcMain.handle('openleira-desktop:close-tab', async (_event, tabId) => desktopWindow.closeDesktopTab(tabId));
+  ipcMain.handle('openleira-desktop:update-setting', async (_event, key, value) => updateDesktopSetting(key, value));
 }
 
 function registerAppEvents() {
@@ -893,9 +903,9 @@ async function bootstrap() {
   await app.whenReady();
   app.setName(APP_NAME);
   app.setAboutPanelOptions({
-    applicationName: APP_NAME,
+    applicationName: RELEASE_NAME ? `${APP_NAME} - ${RELEASE_NAME}` : APP_NAME,
     applicationVersion: app.getVersion(),
-    copyright: 'CloudCLI',
+    copyright: 'OpenLeira contributors',
   });
 
   localServer = new LocalServerController({
@@ -907,7 +917,7 @@ async function bootstrap() {
   });
   cloud = new CloudController({
     storePath: getStorePath(),
-    controlPlaneUrl: CLOUDCLI_CONTROL_PLANE_URL,
+    controlPlaneUrl: OPENLEIRA_CONTROL_PLANE_URL,
     callbackUrl: CALLBACK_URL,
     onChange: syncDesktopState,
   });
@@ -938,7 +948,7 @@ async function bootstrap() {
 
 if (registerSingleInstance()) {
   bootstrap().catch(async (error) => {
-    await showError('CloudCLI failed to start', error);
+    await showError('OpenLeira failed to start', error);
     app.quit();
   });
 }

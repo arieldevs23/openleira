@@ -508,7 +508,7 @@
   },
   "pluginSettings": {
     "title": "Plugins",
-    "description": "Extend the interface with custom plugins. Install from git or drop a folder in ~/.claude-code-ui/plugins/",
+    "description": "Extend the interface with custom plugins. Install from git or drop a folder in ~/.openleira/plugins/",
     "installPlaceholder": "https://git.example.com/user/my-plugin.git",
     "installButton": "Install",
     "installing": "Installing…",
