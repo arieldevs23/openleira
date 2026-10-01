@@ -508,7 +508,7 @@
   },
   "pluginSettings": {
     "title": "plugin",
-    "description": "tambahin fitur pake plugin custom. install dari Git atau taro folder di ~/.claude-code-ui/plugins/",
+    "description": "tambahin fitur pake plugin custom. install dari Git atau taro folder di ~/.openleira/plugins/",
     "installPlaceholder": "https://git.example.com/user/my-plugin.git",
     "installButton": "install",
     "installing": "lagi install…",

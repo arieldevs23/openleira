@@ -243,19 +243,19 @@ export class ViewHost {
     this.attach(view);
     const html = buildPlaceholderHtml(target.name || this.appName, message);
     await view.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-    view.__cloudcliStartupHtml = html;
-    view.__cloudcliLoadedUrl = null;
+    view.__openleiraStartupHtml = html;
+    view.__openleiraLoadedUrl = null;
   }
 
   async showLocalStartupTarget(tabId, target, logs) {
     const view = this.getOrCreateTabView(tabId);
-    if (view.__cloudcliLoadingUrl) return;
+    if (view.__openleiraLoadingUrl) return;
     this.attach(view);
-    const html = buildPlaceholderHtml(target.name || this.appName, 'Starting Local CloudCLI...', logs);
-    if (view.__cloudcliStartupHtml === html) return;
+    const html = buildPlaceholderHtml(target.name || this.appName, 'Starting Local OpenLeira...', logs);
+    if (view.__openleiraStartupHtml === html) return;
     await view.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-    view.__cloudcliStartupHtml = html;
-    view.__cloudcliLoadedUrl = null;
+    view.__openleiraStartupHtml = html;
+    view.__openleiraLoadedUrl = null;
   }
 
   async showContentTarget(tabId, target) {
@@ -265,17 +265,17 @@ export class ViewHost {
     }
     const view = this.getOrCreateTabView(tabId);
     this.attach(view);
-    if (target.forceLoad || view.__cloudcliLoadedUrl !== target.url) {
-      view.__cloudcliLoadingUrl = loadUrl;
+    if (target.forceLoad || view.__openleiraLoadedUrl !== target.url) {
+      view.__openleiraLoadingUrl = loadUrl;
       try {
         await loadUrlWithTimeout(view.webContents, loadUrl);
-        view.__cloudcliLoadedUrl = target.url;
-        view.__cloudcliStartupHtml = null;
+        view.__openleiraLoadedUrl = target.url;
+        view.__openleiraStartupHtml = null;
         delete target.loadUrl;
         delete target.forceLoad;
       } finally {
-        if (view.__cloudcliLoadingUrl === loadUrl) {
-          view.__cloudcliLoadingUrl = null;
+        if (view.__openleiraLoadingUrl === loadUrl) {
+          view.__openleiraLoadingUrl = null;
         }
       }
     }
@@ -293,8 +293,8 @@ export class ViewHost {
     const view = this.getActiveView();
     if (!view) return false;
     await loadUrlWithTimeout(view.webContents, url);
-    view.__cloudcliLoadedUrl = url;
-    view.__cloudcliStartupHtml = null;
+    view.__openleiraLoadedUrl = url;
+    view.__openleiraStartupHtml = null;
     return true;
   }
 

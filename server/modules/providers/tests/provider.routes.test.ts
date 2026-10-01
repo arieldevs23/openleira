@@ -86,7 +86,7 @@ test('session creation route refuses a project folder: projects are prompted thr
   });
 });
 
-test('session creation route names a CloudCLI session from the initial message', async () => {
+test('session creation route names a OpenLeira session from the initial message', async () => {
   await withProviderServer(async (baseUrl, workspacePath) => asFreeChat(workspacePath, async () => {
     const response = await fetch(`${baseUrl}/api/providers/sessions`, {
       method: 'POST',

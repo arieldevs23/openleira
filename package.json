@@ -1,12 +1,12 @@
 {
-  "name": "@cloudcli-ai/cloudcli",
+  "name": "openleira",
   "version": "1.37.3",
   "productName": "OpenLeira",
-  "description": "A web-based UI for Claude Code CLI",
+  "description": "OpenLeira: a self-hosted AI team workspace for Claude Code, Codex, Cursor and OpenCode",
   "type": "module",
   "main": "dist-server/server/index.js",
   "bin": {
-    "cloudcli": "dist-server/server/modules/cli/cli.js"
+    "openleira": "dist-server/server/modules/cli/cli.js"
   },
   "files": [
     "electron/",
@@ -18,13 +18,13 @@
     "scripts/",
     "README.md"
   ],
-  "homepage": "https://cloudcli.ai",
+  "homepage": "https://openleira.online",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/siteboon/claudecodeui.git"
+    "url": "git+https://github.com/arieldevs23/openleira.git"
   },
   "bugs": {
-    "url": "https://github.com/siteboon/claudecodeui/issues"
+    "url": "https://github.com/arieldevs23/openleira/issues"
   },
   "scripts": {
     "dev": "concurrently --kill-others \"npm run server:dev\" \"npm run client\"",
@@ -85,9 +85,9 @@
     ],
     "protocols": [
       {
-        "name": "CloudCLI",
+        "name": "OpenLeira",
         "schemes": [
-          "cloudcli"
+          "openleira"
         ]
       }
     ],
@@ -99,13 +99,13 @@
         "dmg"
       ],
       "extendInfo": {
-        "CFBundleName": "CloudCLI",
-        "CFBundleDisplayName": "CloudCLI",
+        "CFBundleName": "OpenLeira",
+        "CFBundleDisplayName": "OpenLeira",
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "CloudCLI",
+            "CFBundleURLName": "OpenLeira",
             "CFBundleURLSchemes": [
-              "cloudcli"
+              "openleira"
             ]
           }
         ]
@@ -133,8 +133,8 @@
   "keywords": [
     "claude code",
     "claude-code",
-    "claude-code-ui",
-    "cloudcli",
+    "openleira",
+    "openleira",
     "codex",
     "cursor",
     "cursor-cli",
@@ -146,7 +146,7 @@
     "ui",
     "mobile IDE"
   ],
-  "author": "CloudCLI UI Contributors",
+  "author": "reaver4",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.165",

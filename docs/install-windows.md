@@ -35,7 +35,7 @@ Ambil file **`OpenLeira-Setup-<versi>.exe`**:
 
 - **Aplikasi nggak kebuka / layar loading terus**: tutup OpenLeira dari tray, buka lagi. Kalau masih, buka menu bantuan di aplikasi dan lihat log server-nya.
 - **Antivirus memblokir**: tambahkan folder instal OpenLeira ke pengecualian. Installer belum ditandatangani, jadi beberapa antivirus curiga.
-- **Copot pemasangan**: *Settings → Apps → OpenLeira → Uninstall*. Data lo (database dan pengaturan) ada di `%APPDATA%\OpenLeira` dan `%USERPROFILE%\.cloudcli`; hapus manual kalau mau bersih total.
+- **Copot pemasangan**: *Settings → Apps → OpenLeira → Uninstall*. Data lo (database dan pengaturan) ada di `%APPDATA%\OpenLeira` dan `%USERPROFILE%\.openleira`; hapus manual kalau mau bersih total.
 
 ## Buat developer: bikin installer sendiri
 

@@ -15,8 +15,8 @@ import { getBrowserUseRuntime } from './browser-use-runtime.js';
 
 const require = createRequire(import.meta.url);
 const __dirname = getModuleDirectory(import.meta.url);
-const MAX_SESSIONS_PER_OWNER = Number.parseInt(process.env.CLOUDCLI_BROWSER_USE_MAX_SESSIONS_PER_OWNER || '3', 10);
-const SESSION_TTL_MS = Number.parseInt(process.env.CLOUDCLI_BROWSER_USE_SESSION_TTL_MS || String(30 * 60 * 1000), 10);
+const MAX_SESSIONS_PER_OWNER = Number.parseInt(process.env.OPENLEIRA_BROWSER_USE_MAX_SESSIONS_PER_OWNER || '3', 10);
+const SESSION_TTL_MS = Number.parseInt(process.env.OPENLEIRA_BROWSER_USE_SESSION_TTL_MS || String(30 * 60 * 1000), 10);
 const BROWSER_USE_SETTINGS_KEY = 'browser_use_settings';
 const BROWSER_USE_MCP_TOKEN_KEY = 'browser_use_mcp_token';
 
@@ -81,9 +81,10 @@ const DEFAULT_SETTINGS: BrowserUseSettings = {
   enabled: false,
 };
 const AGENT_OWNER_ID = 'agent';
-const PROFILE_ROOT = path.join(os.homedir(), '.cloudcli', 'browser-use', 'profiles');
-const MCP_SERVER_NAME = 'cloudcli-browser';
-const LEGACY_MCP_SERVER_NAMES = ['cloudcli-browser-use'];
+const PROFILE_ROOT = path.join(os.homedir(), '.openleira', 'browser-use', 'profiles');
+const MCP_SERVER_NAME = 'openleira-browser';
+// Names this MCP server had before (including under the CloudCLI name), removed from provider configs.
+const LEGACY_MCP_SERVER_NAMES = ['openleira-browser-use', 'cloudcli-browser', 'cloudcli-browser-use'];
 const RUNTIME_READINESS_CACHE_TTL_MS = 30_000;
 
 function readSettings(): BrowserUseSettings {
@@ -156,7 +157,7 @@ function getMcpCommand(): { command: string; args: string[] } {
   }
 
   return {
-    command: 'cloudcli',
+    command: 'openleira',
     args: ['browser-use-mcp'],
   };
 }
@@ -237,7 +238,7 @@ function getRuntimeReadiness(options: { force?: boolean } = {}): RuntimeReadines
 }
 
 const INSTALL_COMMAND_TIMEOUT_MS = Number.parseInt(
-  process.env.CLOUDCLI_BROWSER_USE_INSTALL_TIMEOUT_MS || String(10 * 60 * 1000),
+  process.env.OPENLEIRA_BROWSER_USE_INSTALL_TIMEOUT_MS || String(10 * 60 * 1000),
   10,
 );
 
@@ -287,7 +288,7 @@ function runCommand(command: string, args: string[]): Promise<void> {
 function formatInstallError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('sudo') && message.includes('password')) {
-    return 'Installing Chromium system dependencies requires administrator privileges. Run `npx playwright install-deps chromium` on the machine where CloudCLI runs, then try again.';
+    return 'Installing Chromium system dependencies requires administrator privileges. Run `npx playwright install-deps chromium` on the machine where OpenLeira runs, then try again.';
   }
   return message || 'Failed to install Browser runtime.';
 }
@@ -465,8 +466,8 @@ export const browserUseService = {
       command,
       args,
       env: {
-        CLOUDCLI_BROWSER_USE_MCP_TOKEN: getOrCreateMcpToken(),
-        CLOUDCLI_BROWSER_USE_API_URL: getMcpApiUrl(),
+        OPENLEIRA_BROWSER_USE_MCP_TOKEN: getOrCreateMcpToken(),
+        OPENLEIRA_BROWSER_USE_API_URL: getMcpApiUrl(),
       },
     });
     return { name: MCP_SERVER_NAME, command, args, results };

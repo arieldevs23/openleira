@@ -209,7 +209,7 @@ over REST first (`:184-189`) — that is the entry point in
 [conversation handoff](./03-conversation-handoff.md).
 
 Attachments get the same treatment. `filterAttachmentsToUploadStore` (`:34-56`) resolves
-every path against the global upload store (`~/.cloudcli/assets`, where
+every path against the global upload store (`~/.openleira/assets`, where
 `POST /api/assets/images` writes) and keeps it only if it is a **direct child** of that
 directory: relative paths are anchored there, absolute paths must already be inside it, and
 traversal or subdirectories are dropped with a warning. Survivors are deduped by path and

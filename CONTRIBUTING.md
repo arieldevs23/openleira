@@ -1,11 +1,11 @@
-# Contributing to CloudCLI UI
+# Contributing to OpenLeira
 
-Thanks for your interest in contributing to CloudCLI UI! Before you start, please take a moment to read through this guide.
+Thanks for your interest in contributing to OpenLeira! Before you start, please take a moment to read through this guide.
 
 ## Before You Start
 
-- **Search first.** Check [existing issues](https://github.com/siteboon/claudecodeui/issues) and [pull requests](https://github.com/siteboon/claudecodeui/pulls) to avoid duplicating work.
-- **Discuss first** for new features. Open an [issue](https://github.com/siteboon/claudecodeui/issues/new) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
+- **Search first.** Check [existing issues](https://github.com/arieldevs23/openleira/issues) and [pull requests](https://github.com/arieldevs23/openleira/pulls) to avoid duplicating work.
+- **Discuss first** for new features. Open an [issue](https://github.com/arieldevs23/openleira/issues/new) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
 - **Bug fixes are always welcome.** If you spot a bug, feel free to open a PR directly.
 
 ## Prerequisites
@@ -18,8 +18,8 @@ Thanks for your interest in contributing to CloudCLI UI! Before you start, pleas
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/<your-username>/claudecodeui.git
-   cd claudecodeui
+   git clone https://github.com/<your-username>/openleira.git
+   cd openleira
    ```
 3. Install dependencies:
    ```bash
@@ -37,7 +37,7 @@ Thanks for your interest in contributing to CloudCLI UI! Before you start, pleas
 ## Project Structure
 
 ```
-claudecodeui/
+openleira/
 ├── src/              # React frontend (Vite + Tailwind)
 │   ├── components/   # UI components
 │   ├── contexts/     # React context providers

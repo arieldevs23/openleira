@@ -447,7 +447,7 @@
   },
   "pluginSettings": {
     "title": "Плагины",
-    "description": "Расширяйте интерфейс с помощью кастомных плагинов. Установите из git или добавьте папку в ~/.claude-code-ui/plugins/",
+    "description": "Расширяйте интерфейс с помощью кастомных плагинов. Установите из git или добавьте папку в ~/.openleira/plugins/",
     "installPlaceholder": "https://git.example.com/user/my-plugin.git",
     "installButton": "Установить",
     "installing": "Установка…",

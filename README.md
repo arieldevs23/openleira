@@ -101,11 +101,15 @@ Buat development: `npm run dev` (server + Vite dengan hot reload).
 
 ## Asal-usul dan lisensi
 
-OpenLeira dikembangkan dari **[CloudCLI UI](https://github.com/siteboon/claudecodeui)** (aka Claude Code UI) karya Siteboon AI B.V. dan para kontributornya. Terima kasih buat mereka: chat, terminal, file explorer, Git, plugin, dan aplikasi desktopnya berasal dari sana. OpenLeira menambahkan workspace tim AI, jenis-jenis workspace, tampilan Simpel, dan tema gothic-nya.
+OpenLeira dibuat oleh **reaver4**. OpenLeira adalah versi modifikasi, bukan software CloudCLI UI yang asli, dan nggak di-endorse oleh Siteboon AI B.V. Basisnya berasal dari:
+
+> CloudCLI UI (https://github.com/siteboon/claudecodeui)
+
+Terima kasih buat Siteboon AI B.V. dan para kontributornya: chat, terminal, file explorer, Git, plugin, dan aplikasi desktopnya berasal dari sana. OpenLeira menambahkan workspace tim AI, jenis-jenis workspace, tampilan Simpel, installer Windows, dan tema gothic-nya.
 
 Lisensinya tetap **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**: lihat [LICENSE](LICENSE) dan [NOTICE](NOTICE). Kalau lo ngubah software ini dan menjalankannya sebagai layanan jaringan, source code hasil ubahan lo wajib dibuka buat penggunanya.
 
-README terjemahan lama di folder `docs/README.*.md` masih menjelaskan CloudCLI dan belum diperbarui.
+Data OpenLeira disimpan di `~/.openleira`. Kalau sebelumnya lo pakai versi lama yang nyimpen di `~/.cloudcli`, foldernya dipindah otomatis waktu server pertama kali jalan.
 
 ### Dibangun dengan
 
