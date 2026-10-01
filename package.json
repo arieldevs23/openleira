@@ -146,7 +146,7 @@
     "ui",
     "mobile IDE"
   ],
-  "author": "reaver4",
+  "author": "OpenLeira contributors",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.165",
@@ -266,5 +266,6 @@
   "optionalDependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",
     "screenshot-desktop": "^1.15.4"
-  }
+  },
+  "releaseName": "Reaver4"
 }

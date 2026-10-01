@@ -12,6 +12,8 @@ import { TabsController } from './tabs.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const APP_NAME = 'OpenLeira';
+// Release line shown with the name ("OpenLeira - Reaver4"); keep in sync with releaseName in package.json.
+const RELEASE_NAME = 'Reaver4';
 const APP_USER_MODEL_ID = 'online.openleira.desktop';
 const CALLBACK_PROTOCOL = 'openleira';
 const CALLBACK_URL = `${CALLBACK_PROTOCOL}://auth/callback`;
@@ -901,9 +903,9 @@ async function bootstrap() {
   await app.whenReady();
   app.setName(APP_NAME);
   app.setAboutPanelOptions({
-    applicationName: APP_NAME,
+    applicationName: RELEASE_NAME ? `${APP_NAME} - ${RELEASE_NAME}` : APP_NAME,
     applicationVersion: app.getVersion(),
-    copyright: 'OpenLeira © reaver4',
+    copyright: 'OpenLeira contributors',
   });
 
   localServer = new LocalServerController({

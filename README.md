@@ -1,6 +1,7 @@
 <div align="center">
  <img src="public/logo.svg" alt="OpenLeira" width="72" height="72">
  <h1>OpenLeira</h1>
+ <p><code>Reaver4</code></p>
  <p><b>Tim AI lo sendiri.</b> Tulis kerjaannya, koordinator bagi tugas ke tim agent AI, tiap anggota kerja barengan tanpa tabrakan, lalu QA ngecek hasilnya sebelum dianggap beres. Jalan di server atau komputer lo sendiri.</p>
 </div>
 
@@ -101,7 +102,7 @@ Buat development: `npm run dev` (server + Vite dengan hot reload).
 
 ## Asal-usul dan lisensi
 
-OpenLeira dibuat oleh **reaver4**. OpenLeira adalah versi modifikasi, bukan software CloudCLI UI yang asli, dan nggak di-endorse oleh Siteboon AI B.V. Basisnya berasal dari:
+Rilis saat ini: **OpenLeira - Reaver4**. OpenLeira adalah versi modifikasi, bukan software CloudCLI UI yang asli, dan nggak di-endorse oleh Siteboon AI B.V. Basisnya berasal dari:
 
 > CloudCLI UI (https://github.com/siteboon/claudecodeui)
 

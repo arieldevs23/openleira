@@ -2,7 +2,7 @@
 
 Semua perubahan penting OpenLeira dicatat di sini. Riwayat sebelum OpenLeira ada di proyek asalnya, CloudCLI UI (https://github.com/siteboon/claudecodeui).
 
-## Belum dirilis
+## Reaver4 (belum dirilis)
 
 ### Ditambahkan
 - **Workspace tim AI**: koordinator membagi kerjaan ke tim agent, tiap tim jalan barengan tanpa tabrakan, QA ngecek tiap hasil, lalu koordinator nulis ringkasan.

@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      __APP_VERSION__: JSON.stringify(pkg.version)
+      __APP_VERSION__: JSON.stringify(pkg.version),
+      __APP_RELEASE_NAME__: JSON.stringify(pkg.releaseName ?? '')
     },
     resolve: {
       alias: {

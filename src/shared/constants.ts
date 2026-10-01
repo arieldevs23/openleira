@@ -52,6 +52,13 @@ export const OFFICE_COLLAPSED_PANELS_STORAGE_KEY = 'office-collapsed-panels';
  */
 export const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
 
+/**
+ * Name of the release line, shown next to the product name ("OpenLeira -
+ * Reaver4"), the way a model family has a name besides its version number.
+ * Comes from `releaseName` in package.json; empty outside a Vite build.
+ */
+export const APP_RELEASE_NAME: string = typeof __APP_RELEASE_NAME__ === 'string' ? __APP_RELEASE_NAME__ : '';
+
 // ---------------------------
 
 //----------------- SETTINGS NAVIGATION ------------
