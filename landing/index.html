@@ -33,6 +33,7 @@
       <a class="wordmark" href="#top" aria-label="OpenLeira, kembali ke atas"><span class="wordmark__open">Open</span><span class="wordmark__leira">Leira</span></a>
       <nav class="nav__menu" aria-label="Utama">
         <ul class="nav__links" id="nav-links">
+          <li><a href="#unduh">Unduh</a></li>
           <li><a href="#fitur">Fitur</a></li>
           <li><a href="#workspace">Workspace</a></li>
           <li><a href="#pasang">Pasang</a></li>
@@ -81,22 +82,39 @@
           <img data-fx="art" src="img/rose.webp" srcset="img/rose-512.webp 512w, img/rose.webp 1024w" sizes="(max-width: 759px) 180px, 480px" width="480" height="480" alt="">
         </div>
 
-        <div class="install" data-rv="rise">
-          <p class="chap install__label" id="dl-label">Pakai di Windows</p>
-          <div class="dl">
-            <a class="btn btn--primary dl__btn" href="https://github.com/arieldevs23/openleira/releases/latest/download/OpenLeira-Setup.exe" aria-describedby="dl-label dl-meta">Download untuk Windows</a>
-            <span class="dl__meta" id="dl-meta">Windows 10/11 64-bit · gratis · <a href="https://github.com/arieldevs23/openleira/releases/latest" target="_blank" rel="noopener noreferrer">semua versi</a></span>
-          </div>
-          <p class="chap install__label install__label--server" id="install-label">Atau pasang di server dengan satu perintah</p>
+        <div class="hero__cta" data-rv="rise">
+          <a class="btn btn--primary" href="#unduh">Download &amp; pasang</a>
+          <a class="btn btn--ghost" href="#fitur">Lihat fitur</a>
+        </div>
+
+        <p class="hero__fine" data-rv>Open source. Bukan model AI baru. Bawa langganan AI sendiri.</p>
+      </div>
+    </section>
+
+    <section class="section unduh wrap" id="unduh" aria-labelledby="h-unduh">
+      <header class="head">
+        <p class="chap" data-rv>Unduh</p>
+        <h2 id="h-unduh" data-rv="rise">Pilih cara pakainya</h2>
+      </header>
+      <div class="unduh__grid">
+        <article class="get" data-rv="rise" aria-labelledby="h-get-win">
+          <p class="chap">Komputer Windows</p>
+          <h3 id="h-get-win" class="get__title">Aplikasi Windows</h3>
+          <p class="get__text">Satu installer, server-nya sudah di dalam. Klik dua kali, ikuti wizard, langsung bisa dipakai.</p>
+          <a class="btn btn--primary get__btn" href="https://github.com/arieldevs23/openleira/releases/latest/download/OpenLeira-Setup.exe">Download OpenLeira-Setup.exe</a>
+          <p class="get__meta">Windows 10/11 64-bit · gratis · <a href="https://github.com/arieldevs23/openleira/releases/latest" target="_blank" rel="noopener noreferrer">semua versi</a></p>
+          <p class="get__note">Kalau muncul &ldquo;Windows protected your PC&rdquo;, pilih <i>More info</i> lalu <i>Run anyway</i>. Installer belum ditandatangani.</p>
+        </article>
+        <article class="get" data-rv="rise" aria-labelledby="h-get-cli">
+          <p class="chap" id="install-label">Server, Linux, macOS, WSL2</p>
+          <h3 id="h-get-cli" class="get__title">Lewat terminal</h3>
+          <p class="get__text">Butuh Git dan Node.js 22+. Perintah ini mengunduh, membangun, lalu menyalakan OpenLeira di port 3001.</p>
           <div class="cmd">
             <code id="cmd-install">curl -fsSL https://openleira.online/install.sh | bash</code>
             <button class="btn btn--primary btn--copy" type="button" data-copy="cmd-install" aria-describedby="install-label">Salin</button>
           </div>
-          <p class="cmd__note">Installer sedang disiapkan. <span class="cmd__status" role="status" aria-live="polite"></span></p>
-        </div>
-
-        <a class="btn btn--ghost hero__alt" href="#fitur" data-rv>Lihat fitur</a>
-        <p class="hero__fine" data-rv>Open source. Bukan model AI baru. Bawa langganan AI sendiri.</p>
+          <p class="get__meta">Lalu buka <code>http://localhost:3001</code> atau alamat server di browser. <span class="cmd__status" role="status" aria-live="polite"></span></p>
+        </article>
       </div>
     </section>
 
@@ -243,8 +261,8 @@
       </header>
       <p class="req" data-rv="side"><span class="chap">Syarat</span> Windows 10/11 64-bit dengan 8&nbsp;GB RAM. Untuk server: Ubuntu 22.04+ atau Debian 12 atau macOS atau WSL2, 2&nbsp;vCPU, 4&nbsp;GB RAM, Node&nbsp;22.</p>
       <ol class="steps">
-        <li data-rv><span><b>Windows:</b> <a href="https://github.com/arieldevs23/openleira/releases/latest/download/OpenLeira-Setup.exe">download installer</a>, klik dua kali, lalu ikuti wizard-nya. Kalau muncul layar &ldquo;Windows protected your PC&rdquo;, pilih <i>More info</i> lalu <i>Run anyway</i>, karena installer belum ditandatangani.</span></li>
-        <li data-rv><span><b>Server:</b> siapkan VPS atau mesin lokal yang memenuhi syarat, lalu jalankan perintah installer dari bagian atas halaman ini.</span></li>
+        <li data-rv><span><b>Windows:</b> <a href="#unduh">download installer</a>, klik dua kali, lalu ikuti wizard-nya.</span></li>
+        <li data-rv><span><b>Server:</b> siapkan VPS atau mesin lokal yang memenuhi syarat, lalu jalankan <a href="#unduh">perintah terminal</a>.</span></li>
         <li data-rv><span>Buka OpenLeira (atau alamat server di browser) dan buat akun pertama, yang otomatis menjadi admin.</span></li>
         <li data-rv><span>Sambungkan Claude Code, Codex, OpenCode, atau Cursor Agent yang sudah dilanggani.</span></li>
       </ol>

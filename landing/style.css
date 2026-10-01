@@ -276,30 +276,34 @@ h3 { font: 700 19px/1.3 var(--serif); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* fokus layar pertama: permukaan solid yang sengaja melewati batas kolom ke arah mawar */
-.install {
-  grid-area: cmd;
-  position: relative;
-  z-index: 3;
-  margin: 48px -18% 0 0;
-  padding: 20px 20px 16px;
+.hero__cta { grid-area: cmd; position: relative; z-index: 3; display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
+.steps a, .get__meta a, .get__note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* unduh: dua kartu sejajar, kiri installer windows, kanan perintah terminal */
+.unduh { padding-block: 72px 24px; }
+.unduh__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 40px; }
+.get {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
 }
-.install__label { margin-bottom: 12px; }
-.install__label--server { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
-.dl { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; }
-.dl__meta { font-size: 13px; color: var(--muted); }
-.dl__meta a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.steps a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.get__title { font-size: 24px; }
+.get__text { line-height: 1.55; }
+.get .cmd { padding: 12px 12px 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+.get .cmd code { font-size: 15px; overflow-wrap: normal; }
+.get__btn { align-self: flex-start; }
+.get__meta { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+.get__meta code { font: 400 13px var(--mono); color: var(--text); }
+.get__note { font-size: 13px; color: var(--muted); }
 .cmd { display: flex; align-items: center; gap: 16px; }
 .cmd code { flex: 1; min-width: 0; font: 400 17px/1.5 var(--mono); overflow-wrap: anywhere; }
 .btn--copy { flex: none; min-width: 96px; }
-.cmd__note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
 .cmd__status.is-error { color: var(--text); }
 
-.hero__alt { grid-area: alt; justify-self: start; margin-top: 28px; }
 .hero__fine { grid-area: fine; align-self: end; margin-top: 28px; padding-bottom: 12px; font-size: 14px; color: var(--muted); }
 
 /* ruang section sengaja tidak rata */
@@ -634,7 +638,6 @@ h3 { font: 700 19px/1.3 var(--serif); }
       "alt   fine";
   }
   .hero h1 { margin-right: -8%; }
-  .install { margin-right: 0; }
 
   .feats {
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -692,13 +695,15 @@ h3 { font: 700 19px/1.3 var(--serif); }
   .hero__chap { margin-bottom: 16px; }
   .hero__sub { margin-top: 20px; font-size: 17px; }
   .rosewin { top: 110px; right: -120px; width: 520px; height: 520px; margin-top: -260px; }
-  .install { margin-top: 32px; padding: 16px; }
+  .hero__cta { margin-top: 32px; }
+  .hero__cta { flex-direction: column; }
+  .hero__cta .btn { width: 100%; justify-content: center; }
+  .unduh__grid { grid-template-columns: minmax(0, 1fr); }
+  .get { padding: 16px; }
+  .get__btn { align-self: stretch; justify-content: center; }
   .cmd { flex-direction: column; align-items: stretch; gap: 12px; }
-  .dl { flex-direction: column; align-items: stretch; }
-  .dl__btn { width: 100%; justify-content: center; }
   .cmd code { font-size: 15px; }
   .btn--copy { width: 100%; }
-  .hero__alt { margin-top: 20px; }
   .hero__fine { margin-top: 16px; padding-bottom: 0; }
 
   .section, .feats-sec, .ws, .pasang, .tentang { padding-block: 64px; }
