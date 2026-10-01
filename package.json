@@ -1,6 +1,6 @@
 {
   "name": "openleira",
-  "version": "1.37.3",
+  "version": "1.37.4",
   "productName": "OpenLeira",
   "description": "OpenLeira: a self-hosted AI team workspace for Claude Code, Codex, Cursor and OpenCode",
   "type": "module",
