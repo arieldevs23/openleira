@@ -1366,8 +1366,9 @@ export function getFreeChatWorkspacePath(): string {
 /**
  * Whether a user may prompt an agent directly (chat) in this folder. Projects
  * are prompted only through the workspace canvas, so only the free-chat
- * workspace and folders inside it qualify. Used by the chat WebSocket and by
- * session creation; the canvas's own runs (`runDetachedChatTurn`) never ask.
+ * workspace and folders inside it qualify. Used by `sessionsService.canPromptDirectly`
+ * (chat WebSocket, session creation) and the shell WebSocket; the canvas's own
+ * runs (`runDetachedChatTurn`) never ask.
  */
 export function isFreeChatPath(candidate: string | null | undefined): boolean {
   if (!candidate) {

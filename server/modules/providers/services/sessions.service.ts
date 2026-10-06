@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 
-import { projectsDb, sessionsDb } from '@/modules/database/index.js';
+import { officesDb, projectsDb, sessionsDb } from '@/modules/database/index.js';
 import { broadcastSessionUpserted, chatRunRegistry } from '@/modules/websocket/index.js';
 import { providerRegistry } from '@/modules/providers/provider.registry.js';
 import { sessionHistoryCache } from '@/modules/providers/services/session-history-cache.service.js';
@@ -14,7 +14,7 @@ import type {
   NormalizedMessage,
   WorkflowAgentActivity,
 } from '@/shared/types.js';
-import { AppError, sliceTailPage } from '@/shared/utils.js';
+import { AppError, isFreeChatPath, sliceTailPage } from '@/shared/utils.js';
 
 /**
  * One session the running-sessions poll reports as busy.
@@ -139,6 +139,28 @@ function resolveProjectDisplayName(
  * file layout.
  */
 export const sessionsService = {
+  /**
+   * Whether a user may prompt an agent directly (chat) in `projectPath`.
+   * The free-chat workspace always qualifies. A project folder qualifies only
+   * when the request comes from the workspace page's solo view (`mode` is
+   * `'solo'`) and the folder is a registered workspace (office); everything
+   * else is prompted through the workspace canvas. Used by session creation
+   * and by the chat WebSocket before a turn starts.
+   */
+  canPromptDirectly(projectPath: string | null | undefined, mode: unknown): boolean {
+    if (isFreeChatPath(projectPath)) {
+      return true;
+    }
+    if (mode !== 'solo' || !projectPath?.trim()) {
+      return false;
+    }
+    const trimmedPath = projectPath.trim();
+    return Boolean(
+      officesDb.getOfficeByProjectPath(trimmedPath)
+        ?? officesDb.getOfficeByProjectPath(path.resolve(trimmedPath)),
+    );
+  },
+
   /**
    * Lists provider ids that can load session history and normalize live messages.
    */

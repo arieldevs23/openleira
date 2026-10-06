@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { closeConnection, initializeDatabase, sessionsDb } from '@/modules/database/index.js';
+import { closeConnection, initializeDatabase, officesDb, projectsDb, sessionsDb } from '@/modules/database/index.js';
 import { sessionsService } from '@/modules/providers/index.js';
 import { handleChatConnection } from '@/modules/websocket/services/chat-websocket.service.js';
 import { chatRunRegistry } from '@/modules/websocket/services/chat-run-registry.service.js';
@@ -206,6 +206,25 @@ test('a session inside a project is refused: projects are prompted through the c
 
     assert.equal(runs.length, 0);
     assert.equal(socket.frames.at(-1)?.code, 'PROJECT_CANVAS_ONLY');
+  });
+});
+
+test('a solo-view send in a registered workspace folder runs', async () => {
+  await withGateway('claude', async ({ socket, runs }) => {
+    const sessionFolder = sessionsDb.getSessionById(SESSION_ID)?.project_path ?? '';
+    process.env.VITE_OBROLAN_DIR = path.join(os.tmpdir(), 'somewhere-else-obrolan');
+    projectsDb.createProjectPath(sessionFolder);
+    officesDb.createOffice({ projectPath: sessionFolder, name: 'Solo', locale: 'en', kind: 'coding', divisions: [] });
+    socket.emit('message', JSON.stringify({
+      type: 'chat.edit-send',
+      sessionId: SESSION_ID,
+      anchorId: 'e-u2',
+      content: 'solo prompt',
+      mode: 'solo',
+    }));
+    await settle();
+
+    assert.equal(runs.length, 1);
   });
 });
 

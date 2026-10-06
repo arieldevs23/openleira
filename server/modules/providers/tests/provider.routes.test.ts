@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import express, { type NextFunction, type Request, type Response } from 'express';
 
-import { closeConnection, initializeDatabase, sessionsDb } from '@/modules/database/index.js';
+import { closeConnection, initializeDatabase, officesDb, projectsDb, sessionsDb } from '@/modules/database/index.js';
 import providerRouter from '@/modules/providers/provider.routes.js';
 import { providerRegistry } from '@/modules/providers/provider.registry.js';
 import type { IProvider } from '@/shared/interfaces.js';
@@ -83,6 +83,46 @@ test('session creation route refuses a project folder: projects are prompted thr
 
     assert.equal(response.status, 403);
     assert.equal(payload.error?.code, 'PROJECT_CANVAS_ONLY');
+  });
+});
+
+test('session creation route opens a solo-view chat in a registered workspace folder', async () => {
+  await withProviderServer(async (baseUrl, workspacePath) => {
+    projectsDb.createProjectPath(workspacePath);
+    officesDb.createOffice({ projectPath: workspacePath, name: 'Solo', locale: 'en', kind: 'coding', divisions: [] });
+    const response = await fetch(`${baseUrl}/api/providers/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: 'codex', projectPath: workspacePath, initialMessage: 'hi', mode: 'solo' }),
+    });
+    const payload = await response.json() as { data: { sessionId: string } };
+
+    assert.equal(response.status, 201);
+    assert.equal(sessionsDb.getSessionById(payload.data.sessionId)?.project_path, workspacePath);
+  });
+});
+
+test('session creation route refuses solo mode outside a workspace and a workspace without solo mode', async () => {
+  await withProviderServer(async (baseUrl, workspacePath) => {
+    projectsDb.createProjectPath(workspacePath);
+    officesDb.createOffice({ projectPath: workspacePath, name: 'Solo', locale: 'en', kind: 'coding', divisions: [] });
+    const attempts = [
+      { projectPath: path.join(os.tmpdir(), 'not-a-workspace'), mode: 'solo' },
+      { projectPath: workspacePath },
+      { projectPath: workspacePath, mode: 'full' },
+    ];
+    for (const attempt of attempts) {
+      const response = await fetch(`${baseUrl}/api/providers/sessions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider: 'codex', initialMessage: 'hi', ...attempt }),
+      });
+      const payload = await response.json() as { error?: { code?: string; message?: string } };
+
+      assert.equal(response.status, 403);
+      assert.equal(payload.error?.code, 'PROJECT_CANVAS_ONLY');
+      assert.match(payload.error?.message ?? '', /workspace canvas/);
+    }
   });
 });
 

@@ -20,7 +20,7 @@ import type {
   ProviderPermissionDecision,
   ProviderRuntimeWriter,
 } from '@/shared/types.js';
-import { isFreeChatPath, parseIncomingJsonObject } from '@/shared/utils.js';
+import { parseIncomingJsonObject } from '@/shared/utils.js';
 
 /**
  * Trust boundary for client-supplied image attachments: chat.send options come
@@ -194,15 +194,19 @@ function resolveSendTarget(
     return null;
   }
 
-  // Projects are prompted only through the workspace canvas, whose runs skip
-  // this function (runDetachedChatTurn). A client-sent cwd is checked too, since
-  // it would otherwise override the session's folder.
+  // Projects are prompted through the workspace canvas, whose runs skip this
+  // function (runDetachedChatTurn), or its solo view (`mode: 'solo'` on a
+  // registered workspace folder). A client-sent cwd is checked too, since it
+  // would otherwise override the session's folder.
   const clientCwd = typeof data.options?.cwd === 'string' ? data.options.cwd : null;
-  if (!isFreeChatPath(session.project_path) || (clientCwd !== null && !isFreeChatPath(clientCwd))) {
+  if (
+    !sessionsService.canPromptDirectly(session.project_path, data.mode)
+    || (clientCwd !== null && !sessionsService.canPromptDirectly(clientCwd, data.mode))
+  ) {
     sendProtocolError(
       ws,
       'PROJECT_CANVAS_ONLY',
-      'This project is prompted only through the workspace canvas. Use free chat for anything else.',
+      'This project is prompted only through the workspace canvas or its solo view. Use free chat for anything else.',
       sessionId
     );
     return null;

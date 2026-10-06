@@ -63,6 +63,12 @@ type UseChatComposerStateArgs = {
    * /session/:id and records it as the current session.
    */
   onSessionEstablished?: (sessionId: string, context: SessionEstablishedContext) => void;
+  /**
+   * `'solo'` when the chat is the workspace page's solo view. Sent with the
+   * session creation and every send, so the server lets this chat prompt the
+   * workspace folder directly; elsewhere a project is prompted only through the canvas.
+   */
+  promptMode?: 'solo';
   onFileOpen?: (filePath: string, diffInfo?: unknown) => void;
   onShowSettings?: () => void;
   scrollToBottom: () => void;
@@ -211,6 +217,7 @@ export function useChatComposerState({
   sendByCtrlEnter,
   onSessionProcessing,
   onSessionEstablished,
+  promptMode,
   onFileOpen,
   onShowSettings,
   scrollToBottom,
@@ -897,6 +904,7 @@ export function useChatComposerState({
             provider,
             projectPath: resolvedProjectPath,
             initialMessage: messageContent,
+            ...(promptMode ? { mode: promptMode } : {}),
           });
           if (!response.ok) {
             throw new Error(`Failed to create session (${response.status})`);
@@ -991,6 +999,7 @@ export function useChatComposerState({
         type: editingAnchorId ? 'chat.edit-send' : 'chat.send',
         sessionId: targetSessionId,
         ...(editingAnchorId ? { anchorId: editingAnchorId } : {}),
+        ...(promptMode ? { mode: promptMode } : {}),
         content: messageContent,
         options: {
           ...(queuedSubmission?.options ?? buildSendOptions(messageContent)),
@@ -1030,6 +1039,7 @@ export function useChatComposerState({
       mutateQueue,
       onSessionProcessing,
       onSessionEstablished,
+      promptMode,
       provider,
       recordSentMessage,
       resetCommandMenuState,

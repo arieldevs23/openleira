@@ -392,6 +392,8 @@ export const api = {
       provider: string;
       projectPath: string;
       initialMessage?: unknown;
+      /** `'solo'` when sent from the workspace page's solo view, which may chat in a workspace folder. */
+      mode?: 'solo';
     }) => post('/api/providers/sessions', payload),
     sessionMessages: (
       sessionId: string,

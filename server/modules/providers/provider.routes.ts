@@ -17,7 +17,7 @@ import type {
   ProviderSkillCreateInput,
   UpsertProviderMcpServerInput,
 } from '@/shared/types.js';
-import { AppError, asyncHandler, createApiSuccessResponse, isFreeChatPath } from '@/shared/utils.js';
+import { AppError, asyncHandler, createApiSuccessResponse } from '@/shared/utils.js';
 
 const router = express.Router();
 
@@ -760,13 +760,17 @@ router.post(
     const provider = parseProvider(body.provider);
     const projectPath = typeof body.projectPath === 'string' ? body.projectPath : '';
     const initialMessage = typeof body.initialMessage === 'string' ? body.initialMessage : '';
-    // Projects are prompted only through the workspace canvas; its runner creates
-    // its sessions itself, so this user-facing entry only opens free chats.
-    if (!isFreeChatPath(projectPath)) {
-      throw new AppError('This project is prompted only through the workspace canvas.', {
-        code: 'PROJECT_CANVAS_ONLY',
-        statusCode: 403,
-      });
+    // Projects are prompted through the workspace canvas, whose runner creates its
+    // sessions itself; this user-facing entry opens free chats and solo-view chats
+    // in a registered workspace folder.
+    if (!sessionsService.canPromptDirectly(projectPath, body.mode)) {
+      throw new AppError(
+        'This project is prompted only through the workspace canvas or its solo view. Use free chat for anything else.',
+        {
+          code: 'PROJECT_CANVAS_ONLY',
+          statusCode: 403,
+        },
+      );
     }
     const result = sessionsService.createAppSession(provider, projectPath, initialMessage);
     res.status(201).json(createApiSuccessResponse(result));
