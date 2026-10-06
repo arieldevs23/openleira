@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 
 import { useProjectMainState } from '@/modules/project-workspace/context/ProjectsStateContext';
 import type { SessionEstablishedContext, SessionNavigationOptions,ProjectWorkspaceShellProps } from '@/shared/types';
@@ -24,14 +24,42 @@ function ProjectMainRegion({
     registerOptimisticSession,
     projects,
     handleProjectSelect,
+    handleNewSession,
+    refreshProjectsSilently,
   } = useProjectMainState();
+
+  // A workspace made a moment ago is not in the project list yet; reloading the
+  // list lets the effect below select it once it arrives.
+  const pendingCanvasProjectIdRef = useRef<string | null>(null);
 
   const handleCanvasProjectChange = useCallback((projectId: string) => {
     const project = projects.find((candidate) => candidate.projectId === projectId);
-    if (project && project.projectId !== selectedProject?.projectId) {
+    if (!project) {
+      pendingCanvasProjectIdRef.current = projectId;
+      void refreshProjectsSilently();
+      return;
+    }
+    pendingCanvasProjectIdRef.current = null;
+    if (project.projectId !== selectedProject?.projectId) {
       handleProjectSelect(project);
     }
-  }, [handleProjectSelect, projects, selectedProject?.projectId]);
+  }, [handleProjectSelect, projects, refreshProjectsSilently, selectedProject?.projectId]);
+
+  useEffect(() => {
+    const pendingId = pendingCanvasProjectIdRef.current;
+    const project = pendingId ? projects.find((candidate) => candidate.projectId === pendingId) : undefined;
+    if (project) {
+      pendingCanvasProjectIdRef.current = null;
+      handleProjectSelect(project);
+    }
+  }, [handleProjectSelect, projects]);
+
+  // A project's new chat goes back to its workspace page, where the solo view shows it.
+  const handleNewSoloChat = useCallback(() => {
+    if (selectedProject) {
+      handleNewSession(selectedProject);
+    }
+  }, [handleNewSession, selectedProject]);
 
   const handleOpenSidebar = useCallback(() => {
     setSidebarOpen(true);
@@ -68,6 +96,7 @@ function ProjectMainRegion({
       externalMessageUpdate={externalMessageUpdate}
       newSessionTrigger={newSessionTrigger}
       onCanvasProjectChange={handleCanvasProjectChange}
+      onNewSoloChat={handleNewSoloChat}
     />
   );
 }

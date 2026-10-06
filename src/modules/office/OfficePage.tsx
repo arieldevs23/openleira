@@ -5,6 +5,7 @@ import {
   FolderPlus,
   Loader2,
   Menu,
+  MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRight,
@@ -62,12 +63,25 @@ const COLLAPSED_PANELS_KEY = OFFICE_COLLAPSED_PANELS_STORAGE_KEY;
 const CHAT_DOCK_KEY = OFFICE_CHAT_DOCK_STORAGE_KEY;
 const VIEW_MODE_KEY = 'office-view-mode';
 
-/** How a workspace is shown: the guided simple view (default) or the full canvas with every control. */
-type ViewMode = 'simple' | 'full';
+/**
+ * How a workspace is shown: the guided simple view (default), the full canvas
+ * with every control, or solo: one plain agent chat in the workspace folder,
+ * without the team.
+ */
+type ViewMode = 'simple' | 'full' | 'solo';
+
+const VIEW_MODES: ViewMode[] = ['simple', 'full', 'solo'];
+
+const VIEW_MODE_LABEL_KEYS: Record<ViewMode, string> = {
+  simple: 'simple.viewSimple',
+  full: 'simple.viewFull',
+  solo: 'simple.viewSolo',
+};
 
 const readViewMode = (): ViewMode => {
   try {
-    return window.localStorage.getItem(VIEW_MODE_KEY) === 'full' ? 'full' : 'simple';
+    const stored = window.localStorage.getItem(VIEW_MODE_KEY);
+    return VIEW_MODES.find((mode) => mode === stored) ?? 'simple';
   } catch {
     return 'simple';
   }
@@ -153,6 +167,14 @@ type OfficePageProps = {
   onProjectChange?: (projectId: string) => void;
   /** Opens a workspace session in the regular chat view. */
   onOpenSession: (sessionId: string) => void;
+  /**
+   * The regular agent chat for a project, shown by the solo view. Supplied by
+   * the project-workspace module, which owns the chat connection; null while
+   * the app has not switched to that project yet.
+   */
+  renderSoloChat?: (projectId: string) => ReactNode;
+  /** Starts a fresh solo chat in the project shown, dropping the open session. */
+  onNewSoloChat?: () => void;
 };
 
 /**
@@ -161,7 +183,7 @@ type OfficePageProps = {
  * case result, files, tokens or the picked agent on the right. Rendered by
  * the project-workspace module in place of the project sidebar and tabs.
  */
-export default function OfficePage({ initialProjectId, onProjectChange, onOpenSession }: OfficePageProps) {
+export default function OfficePage({ initialProjectId, onProjectChange, onOpenSession, renderSoloChat, onNewSoloChat }: OfficePageProps) {
   const { t, i18n } = useTranslation('office');
   const { workspaces, error: workspacesError } = useWorkspaces();
   const { analyses, forgetProject } = useAnalyses();
@@ -170,12 +192,20 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
   // The workspace on screen, by its project folder id.
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => initialProjectId ?? readStoredWorkspace());
 
+  // The last workspace reported to the app, so it is reported once per pick
+  // rather than again whenever the app's callback is recreated.
+  const reportedProjectIdRef = useRef<string | null>(null);
+
   // A project opened from elsewhere in the app takes over the canvas.
   useEffect(() => {
+    reportedProjectIdRef.current = null;
     if (initialProjectId) {
       setSelectedProjectId(initialProjectId);
     }
   }, [initialProjectId]);
+
+  // The workspace the user picked or just made; it counts as listed before the list reloads.
+  const pickedProjectIdRef = useRef<string | null>(null);
 
   // Falls back to a listed workspace when the remembered one is gone (or none was remembered);
   // the project the user opened stays, even without a workspace yet.
@@ -184,7 +214,9 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
       return;
     }
     const isKnown = selectedProjectId !== null
-      && (selectedProjectId === initialProjectId || workspaces.some((workspace) => workspace.projectId === selectedProjectId));
+      && (selectedProjectId === initialProjectId
+        || selectedProjectId === pickedProjectIdRef.current
+        || workspaces.some((workspace) => workspace.projectId === selectedProjectId));
     if (!isKnown) {
       setSelectedProjectId(workspaces[0].projectId);
     }
@@ -197,12 +229,14 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
     initialProjectIdRef.current = initialProjectId;
   }, [initialProjectId]);
   useEffect(() => {
-    if (selectedProjectId && selectedProjectId !== initialProjectIdRef.current) {
+    if (selectedProjectId && selectedProjectId !== initialProjectIdRef.current && selectedProjectId !== reportedProjectIdRef.current) {
+      reportedProjectIdRef.current = selectedProjectId;
       onProjectChange?.(selectedProjectId);
     }
   }, [selectedProjectId, onProjectChange]);
 
   const selectWorkspace = (projectId: string) => {
+    pickedProjectIdRef.current = projectId;
     setSelectedProjectId(projectId);
   };
 
@@ -660,6 +694,30 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
 
   // ----- main area -----
   const renderMain = () => {
+    if (viewMode === 'solo' && selectedProjectId) {
+      const chat = renderSoloChat?.(selectedProjectId) ?? null;
+      return (
+        <div className="flex h-full min-h-0 flex-col" data-testid="office-solo">
+          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
+            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{t('solo.hint')}</p>
+            {onNewSoloChat && (
+              <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={onNewSoloChat} data-testid="office-solo-new">
+                <MessageSquarePlus className="h-3.5 w-3.5" />
+                {t('solo.newChat')}
+              </Button>
+            )}
+          </div>
+          <div className="min-h-0 flex-1">
+            {chat ?? (
+              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('loading')}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
     if (workspaces !== null && workspaces.length === 0 && loadState !== 'ready') {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
@@ -847,25 +905,27 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
             </Button>
           )}
           <h1 className="min-w-0 flex-1 truncate px-1 text-sm font-semibold text-foreground">{office?.name ?? t('sidebar.title')}</h1>
+          {selectedProjectId && (
+            <div role="group" aria-label={t('simple.viewLabel')} className="mr-1 flex rounded-[10px] border border-border bg-muted/40 p-0.5">
+              {VIEW_MODES.map((mode) => (
+                  <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={viewMode === mode}
+                  onClick={() => setViewMode(mode)}
+                  className={cn(
+                    'rounded-[8px] px-2.5 py-1 text-xs transition-colors',
+                    viewMode === mode ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                  data-testid={`office-view-${mode}`}
+                >
+                  {t(VIEW_MODE_LABEL_KEYS[mode])}
+                </button>
+              ))}
+            </div>
+          )}
           {office && (
             <>
-              <div role="group" aria-label={t('simple.viewLabel')} className="mr-1 flex rounded-[10px] border border-border bg-muted/40 p-0.5">
-                {(['simple', 'full'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    aria-pressed={viewMode === mode}
-                    onClick={() => setViewMode(mode)}
-                    className={cn(
-                      'rounded-[8px] px-2.5 py-1 text-xs transition-colors',
-                      viewMode === mode ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                    )}
-                    data-testid={`office-view-${mode}`}
-                  >
-                    {t(mode === 'simple' ? 'simple.viewSimple' : 'simple.viewFull')}
-                  </button>
-                ))}
-              </div>
               {viewMode === 'full' && (
                 <>
                   {toolbarButton(t('toolbar.providers'), Plug, () => openWizard('providers'))}

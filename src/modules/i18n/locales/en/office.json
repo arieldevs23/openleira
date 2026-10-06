@@ -768,6 +768,11 @@
     "showTeam": "See the team (full view)",
     "viewSimple": "Simple",
     "viewFull": "Full",
-    "viewLabel": "view"
+    "viewLabel": "view",
+    "viewSolo": "Solo"
+  },
+  "solo": {
+    "hint": "Chat on your own with one agent in this workspace folder, no team. Like a regular Claude Code session.",
+    "newChat": "New chat"
   }
 }

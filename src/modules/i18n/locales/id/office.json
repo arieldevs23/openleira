@@ -755,6 +755,11 @@
     "showTeam": "lihat timnya (tampilan lengkap)",
     "viewSimple": "Simpel",
     "viewFull": "Lengkap",
-    "viewLabel": "tampilan"
+    "viewLabel": "tampilan",
+    "viewSolo": "Solo"
+  },
+  "solo": {
+    "hint": "Chat sendiri sama satu agent di folder workspace ini, tanpa tim. Kayak sesi Claude Code biasa.",
+    "newChat": "Chat baru"
   }
 }

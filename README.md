@@ -59,6 +59,7 @@ Tiap jenis punya alur kerja, aturan, dan cara QA ngecek sendiri. Contohnya, di L
 
 ## Fitur lain
 
+- **Mode Solo**: kerja sendiri tanpa tim. Chat langsung sama satu agent di folder workspace, kayak sesi Claude Code biasa. Pilih **Solo** di sebelah Simpel | Lengkap.
 - **Tampilan Lengkap**: kanvas ala draw.io buat ngatur tim, gambar alur kerja (panah = urutan), kasih skill ke agent, dan pantau pemakaian token.
 - **Chat dan terminal biasa** buat ngobrol langsung dengan Claude Code, Codex, Cursor, atau OpenCode di proyek lo.
 - **File explorer, editor kode, dan Git/GitHub** (clone, push, pull).

@@ -36,6 +36,8 @@ type WorkspaceMainProps = {
   newSessionTrigger: number;
   /** Selects the project the workspace canvas switched to, so files and terminal follow it. */
   onCanvasProjectChange: (projectId: string) => void;
+  /** Starts a fresh chat in the selected project while staying in workspace mode (the solo view). */
+  onNewSoloChat: () => void;
 };
 
 /**
@@ -60,6 +62,7 @@ function WorkspaceMain({
   externalMessageUpdate,
   newSessionTrigger,
   onCanvasProjectChange,
+  onNewSoloChat,
 }: WorkspaceMainProps) {
   const preferences = useUiPreferences();
   const { showRawParameters, showThinking, sendByCtrlEnter } = preferences;
@@ -160,6 +163,50 @@ function WorkspaceMain({
 
   const openCanvas = useCallback(() => handleModeChange(true), [handleModeChange]);
 
+  // The workspace page's solo view: the regular agent chat in the workspace
+  // folder, without the team. Shown once the app has switched to that project;
+  // only that project's own session is carried over.
+  const renderSoloChat = useCallback((projectId: string) => {
+    if (selectedProject?.projectId !== projectId) {
+      return null;
+    }
+    const soloSession = selectedSession?.__projectId === projectId ? selectedSession : null;
+    return (
+      <ChatInterface
+        isActive
+        selectedProject={selectedProject}
+        selectedSession={soloSession}
+        ws={ws}
+        sendMessage={sendMessage}
+        onFileOpen={handleFileOpen}
+        onNavigateToSession={onNavigateToSession}
+        onSessionEstablished={onSessionEstablished}
+        onShowSettings={onShowSettings}
+        showRawParameters={showRawParameters}
+        showThinking={showThinking}
+        sendByCtrlEnter={sendByCtrlEnter}
+        externalMessageUpdate={externalMessageUpdate}
+        newSessionTrigger={newSessionTrigger}
+        onShowAllTasks={null}
+        allowProjectPrompting
+      />
+    );
+  }, [
+    externalMessageUpdate,
+    handleFileOpen,
+    newSessionTrigger,
+    onNavigateToSession,
+    onSessionEstablished,
+    onShowSettings,
+    selectedProject,
+    selectedSession,
+    sendByCtrlEnter,
+    sendMessage,
+    showRawParameters,
+    showThinking,
+    ws,
+  ]);
+
   // Stable arguments keep usePaletteOpsRegister's effect from tearing down and
   // rewriting the whole palette registry on every render.
   usePaletteOpsRegister({ openFile, openFileInEditor, openDirectory });
@@ -182,7 +229,13 @@ function WorkspaceMain({
         />
         <div className="min-h-0 flex-1 overflow-hidden">
           <WorkspaceErrorBoundary showDetails>
-            <OfficePage initialProjectId={canvasProjectId} onProjectChange={onCanvasProjectChange} onOpenSession={openOfficeSession} />
+            <OfficePage
+              initialProjectId={canvasProjectId}
+              onProjectChange={onCanvasProjectChange}
+              onOpenSession={openOfficeSession}
+              renderSoloChat={renderSoloChat}
+              onNewSoloChat={onNewSoloChat}
+            />
           </WorkspaceErrorBoundary>
         </div>
       </div>

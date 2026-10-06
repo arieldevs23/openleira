@@ -49,6 +49,11 @@ type ChatInterfaceProps = {
   onShowAllTasks?: (() => void) | null;
   /** Opens the workspace canvas: the only place a project's agents are prompted. */
   onOpenCanvas?: () => void;
+  /**
+   * Lets the user prompt the agent in a project directly. Set by the
+   * workspace page's solo view, the one place a project gets a plain chat.
+   */
+  allowProjectPrompting?: boolean;
 };
 
 /**
@@ -73,12 +78,13 @@ function ChatInterface({
   newSessionTrigger,
   onShowAllTasks,
   onOpenCanvas,
+  allowProjectPrompting = false,
 }: ChatInterfaceProps) {
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings();
   const { subscribe } = useWebSocket();
   const { t } = useTranslation('chat');
-  // Projects are prompted only through the canvas; only the free-chat workspace has a message box.
-  const isCanvasOnly = Boolean(selectedProject && !isObrolanProject(selectedProject));
+  // Projects are prompted through the canvas or its solo view; elsewhere only the free-chat workspace has a message box.
+  const isCanvasOnly = Boolean(selectedProject && !isObrolanProject(selectedProject) && !allowProjectPrompting);
   const processingSessions = useProcessingSessions();
   const {
     markSessionProcessing: onSessionProcessing,
