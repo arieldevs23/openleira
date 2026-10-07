@@ -143,6 +143,32 @@ export function createFileTreeRouter(
     });
   }, logger));
 
+  // A real download (Content-Disposition: attachment) the browser streams to disk:
+  // a file as it is, a folder as a zip. Opened as a plain link, so it also takes
+  // the auth token as `?token=`.
+  router.get('/projects/:projectId/download', createRouteHandler(async (request, response) => {
+    const targetPath = readRequiredString(request.query.path, 'path', 'Invalid file path');
+    const download = await services.openDownload(readProjectId(request), targetPath);
+    const asciiName = download.fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
+    response.setHeader('Content-Type', download.contentType);
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(download.fileName)}`,
+    );
+    if (download.size !== null) {
+      response.setHeader('Content-Length', String(download.size));
+    }
+    download.stream.on('error', (error) => {
+      logger.error('Error streaming File Tree download', error);
+      if (!response.headersSent) {
+        response.status(500).json({ error: 'Error reading file' });
+      } else {
+        response.destroy(error);
+      }
+    });
+    download.stream.pipe(response);
+  }, logger));
+
   router.put('/projects/:projectId/file', createRouteHandler(async (request, response) => {
     const body = readBody(request);
     const filePath = readRequiredString(body.filePath, 'filePath', 'Invalid file path');

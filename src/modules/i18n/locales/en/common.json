@@ -134,6 +134,9 @@
       "refresh": "Refresh",
       "menuLabel": "File context menu",
       "loading": "Loading..."
+    },
+    "toast": {
+      "folderDownloadStarted": "Zipping the folder; the download starts in a moment"
     }
   },
   "projectWizard": {

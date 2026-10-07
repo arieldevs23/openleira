@@ -7,6 +7,8 @@ import { Readable } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import JSZip from 'jszip';
+
 import { createFileTreeService } from '@/modules/file-tree/file-tree.service.js';
 import type {
   FileTreeDirectoryEntry,
@@ -572,5 +574,69 @@ test('reading through a symlink out of the temp directory is still refused', asy
     await fsPromises.rm(temporaryDirectory, { recursive: true, force: true });
     await fsPromises.rm(projectRoot, { recursive: true, force: true });
     await fsPromises.rm(outsideDirectory, { recursive: true, force: true });
+  }
+});
+
+/** The real file system, as the module wires it, for tests that work on a temporary folder. */
+const realFileSystem: FileTreeFileSystem = {
+  access: (candidatePath) => fsPromises.access(candidatePath),
+  stat: (candidatePath) => fsPromises.stat(candidatePath),
+  lstat: (candidatePath) => fsPromises.lstat(candidatePath),
+  openDirectory: async function* (directoryPath) {
+    yield* await fsPromises.opendir(directoryPath);
+  },
+  realpath: (candidatePath) => fsPromises.realpath(candidatePath),
+  readTextFile: (filePath) => fsPromises.readFile(filePath, 'utf8'),
+  writeTextFile: (filePath, content) => fsPromises.writeFile(filePath, content, 'utf8'),
+  makeDirectory: async (directoryPath, recursive) => { await fsPromises.mkdir(directoryPath, { recursive }); },
+  rename: (oldPath, newPath) => fsPromises.rename(oldPath, newPath),
+  removeDirectory: (directoryPath) => fsPromises.rm(directoryPath, { recursive: true, force: true }),
+  unlink: (filePath) => fsPromises.unlink(filePath),
+  copyFile: (sourcePath, destinationPath) => fsPromises.copyFile(sourcePath, destinationPath),
+  createReadStream: (filePath) => createReadStream(filePath),
+};
+
+const readAll = async (stream: Readable): Promise<Buffer> => {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.from(chunk as Buffer));
+  }
+  return Buffer.concat(chunks);
+};
+
+test('openDownload streams a file with its size, and zips a folder without dependency or VCS folders', async () => {
+  const projectRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'file-tree-download-'));
+  try {
+    await fsPromises.mkdir(path.join(projectRoot, 'hasil', 'grafik'), { recursive: true });
+    await fsPromises.mkdir(path.join(projectRoot, 'hasil', 'node_modules', 'pkg'), { recursive: true });
+    await fsPromises.writeFile(path.join(projectRoot, 'hasil', 'laporan.txt'), 'isi laporan');
+    await fsPromises.writeFile(path.join(projectRoot, 'hasil', 'grafik', 'data.bin'), Buffer.from([0, 1, 2, 255]));
+    await fsPromises.writeFile(path.join(projectRoot, 'hasil', 'node_modules', 'pkg', 'index.js'), 'skip me');
+    for (let index = 0; index < 300; index += 1) {
+      await fsPromises.writeFile(path.join(projectRoot, 'hasil', 'grafik', `bagian-${index}.txt`), `bagian ${index}`);
+    }
+    const service = createFileTreeService(createDependencies(realFileSystem, projectRoot));
+
+    const file = await service.openDownload('project-1', 'hasil/laporan.txt');
+    assert.equal(file.fileName, 'laporan.txt');
+    assert.equal(file.size, 11);
+    assert.equal((await readAll(file.stream)).toString(), 'isi laporan');
+
+    const folder = await service.openDownload('project-1', 'hasil');
+    assert.equal(folder.fileName, 'hasil.zip');
+    assert.equal(folder.contentType, 'application/zip');
+    assert.equal(folder.size, null);
+    const zip = await JSZip.loadAsync(await readAll(folder.stream));
+    assert.equal(await zip.file('laporan.txt')?.async('string'), 'isi laporan');
+    assert.deepEqual([...(await zip.file('grafik/data.bin')!.async('uint8array'))], [0, 1, 2, 255]);
+    assert.equal(await zip.file('grafik/bagian-299.txt')?.async('string'), 'bagian 299');
+    assert.equal(Object.keys(zip.files).some((name) => name.includes('node_modules')), false);
+
+    await assert.rejects(
+      () => service.openDownload('project-1', 'hasil/missing.txt'),
+      (error: unknown) => error instanceof AppError && error.statusCode === 404,
+    );
+  } finally {
+    await fsPromises.rm(projectRoot, { recursive: true, force: true });
   }
 });

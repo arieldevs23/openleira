@@ -150,6 +150,32 @@ export const sessionMessagesUrl = (
 const fileContentPath = (projectId: string, filePath: string) =>
   `/api/file-tree/projects/${projectId}/files/content${query({ path: filePath })}`;
 
+/**
+ * A project file or folder as a real download (a folder arrives as a zip the
+ * server builds while it streams). The browser opens it as a plain link, which
+ * cannot carry the auth header, so the token rides along as `?token=`. Used by
+ * the file-tree and office modules through `startProjectDownload`.
+ */
+export const projectDownloadUrl = (projectId: string, targetPath: string): string => {
+  const token = IS_PLATFORM ? null : getStoredAuthToken();
+  return `/api/file-tree/projects/${encodeURIComponent(projectId)}/download${query({ path: targetPath, ...(token ? { token } : {}) })}`;
+};
+
+/**
+ * Starts a browser download of a project file or folder. The browser streams
+ * it straight to disk with its own progress, instead of the page reading the
+ * whole file into memory first. Used by the file-tree and office modules.
+ */
+export const startProjectDownload = (projectId: string, targetPath: string): void => {
+  const anchor = document.createElement('a');
+  anchor.href = projectDownloadUrl(projectId, targetPath);
+  anchor.download = '';
+  anchor.rel = 'noopener';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+};
+
 const pluginAssetPath = (pluginName: string, assetFile: string) =>
   `/api/plugins/${encodeURIComponent(pluginName)}/assets/${encodeURIComponent(assetFile)}`;
 

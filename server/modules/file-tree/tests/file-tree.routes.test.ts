@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
+import { Readable } from 'node:stream';
 import test from 'node:test';
 
 import express, { type RequestHandler } from 'express';
@@ -18,6 +19,7 @@ function createFakeServices(overrides: Partial<FileTreeServices> = {}): FileTree
     createWorkspaceFolder: unexpectedOperation,
     readTextFile: unexpectedOperation,
     openFile: unexpectedOperation,
+    openDownload: unexpectedOperation,
     saveTextFile: unexpectedOperation,
     listProjectFiles: unexpectedOperation,
     createEntry: unexpectedOperation,
@@ -154,4 +156,26 @@ test('create route rejects invalid entry types without calling the service', asy
   });
 
   assert.equal(createCalled, false);
+});
+
+test('download route sends an attachment with the file name, its size, and the bytes', async () => {
+  const inputs: string[][] = [];
+  const services = createFakeServices({
+    openDownload: async (projectId, targetPath) => {
+      inputs.push([projectId, targetPath]);
+      return { fileName: 'laporan Q3 ü.xlsx', contentType: 'application/vnd.ms-excel', size: 5, stream: Readable.from([Buffer.from('hello')]) };
+    },
+  });
+
+  await withFileTreeServer(services, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/file-tree/projects/p1/download?path=${encodeURIComponent('out/laporan Q3 ü.xlsx')}`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-length'), '5');
+    const disposition = response.headers.get('content-disposition') ?? '';
+    assert.match(disposition, /^attachment; filename="laporan Q3 _.xlsx"; filename\*=UTF-8''laporan%20Q3%20%C3%BC\.xlsx$/);
+    assert.equal(await response.text(), 'hello');
+
+    assert.equal((await fetch(`${baseUrl}/api/file-tree/projects/p1/download`)).status, 400);
+  });
+  assert.deepEqual(inputs, [['p1', 'out/laporan Q3 ü.xlsx']]);
 });

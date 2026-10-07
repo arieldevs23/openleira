@@ -102,7 +102,7 @@ export default function ResultFilesPanel({ projectId, projectPath, tasks, divisi
     setMenu({ x: event.clientX, y: event.clientY, target });
   };
 
-  const runDownload = async (work: () => Promise<void>) => {
+  const runDownload = async (work: () => Promise<void> | void) => {
     setDownload({ busy: true, error: null });
     try {
       await work();
