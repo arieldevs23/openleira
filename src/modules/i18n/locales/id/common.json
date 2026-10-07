@@ -134,6 +134,9 @@
       "refresh": "refresh",
       "menuLabel": "menu konteks file",
       "loading": "bentar..."
+    },
+    "toast": {
+      "folderDownloadStarted": "Folder lagi di-zip, download-nya mulai sebentar lagi"
     }
   },
   "projectWizard": {

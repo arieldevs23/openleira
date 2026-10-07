@@ -1,6 +1,8 @@
 import path from 'node:path';
+import { PassThrough, Readable } from 'node:stream';
 
 import ignore from 'ignore';
+import JSZip from 'jszip';
 
 import type {
   FileTreeDirectoryEntry,
@@ -47,6 +49,41 @@ function includeEntryByHardExclusions(entryPath: string, isDirectory: boolean): 
 function includeEntryByFallbackDirectoryNames(entryPath: string, isDirectory: boolean): boolean {
   return includeEntryByHardExclusions(entryPath, isDirectory)
     && (!isDirectory || !IGNORED_DIRECTORY_NAMES.has(path.basename(entryPath)));
+}
+
+// A folder download stops here rather than building a zip of a whole home directory.
+const MAXIMUM_DOWNLOAD_ENTRIES = 50_000;
+
+// Files above this size go into a folder zip uncompressed.
+const STORE_UNCOMPRESSED_ABOVE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * A stream that opens its file only when the zip writer first reads it, so
+ * zipping a folder never holds thousands of files open at once.
+ */
+function openWhenRead(open: () => Readable): Readable {
+  let source: Readable | null = null;
+  const lazy = new Readable({
+    read() {
+      if (source) {
+        source.resume();
+        return;
+      }
+      source = open();
+      source.on('data', (chunk) => {
+        if (!lazy.push(chunk)) {
+          source?.pause();
+        }
+      });
+      source.once('end', () => lazy.push(null));
+      source.once('error', (error) => lazy.destroy(error));
+    },
+    destroy(error, callback) {
+      source?.destroy();
+      callback(error);
+    },
+  });
+  return lazy;
 }
 
 function createFileTreeError(message: string, statusCode: number, code: string): AppError {
@@ -503,6 +540,78 @@ export function createFileTreeService(dependencies: FileTreeServiceDependencies)
       return {
         contentType: dependencies.resolveMimeType(resolvedPath),
         stream: fileSystem.createReadStream(resolvedPath),
+      };
+    },
+
+    async openDownload(projectId, targetPath) {
+      const projectRoot = await resolveProjectRoot(projectId);
+      const resolvedPath = await resolveReadablePath(projectRoot, targetPath);
+      let stats;
+      try {
+        stats = await fileSystem.stat(resolvedPath);
+      } catch {
+        throw createFileTreeError('File not found', 404, 'FILE_NOT_FOUND');
+      }
+      const baseName = path.basename(resolvedPath) || 'download';
+
+      if (!stats.isDirectory()) {
+        return {
+          fileName: baseName,
+          contentType: dependencies.resolveMimeType(resolvedPath),
+          size: stats.size,
+          stream: fileSystem.createReadStream(resolvedPath),
+        };
+      }
+
+      // Everything in the folder except VCS data and dependency folders, which
+      // can be rebuilt and would make the zip huge. Symbolic links are skipped.
+      const zip = new JSZip();
+      let entryCount = 0;
+      const addDirectory = async (directoryPath: string, relativePath: string): Promise<void> => {
+        for await (const entry of fileSystem.openDirectory(directoryPath)) {
+          entryCount += 1;
+          if (entryCount > MAXIMUM_DOWNLOAD_ENTRIES) {
+            throw createFileTreeError('This folder has too many files to download at once.', 413, 'DOWNLOAD_TOO_LARGE');
+          }
+          const entryPath = path.join(directoryPath, entry.name);
+          const entryRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+          if (entry.isDirectory()) {
+            if (!HARD_EXCLUDED_DIRECTORY_NAMES.has(entry.name)) {
+              zip.folder(entryRelativePath);
+              await addDirectory(entryPath, entryRelativePath);
+            }
+            continue;
+          }
+          const entryStats = await fileSystem.lstat(entryPath).catch(() => null);
+          if (!entryStats || entryStats.isSymbolicLink() || entryStats.isDirectory()) {
+            continue;
+          }
+          zip.file(entryRelativePath, openWhenRead(() => fileSystem.createReadStream(entryPath)), {
+            binary: true,
+            // Big files are mostly media, archives or office files that are already compressed;
+            // storing them as they are keeps the download fast instead of re-compressing for nothing.
+            ...(entryStats.size > STORE_UNCOMPRESSED_ABOVE_BYTES ? { compression: 'STORE' as const } : {}),
+          });
+        }
+      };
+      await addDirectory(resolvedPath, '');
+
+      // JSZip hands back an old-style stream; a PassThrough gives callers a regular Node stream.
+      const zipStream = new PassThrough();
+      const generated = zip.generateNodeStream({
+        type: 'nodebuffer',
+        streamFiles: true,
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      });
+      generated.on('error', (error: Error) => zipStream.destroy(error));
+      generated.pipe(zipStream);
+
+      return {
+        fileName: `${baseName}.zip`,
+        contentType: 'application/zip',
+        size: null,
+        stream: zipStream,
       };
     },
 

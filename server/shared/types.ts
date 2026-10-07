@@ -1348,6 +1348,17 @@ export type FileTreeServices = {
   createWorkspaceFolder(folderPath: string): Promise<{ success: true; path: string }>;
   readTextFile(projectId: string, filePath: string): Promise<{ content: string; path: string }>;
   openFile(projectId: string, filePath: string): Promise<{ contentType: string; stream: Readable }>;
+  /**
+   * A file or folder of the project as a download: a file is streamed as it is
+   * on disk (with its size), a folder as a zip built while it streams.
+   */
+  openDownload(projectId: string, targetPath: string): Promise<{
+    fileName: string;
+    contentType: string;
+    /** Known for a file; a zip's size is not known until it is done. */
+    size: number | null;
+    stream: Readable;
+  }>;
   saveTextFile(projectId: string, filePath: string, content: string): Promise<{
     success: true;
     path: string;
