@@ -215,6 +215,17 @@ export function createOfficeRouter(dependencies: OfficeRouteDependencies): expre
   }));
 
   // Static paths first, so they never match the `:officeId` parameter.
+  router.get('/solo-sessions', asyncHandler(async (req, res) => {
+    const projectId = typeof req.query.projectId === 'string' ? req.query.projectId.trim() : '';
+    if (!projectId) {
+      throw badRequest('projectId is required.');
+    }
+    const limit = Number.parseInt(typeof req.query.limit === 'string' ? req.query.limit : '', 10);
+    res.json(createApiSuccessResponse({
+      sessions: office.listSoloSessions(projectId, Number.isFinite(limit) ? limit : undefined),
+    }));
+  }));
+
   router.get('/workspaces', asyncHandler(async (_req, res) => {
     res.json(createApiSuccessResponse({ workspaces: office.listWorkspaces() }));
   }));

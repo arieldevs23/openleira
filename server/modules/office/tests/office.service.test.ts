@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { closeConnection, initializeDatabase, officeCasesDb, projectsDb } from '@/modules/database/index.js';
+import { closeConnection, initializeDatabase, officeCasesDb, officesDb, projectsDb, sessionsDb } from '@/modules/database/index.js';
 import { officeService } from '@/modules/office/services/office.service.js';
-import { providerModelsService } from '@/modules/providers/index.js';
+import { providerModelsService, sessionsService } from '@/modules/providers/index.js';
 import type { LLMProvider, OfficeDivision, ProviderAuthStatus } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
@@ -471,5 +471,30 @@ test('shapes are drawn, restyled, stacked and deleted, with their input checked'
     assert.equal(officeService.getSnapshot(office.id).shapes.length, 2);
     assert.deepEqual(officeService.deleteShape(office.id, box.id).map((shape) => shape.id), [label.id]);
     assert.throws(() => officeService.deleteShape(office.id, box.id), rejectsWith('OFFICE_SHAPE_NOT_FOUND'));
+  });
+});
+
+test('the solo history lists only chats created as solo chats, for that project only', async () => {
+  await withProject(async (projectId) => {
+    const projectPath = projectsDb.getProjectPathById(projectId);
+    assert.ok(projectPath);
+    const old = sessionsService.createSoloSession('claude', projectPath, 'old chat about the shop');
+    sessionsDb.createAppSession('team-run', 'claude', projectPath, 'kantor shop · Backend');
+    const latest = sessionsService.createSoloSession('codex', projectPath, '');
+    const { project: other } = projectsDb.createProjectPath(path.join(path.dirname(projectPath), 'other'));
+    assert.ok(other);
+    sessionsService.createSoloSession('claude', other.project_path, 'other folder');
+    sessionsDb.updateSessionCustomName(latest.sessionId, 'latest chat');
+
+    const listed = officeService.listSoloSessions(projectId);
+    assert.deepEqual(listed.map((session) => session.sessionId).sort(), [latest.sessionId, old.sessionId].sort());
+    const newest = listed.find((session) => session.sessionId === latest.sessionId);
+    assert.equal(newest?.provider, 'codex');
+    assert.equal(newest?.title, 'latest chat');
+    assert.equal(officesDb.isSoloSession(old.sessionId), true);
+    assert.equal(officesDb.isSoloSession('team-run'), false);
+
+    assert.throws(() => sessionsService.createSoloSession('claude', '/not/a/project', 'hi'), rejectsWith('PROJECT_NOT_FOUND'));
+    assert.throws(() => officeService.listSoloSessions('no-such-project'), rejectsWith('PROJECT_NOT_FOUND'));
   });
 });

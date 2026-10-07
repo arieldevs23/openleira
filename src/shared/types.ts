@@ -1881,6 +1881,15 @@ export type OfficeWorkspaceSummary = {
   totalCases: number;
 };
 
+/** One chat in a workspace's solo history; `title` is '' until the provider names the session. */
+export type OfficeSoloSession = {
+  sessionId: string;
+  provider: LLMProvider;
+  title: string;
+  createdAt: string;
+  lastActivity: string;
+};
+
 /** A division the app analysis proposes; the user edits it before the workspace is created. */
 export type OfficeDivisionProposal = {
   name: string;

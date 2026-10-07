@@ -86,7 +86,7 @@ test('session creation route refuses a project folder: projects are prompted thr
   });
 });
 
-test('session creation route opens a solo-view chat in a registered workspace folder', async () => {
+test('session creation route opens a solo-view chat in a registered workspace folder and records it as solo', async () => {
   await withProviderServer(async (baseUrl, workspacePath) => {
     projectsDb.createProjectPath(workspacePath);
     officesDb.createOffice({ projectPath: workspacePath, name: 'Solo', locale: 'en', kind: 'coding', divisions: [] });
@@ -99,6 +99,7 @@ test('session creation route opens a solo-view chat in a registered workspace fo
 
     assert.equal(response.status, 201);
     assert.equal(sessionsDb.getSessionById(payload.data.sessionId)?.project_path, workspacePath);
+    assert.equal(officesDb.isSoloSession(payload.data.sessionId), true);
   });
 });
 

@@ -760,6 +760,9 @@
   },
   "solo": {
     "hint": "Chat sendiri sama satu agent di folder workspace ini, tanpa tim. Kayak sesi Claude Code biasa.",
-    "newChat": "Chat baru"
+    "newChat": "Chat baru",
+    "history": "Riwayat",
+    "empty": "Belum ada chat. Ketik pesan buat mulai.",
+    "untitled": "Chat tanpa judul"
   }
 }

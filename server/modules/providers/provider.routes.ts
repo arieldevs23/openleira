@@ -17,7 +17,7 @@ import type {
   ProviderSkillCreateInput,
   UpsertProviderMcpServerInput,
 } from '@/shared/types.js';
-import { AppError, asyncHandler, createApiSuccessResponse } from '@/shared/utils.js';
+import { AppError, asyncHandler, createApiSuccessResponse, isFreeChatPath } from '@/shared/utils.js';
 
 const router = express.Router();
 
@@ -771,6 +771,12 @@ router.post(
           statusCode: 403,
         },
       );
+    }
+    // A solo-view chat in a workspace folder is recorded, so its history lists it
+    // and the chat gate lets its sends through.
+    if (body.mode === 'solo' && !isFreeChatPath(projectPath)) {
+      res.status(201).json(createApiSuccessResponse(sessionsService.createSoloSession(provider, projectPath, initialMessage)));
+      return;
     }
     const result = sessionsService.createAppSession(provider, projectPath, initialMessage);
     res.status(201).json(createApiSuccessResponse(result));

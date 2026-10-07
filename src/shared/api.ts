@@ -444,6 +444,8 @@ export const api = {
       extra: { divisions?: unknown[]; appSummary?: string | null; kind?: OfficeWorkspaceKind; auditChecks?: string | null } = {},
     ) => post('/api/office', { projectId, locale, ...extra }),
     workspaces: () => get('/api/office/workspaces'),
+    // The solo view's chat history for a project (the server records solo chats when it creates them).
+    soloSessions: (projectId: string) => get(`/api/office/solo-sessions${query({ projectId })}`),
     remove: (officeId: string) => del(`/api/office/${encodeURIComponent(officeId)}`),
     prepareFolder: (path: string, mode: 'new' | 'existing') => post('/api/office/folders', { path, mode }),
     startAnalysis: (input: { projectId: string; provider: string; model: string; locale: string }) =>

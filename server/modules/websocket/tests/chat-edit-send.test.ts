@@ -209,22 +209,47 @@ test('a session inside a project is refused: projects are prompted through the c
   });
 });
 
-test('a solo-view send in a registered workspace folder runs', async () => {
+test('a solo chat in a registered workspace folder runs, but only within that folder', async () => {
   await withGateway('claude', async ({ socket, runs }) => {
     const sessionFolder = sessionsDb.getSessionById(SESSION_ID)?.project_path ?? '';
     process.env.VITE_OBROLAN_DIR = path.join(os.tmpdir(), 'somewhere-else-obrolan');
     projectsDb.createProjectPath(sessionFolder);
     officesDb.createOffice({ projectPath: sessionFolder, name: 'Solo', locale: 'en', kind: 'coding', divisions: [] });
+    officesDb.addSoloSession(SESSION_ID);
+
     socket.emit('message', JSON.stringify({
       type: 'chat.edit-send',
       sessionId: SESSION_ID,
       anchorId: 'e-u2',
-      content: 'solo prompt',
-      mode: 'solo',
+      content: 'without the solo mode',
     }));
     await settle();
+    assert.equal(runs.length, 0);
+    assert.equal(socket.frames.at(-1)?.code, 'PROJECT_CANVAS_ONLY');
 
+    socket.emit('message', JSON.stringify({
+      type: 'chat.edit-send',
+      sessionId: SESSION_ID,
+      anchorId: 'e-u2',
+      mode: 'solo',
+      content: 'outside the project',
+      options: { cwd: path.join(os.tmpdir(), 'some-other-project') },
+    }));
+    await settle();
+    assert.equal(runs.length, 0);
+    assert.equal(socket.frames.at(-1)?.code, 'PROJECT_CANVAS_ONLY');
+
+    socket.emit('message', JSON.stringify({
+      type: 'chat.edit-send',
+      sessionId: SESSION_ID,
+      anchorId: 'e-u2',
+      mode: 'solo',
+      content: 'a solo prompt',
+      options: { cwd: path.join(sessionFolder, 'src') },
+    }));
+    await settle();
     assert.equal(runs.length, 1);
+    assert.equal(runs[0].command, 'a solo prompt');
   });
 });
 

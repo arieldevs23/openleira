@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import type { WebSocket } from 'ws';
 
-import { sessionsDb } from '@/modules/database/index.js';
+import { officesDb, sessionsDb } from '@/modules/database/index.js';
 import { providerModelsService, sessionsService } from '@/modules/providers/index.js';
 import { chatRunRegistry } from '@/modules/websocket/services/chat-run-registry.service.js';
 import { connectedClients, WS_OPEN_STATE } from '@/modules/websocket/services/websocket-state.service.js';
@@ -20,7 +20,7 @@ import type {
   ProviderPermissionDecision,
   ProviderRuntimeWriter,
 } from '@/shared/types.js';
-import { parseIncomingJsonObject } from '@/shared/utils.js';
+import { isFreeChatPath, parseIncomingJsonObject } from '@/shared/utils.js';
 
 /**
  * Trust boundary for client-supplied image attachments: chat.send options come
@@ -194,15 +194,23 @@ function resolveSendTarget(
     return null;
   }
 
-  // Projects are prompted through the workspace canvas, whose runs skip this
-  // function (runDetachedChatTurn), or its solo view (`mode: 'solo'` on a
-  // registered workspace folder). A client-sent cwd is checked too, since it
+  // Projects are prompted only through the workspace canvas, whose runs skip
+  // this function (runDetachedChatTurn), or as a solo chat: a session recorded
+  // by the solo view in a registered workspace folder, sent with `mode: 'solo'`,
+  // that stays inside that folder. A client-sent cwd is checked too, since it
   // would otherwise override the session's folder.
   const clientCwd = typeof data.options?.cwd === 'string' ? data.options.cwd : null;
-  if (
-    !sessionsService.canPromptDirectly(session.project_path, data.mode)
-    || (clientCwd !== null && !sessionsService.canPromptDirectly(clientCwd, data.mode))
-  ) {
+  const isFreeChat = isFreeChatPath(session.project_path);
+  const isSoloChat = !isFreeChat
+    && sessionsService.canPromptDirectly(session.project_path, data.mode)
+    && officesDb.isSoloSession(sessionId);
+  const isInsideSessionFolder = (candidate: string) => {
+    const root = path.resolve(session.project_path ?? '');
+    const resolved = path.resolve(candidate);
+    return resolved === root || resolved.startsWith(`${root}${path.sep}`);
+  };
+  const isCwdAllowed = clientCwd === null || (isSoloChat ? isInsideSessionFolder(clientCwd) : isFreeChatPath(clientCwd));
+  if (!(isFreeChat || isSoloChat) || !isCwdAllowed) {
     sendProtocolError(
       ws,
       'PROJECT_CANVAS_ONLY',
