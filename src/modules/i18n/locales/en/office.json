@@ -773,6 +773,9 @@
   },
   "solo": {
     "hint": "Chat on your own with one agent in this workspace folder, no team. Like a regular Claude Code session.",
-    "newChat": "New chat"
+    "newChat": "New chat",
+    "history": "History",
+    "empty": "No chats yet. Type a message to start.",
+    "untitled": "Untitled chat"
   }
 }

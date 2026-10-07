@@ -1718,6 +1718,19 @@ export type OfficeWorkspaceSummary = {
   totalCases: number;
 };
 
+/**
+ * A chat the user had on their own in a workspace's solo view, newest first in
+ * its history. `title` is the session's name ('' until the provider names it).
+ * Used by the office repository, service and routes.
+ */
+export type OfficeSoloSession = {
+  sessionId: string;
+  provider: LLMProvider;
+  title: string;
+  createdAt: string;
+  lastActivity: string;
+};
+
 /** A division the "analyse an existing app" step suggests; the user reviews it before it is saved. */
 export type OfficeDivisionProposal = {
   name: string;

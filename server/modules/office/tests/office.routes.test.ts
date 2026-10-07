@@ -223,3 +223,16 @@ test('workspace, flow, position and analysis routes parse their input', async ()
     auditChecks: null,
   });
 });
+
+test('the solo history route needs a projectId and passes the limit through', async () => {
+  const calls: Call[] = [];
+  await withServer(calls, async (request) => {
+    assert.equal((await request('GET', '/api/office/solo-sessions')).status, 400);
+    assert.equal((await request('GET', '/api/office/solo-sessions?projectId=p1')).status, 200);
+    assert.equal((await request('GET', '/api/office/solo-sessions?projectId=p1&limit=5')).status, 200);
+  });
+  assert.deepEqual(calls, [
+    { method: 'office.listSoloSessions', args: ['p1', undefined] },
+    { method: 'office.listSoloSessions', args: ['p1', 5] },
+  ]);
+});

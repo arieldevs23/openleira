@@ -5,7 +5,6 @@ import {
   FolderPlus,
   Loader2,
   Menu,
-  MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRight,
@@ -17,7 +16,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,6 +28,7 @@ import OfficeCanvas from '@/modules/office/OfficeCanvas';
 import ResultFilesPanel from '@/modules/office/ResultFilesPanel';
 import ShapePanel from '@/modules/office/ShapePanel';
 import SimpleView from '@/modules/office/SimpleView';
+import SoloView from '@/modules/office/SoloView';
 import SkillNodePanel from '@/modules/office/SkillNodePanel';
 import UsagePanel from '@/modules/office/UsagePanel';
 import WorkspaceSidebar from '@/modules/office/WorkspaceSidebar';
@@ -170,9 +170,14 @@ type OfficePageProps = {
   /**
    * The regular agent chat for a project, shown by the solo view. Supplied by
    * the project-workspace module, which owns the chat connection; null while
-   * the app has not switched to that project yet.
+   * the app has not switched to that project yet. `onSessionEstablished` is
+   * told the id of a chat the solo view just started, for its history.
    */
-  renderSoloChat?: (projectId: string) => ReactNode;
+  renderSoloChat?: (projectId: string, onSessionEstablished: (sessionId: string) => void) => ReactNode;
+  /** The app's open session when it belongs to the project shown; the solo view highlights it. */
+  soloSessionId?: string | null;
+  /** Opens an earlier solo chat in place, staying in workspace mode. */
+  onOpenSoloSession?: (sessionId: string) => void;
   /** Starts a fresh solo chat in the project shown, dropping the open session. */
   onNewSoloChat?: () => void;
 };
@@ -183,7 +188,15 @@ type OfficePageProps = {
  * case result, files, tokens or the picked agent on the right. Rendered by
  * the project-workspace module in place of the project sidebar and tabs.
  */
-export default function OfficePage({ initialProjectId, onProjectChange, onOpenSession, renderSoloChat, onNewSoloChat }: OfficePageProps) {
+export default function OfficePage({
+  initialProjectId,
+  onProjectChange,
+  onOpenSession,
+  renderSoloChat,
+  soloSessionId,
+  onOpenSoloSession,
+  onNewSoloChat,
+}: OfficePageProps) {
   const { t, i18n } = useTranslation('office');
   const { workspaces, error: workspacesError } = useWorkspaces();
   const { analyses, forgetProject } = useAnalyses();
@@ -301,6 +314,8 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
   // The automatic model setup is running, or why it failed; the simple view shows both.
   const [autoSetup, setAutoSetup] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
   const autoSetupOfficeRef = useRef<string | null>(null);
+
+  const openSoloSession = useCallback((sessionId: string) => onOpenSoloSession?.(sessionId), [onOpenSoloSession]);
 
   const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
@@ -695,27 +710,16 @@ export default function OfficePage({ initialProjectId, onProjectChange, onOpenSe
   // ----- main area -----
   const renderMain = () => {
     if (viewMode === 'solo' && selectedProjectId) {
-      const chat = renderSoloChat?.(selectedProjectId) ?? null;
       return (
-        <div className="flex h-full min-h-0 flex-col" data-testid="office-solo">
-          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
-            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{t('solo.hint')}</p>
-            {onNewSoloChat && (
-              <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={onNewSoloChat} data-testid="office-solo-new">
-                <MessageSquarePlus className="h-3.5 w-3.5" />
-                {t('solo.newChat')}
-              </Button>
-            )}
-          </div>
-          <div className="min-h-0 flex-1">
-            {chat ?? (
-              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t('loading')}
-              </div>
-            )}
-          </div>
-        </div>
+        <SoloView
+          key={selectedProjectId}
+          projectId={selectedProjectId}
+          activeSessionId={soloSessionId ?? null}
+          isNarrow={isNarrow}
+          renderChat={(onSessionEstablished) => renderSoloChat?.(selectedProjectId, onSessionEstablished) ?? null}
+          onOpenSession={openSoloSession}
+          onNewChat={() => onNewSoloChat?.()}
+        />
       );
     }
     if (workspaces !== null && workspaces.length === 0 && loadState !== 'ready') {

@@ -62,6 +62,8 @@ type UseChatComposerStateArgs = {
    * stable for the conversation's whole lifetime — the consumer navigates to
    * /session/:id and records it as the current session.
    */
+  /** A new chat is a workspace solo chat: the server may open it in a project folder and lists it in that history. */
+  isSoloChat?: boolean;
   onSessionEstablished?: (sessionId: string, context: SessionEstablishedContext) => void;
   onFileOpen?: (filePath: string, diffInfo?: unknown) => void;
   onShowSettings?: () => void;
@@ -211,6 +213,7 @@ export function useChatComposerState({
   sendByCtrlEnter,
   onSessionProcessing,
   onSessionEstablished,
+  isSoloChat = false,
   onFileOpen,
   onShowSettings,
   scrollToBottom,
@@ -897,6 +900,7 @@ export function useChatComposerState({
             provider,
             projectPath: resolvedProjectPath,
             initialMessage: messageContent,
+            ...(isSoloChat ? { solo: true } : {}),
           });
           if (!response.ok) {
             throw new Error(`Failed to create session (${response.status})`);

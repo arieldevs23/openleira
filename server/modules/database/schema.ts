@@ -441,6 +441,16 @@ CREATE TABLE IF NOT EXISTS office_shapes (
 );
 `;
 
+export const OFFICE_SOLO_SESSIONS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS office_solo_sessions (
+    -- A chat the user had on their own in a workspace's solo view; team-run
+    -- sessions of the same project are never listed here.
+    session_id TEXT PRIMARY KEY NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+);
+`;
+
 export const OFFICE_SKILL_LINKS_TABLE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS office_skill_links (
     -- A division linked to a skill node on the canvas has that skill.

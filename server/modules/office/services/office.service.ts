@@ -23,6 +23,7 @@ import type {
   OfficeShapePatch,
   OfficeSkillNode,
   OfficeSnapshot,
+  OfficeSoloSession,
   ProviderAuthStatus,
 } from '@/shared/types.js';
 import { AppError, isOfficeWorkspaceKind, validateWorkspacePath } from '@/shared/utils.js';
@@ -437,6 +438,19 @@ export const officeService = {
     }
     officesDb.deleteOffice(officeId);
     broadcastOfficeUpdate(officeId, { entity: 'deleted' });
+  },
+
+  /**
+   * The project's solo chats (its workspace's "Solo" view), most recently
+   * active first. Sessions run by the AI team are never in it: only sessions
+   * created as solo chats (`sessionsService.createSoloSession`) are listed.
+   */
+  listSoloSessions(projectId: string, limit = 50): OfficeSoloSession[] {
+    const projectPath = projectsDb.getProjectPathById(projectId);
+    if (!projectPath) {
+      throw notFound('Project not found.', 'PROJECT_NOT_FOUND');
+    }
+    return officesDb.listSoloSessions(projectPath, Math.min(Math.max(limit, 1), 200));
   },
 
   /** The office of a project, or null when it has none yet. */

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 
-import { projectsDb, sessionsDb } from '@/modules/database/index.js';
+import { officesDb, projectsDb, sessionsDb } from '@/modules/database/index.js';
 import { broadcastSessionUpserted, chatRunRegistry } from '@/modules/websocket/index.js';
 import { providerRegistry } from '@/modules/providers/provider.registry.js';
 import { sessionHistoryCache } from '@/modules/providers/services/session-history-cache.service.js';
@@ -254,6 +254,26 @@ export const sessionsService = {
    * comes directly from the first visible OpenLeira message and is limited to
    * four whole words before any provider-owned storage exists.
    */
+  /**
+   * Creates a chat started from a workspace's solo view: a plain agent chat in
+   * a project folder, which is otherwise prompted only through its canvas. The
+   * session is recorded as a solo chat, which is what lets the chat gate
+   * accept it and what the solo history lists. The folder must be a project.
+   */
+  createSoloSession(
+    provider: LLMProvider,
+    projectPath: string,
+    initialMessage: string,
+  ): CreateAppSessionResult {
+    const project = projectsDb.getProjectPath(projectPath.trim());
+    if (!project || project.isArchived) {
+      throw new AppError('Project not found.', { code: 'PROJECT_NOT_FOUND', statusCode: 404 });
+    }
+    const result = this.createAppSession(provider, project.project_path, initialMessage);
+    officesDb.addSoloSession(result.sessionId);
+    return result;
+  },
+
   createAppSession(
     provider: LLMProvider,
     projectPath: string,

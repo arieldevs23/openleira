@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { closeConnection, initializeDatabase, sessionsDb } from '@/modules/database/index.js';
+import { closeConnection, initializeDatabase, officesDb, sessionsDb } from '@/modules/database/index.js';
 import { sessionsService } from '@/modules/providers/index.js';
 import { handleChatConnection } from '@/modules/websocket/services/chat-websocket.service.js';
 import { chatRunRegistry } from '@/modules/websocket/services/chat-run-registry.service.js';
@@ -206,6 +206,36 @@ test('a session inside a project is refused: projects are prompted through the c
 
     assert.equal(runs.length, 0);
     assert.equal(socket.frames.at(-1)?.code, 'PROJECT_CANVAS_ONLY');
+  });
+});
+
+test('a solo chat in a project is let through, but only within its project folder', async () => {
+  await withGateway('claude', async ({ socket, runs }) => {
+    process.env.VITE_OBROLAN_DIR = path.join(os.tmpdir(), 'somewhere-else-obrolan');
+    officesDb.addSoloSession(SESSION_ID);
+    const sessionFolder = sessionsDb.getSessionById(SESSION_ID)?.project_path ?? '';
+
+    socket.emit('message', JSON.stringify({
+      type: 'chat.edit-send',
+      sessionId: SESSION_ID,
+      anchorId: 'e-u2',
+      content: 'outside the project',
+      options: { cwd: path.join(os.tmpdir(), 'some-other-project') },
+    }));
+    await settle();
+    assert.equal(runs.length, 0);
+    assert.equal(socket.frames.at(-1)?.code, 'PROJECT_CANVAS_ONLY');
+
+    socket.emit('message', JSON.stringify({
+      type: 'chat.edit-send',
+      sessionId: SESSION_ID,
+      anchorId: 'e-u2',
+      content: 'a solo prompt',
+      options: { cwd: path.join(sessionFolder, 'src') },
+    }));
+    await settle();
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].command, 'a solo prompt');
   });
 });
 

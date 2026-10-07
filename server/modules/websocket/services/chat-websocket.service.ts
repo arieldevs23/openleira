@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import type { WebSocket } from 'ws';
 
-import { sessionsDb } from '@/modules/database/index.js';
+import { officesDb, sessionsDb } from '@/modules/database/index.js';
 import { providerModelsService, sessionsService } from '@/modules/providers/index.js';
 import { chatRunRegistry } from '@/modules/websocket/services/chat-run-registry.service.js';
 import { connectedClients, WS_OPEN_STATE } from '@/modules/websocket/services/websocket-state.service.js';
@@ -195,10 +195,19 @@ function resolveSendTarget(
   }
 
   // Projects are prompted only through the workspace canvas, whose runs skip
-  // this function (runDetachedChatTurn). A client-sent cwd is checked too, since
-  // it would otherwise override the session's folder.
+  // this function (runDetachedChatTurn), or as a solo chat started from the
+  // workspace's solo view, which stays inside its project folder. A client-sent
+  // cwd is checked too, since it would otherwise override the session's folder.
   const clientCwd = typeof data.options?.cwd === 'string' ? data.options.cwd : null;
-  if (!isFreeChatPath(session.project_path) || (clientCwd !== null && !isFreeChatPath(clientCwd))) {
+  const isFreeChat = isFreeChatPath(session.project_path);
+  const isSoloChat = !isFreeChat && Boolean(session.project_path) && officesDb.isSoloSession(sessionId);
+  const isInsideSessionFolder = (candidate: string) => {
+    const root = path.resolve(session.project_path ?? '');
+    const resolved = path.resolve(candidate);
+    return resolved === root || resolved.startsWith(`${root}${path.sep}`);
+  };
+  const isCwdAllowed = clientCwd === null || (isSoloChat ? isInsideSessionFolder(clientCwd) : isFreeChatPath(clientCwd));
+  if (!(isFreeChat || isSoloChat) || !isCwdAllowed) {
     sendProtocolError(
       ws,
       'PROJECT_CANVAS_ONLY',

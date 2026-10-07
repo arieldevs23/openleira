@@ -166,11 +166,15 @@ function WorkspaceMain({
   // The workspace page's solo view: the regular agent chat in the workspace
   // folder, without the team. Shown once the app has switched to that project;
   // only that project's own session is carried over.
-  const renderSoloChat = useCallback((projectId: string) => {
+  // A session opened from the URL may not carry its project id; it then belongs to the selected project,
+  // which the app selects together with the session.
+  const sessionProjectId = selectedSession ? (selectedSession.__projectId ?? selectedProject?.projectId ?? null) : null;
+  const soloSessionId = selectedProject && sessionProjectId === selectedProject.projectId ? selectedSession?.id ?? null : null;
+  const renderSoloChat = useCallback((projectId: string, onSoloSessionEstablished: (sessionId: string) => void) => {
     if (selectedProject?.projectId !== projectId) {
       return null;
     }
-    const soloSession = selectedSession?.__projectId === projectId ? selectedSession : null;
+    const soloSession = sessionProjectId === projectId ? selectedSession : null;
     return (
       <ChatInterface
         isActive
@@ -180,7 +184,10 @@ function WorkspaceMain({
         sendMessage={sendMessage}
         onFileOpen={handleFileOpen}
         onNavigateToSession={onNavigateToSession}
-        onSessionEstablished={onSessionEstablished}
+        onSessionEstablished={(sessionId, context) => {
+          onSessionEstablished(sessionId, context);
+          onSoloSessionEstablished(sessionId);
+        }}
         onShowSettings={onShowSettings}
         showRawParameters={showRawParameters}
         showThinking={showThinking}
@@ -202,10 +209,16 @@ function WorkspaceMain({
     selectedSession,
     sendByCtrlEnter,
     sendMessage,
+    sessionProjectId,
     showRawParameters,
     showThinking,
     ws,
   ]);
+
+  // An earlier solo chat opens in place: the URL selects the session, the tab stays on the workspace page.
+  const openSoloSession = useCallback((sessionId: string) => {
+    onNavigateToSession(sessionId);
+  }, [onNavigateToSession]);
 
   // Stable arguments keep usePaletteOpsRegister's effect from tearing down and
   // rewriting the whole palette registry on every render.
@@ -234,6 +247,8 @@ function WorkspaceMain({
               onProjectChange={onCanvasProjectChange}
               onOpenSession={openOfficeSession}
               renderSoloChat={renderSoloChat}
+              soloSessionId={soloSessionId}
+              onOpenSoloSession={openSoloSession}
               onNewSoloChat={onNewSoloChat}
             />
           </WorkspaceErrorBoundary>

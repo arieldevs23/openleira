@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import express, { type NextFunction, type Request, type Response } from 'express';
 
-import { closeConnection, initializeDatabase, sessionsDb } from '@/modules/database/index.js';
+import { closeConnection, initializeDatabase, officesDb, projectsDb, sessionsDb } from '@/modules/database/index.js';
 import providerRouter from '@/modules/providers/provider.routes.js';
 import { providerRegistry } from '@/modules/providers/provider.registry.js';
 import type { IProvider } from '@/shared/interfaces.js';
@@ -83,6 +83,24 @@ test('session creation route refuses a project folder: projects are prompted thr
 
     assert.equal(response.status, 403);
     assert.equal(payload.error?.code, 'PROJECT_CANVAS_ONLY');
+  });
+});
+
+test('a solo chat may open in a project folder and is recorded as one; an unknown folder is refused', async () => {
+  await withProviderServer(async (baseUrl, workspacePath) => {
+    const post = (projectPath: string) => fetch(`${baseUrl}/api/providers/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: 'claude', projectPath, initialMessage: 'hi there', solo: true }),
+    });
+
+    assert.equal((await post(path.join(workspacePath, 'not-a-project'))).status, 404);
+
+    projectsDb.createProjectPath(workspacePath);
+    const response = await post(workspacePath);
+    const payload = await response.json() as { data: { sessionId: string } };
+    assert.equal(response.status, 201);
+    assert.equal(officesDb.isSoloSession(payload.data.sessionId), true);
   });
 });
 

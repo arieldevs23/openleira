@@ -266,6 +266,7 @@ function ChatInterface({
     sendByCtrlEnter,
     onSessionProcessing,
     onSessionEstablished: handleSessionEstablished,
+    isSoloChat: allowProjectPrompting,
     onFileOpen,
     onShowSettings,
     scrollToBottom,

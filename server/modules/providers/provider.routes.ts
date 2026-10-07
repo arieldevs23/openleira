@@ -760,8 +760,13 @@ router.post(
     const provider = parseProvider(body.provider);
     const projectPath = typeof body.projectPath === 'string' ? body.projectPath : '';
     const initialMessage = typeof body.initialMessage === 'string' ? body.initialMessage : '';
-    // Projects are prompted only through the workspace canvas; its runner creates
-    // its sessions itself, so this user-facing entry only opens free chats.
+    // A workspace's solo view opens a plain chat in its project folder.
+    if (body.solo === true) {
+      res.status(201).json(createApiSuccessResponse(sessionsService.createSoloSession(provider, projectPath, initialMessage)));
+      return;
+    }
+    // Otherwise projects are prompted only through the workspace canvas; its runner
+    // creates its sessions itself, so this user-facing entry only opens free chats.
     if (!isFreeChatPath(projectPath)) {
       throw new AppError('This project is prompted only through the workspace canvas.', {
         code: 'PROJECT_CANVAS_ONLY',

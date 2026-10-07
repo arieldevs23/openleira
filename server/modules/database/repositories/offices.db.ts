@@ -13,6 +13,7 @@ import type {
   OfficeShapeKind,
   OfficeShapePatch,
   OfficeSkillNode,
+  OfficeSoloSession,
   OfficeWorkspaceKind,
   OfficeWorkspaceSummary,
 } from '@/shared/types.js';
@@ -418,6 +419,46 @@ export const officesDb = {
 
   unlinkSkill(nodeId: string, divisionId: string): void {
     getConnection().prepare('DELETE FROM office_skill_links WHERE skill_node_id = ? AND division_id = ?').run(nodeId, divisionId);
+  },
+
+  /** Whether a session was started from a workspace's solo view (the chat gate lets those through). */
+  isSoloSession(sessionId: string): boolean {
+    return Boolean(getConnection().prepare('SELECT 1 FROM office_solo_sessions WHERE session_id = ?').get(sessionId));
+  },
+
+  /** Marks a session as a solo chat; registering it twice keeps the first time. */
+  addSoloSession(sessionId: string): void {
+    getConnection()
+      .prepare('INSERT OR IGNORE INTO office_solo_sessions (session_id, created_at) VALUES (?, ?)')
+      .run(sessionId, new Date().toISOString());
+  },
+
+  /** The solo chats in a project folder that are not archived, most recently active first. */
+  listSoloSessions(projectPath: string, limit: number): OfficeSoloSession[] {
+    const rows = getConnection()
+      .prepare(
+        `SELECT s.session_id, s.provider, s.custom_name, s.created_at, s.updated_at, o.created_at AS solo_created_at
+         FROM office_solo_sessions o
+         JOIN sessions s ON s.session_id = o.session_id
+         WHERE s.project_path = ? AND s.isArchived = 0
+         ORDER BY datetime(COALESCE(s.updated_at, s.created_at, o.created_at)) DESC, s.session_id DESC
+         LIMIT ?`,
+      )
+      .all(projectPath, limit) as {
+        session_id: string;
+        provider: string;
+        custom_name: string | null;
+        created_at: string | null;
+        updated_at: string | null;
+        solo_created_at: string;
+      }[];
+    return rows.map((row) => ({
+      sessionId: row.session_id,
+      provider: row.provider as LLMProvider,
+      title: row.custom_name ?? '',
+      createdAt: row.created_at ?? row.solo_created_at,
+      lastActivity: row.updated_at ?? row.created_at ?? row.solo_created_at,
+    }));
   },
 
   getOfficeByProjectPath(projectPath: string): Office | null {
