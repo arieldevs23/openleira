@@ -29,9 +29,9 @@ const MAX_LISTED_PROJECTS = 5;
 
 /** Shown until the Claude catalogue arrives, so the picker is never empty. */
 const FALLBACK_CLAUDE_MODELS: ProviderModelOption[] = [
-  { value: 'sonnet', label: 'Sonnet' },
-  { value: 'opus', label: 'Opus' },
-  { value: 'fable', label: 'Fable 5' },
+  { value: 'sonnet', label: 'Sonnet 5.5' },
+  { value: 'opus', label: 'Opus 5.5' },
+  { value: 'fable', label: 'Fable 5.1' },
 ];
 
 const PROVIDER_LABELS: Record<LLMProvider, string> = {
