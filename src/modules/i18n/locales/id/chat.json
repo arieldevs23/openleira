@@ -152,12 +152,22 @@
     "model": "model",
     "effortDefault": "default",
     "loadingModels": "bentar, load model…",
-    "modelMenu": "pilih model sama level reasoning",
+    "modelMenu": "pilih model",
     "permissionHeading": "aksi {{provider}} mau disetujuin gimana?",
     "editing": {
       "title": "ganti pesan sebelumnya",
       "filesNotReverted": "file yang udah diubah agent ga dibalikin",
       "cancel": "batal"
+    },
+    "moreModels": "Model lainnya",
+    "effortMenu": "level mikir (reasoning)",
+    "effortLevels": {
+      "default": "Otomatis",
+      "low": "Rendah",
+      "medium": "Sedang",
+      "high": "Tinggi",
+      "xhigh": "Sangat tinggi",
+      "max": "Maksimal"
     }
   },
   "providerSelection": {
